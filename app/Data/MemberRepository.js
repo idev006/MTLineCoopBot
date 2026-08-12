@@ -19,6 +19,8 @@
  * - listMembers()                → Array<Object> สมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
  * - logExpiry(entry)            → { log_id, status } (t_expiry_log — MT-32)
  * - renewMember(rowIndex, newExpDt, lineUserId?) → { memExpDt, memStatus } (MT-12)
+ * - listNotices()               → Array<Object> ประกาศทั้งหมด (t_notice — MT-13)
+ * - markNoticeSent(noticeId, sentDt) → boolean (กัน broadcast ซ้ำ — MT-13)
  */
 
 var Data = Data || {};
@@ -29,7 +31,7 @@ Data.MemberRepository = (() => {
   const INTERFACE = [
     'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
     'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation',
-    'listMembers', 'logExpiry', 'renewMember'
+    'listMembers', 'logExpiry', 'renewMember', 'listNotices', 'markNoticeSent'
   ];
 
   /**

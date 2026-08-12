@@ -10,7 +10,7 @@ MTLineCoopBot/
 └── app/                         # rootDir ของ Apps Script project
     ├── appsscript.json          # manifest: timezone, runtime, webapp settings
     ├── Config.js                # ค่าคอนฟิก + Script Properties
-    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (5 ตาราง: t_member_mast + 4 ตาราง MT-27)
+    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (6 ตาราง: t_member_mast + 5 ตาราง MT-27/32/13)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
     ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
     │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
@@ -22,11 +22,12 @@ MTLineCoopBot/
     ├── WebApp.js                # Entry point doPost(e)
     ├── Test.js                  # ฟังก์ชันทดสอบระบบ (verifyMenuContract ฯลฯ)
     ├── Dashboard.js             # สร้าง KPI Dashboard ของทีม (createDashboard)
-    ├── SeedData.js              # สร้างตาราง 4 ตาราง + dummy data (MT-27)
+    ├── SeedData.js              # สร้างตาราง 6 ตาราง + dummy data (MT-27/32/13)
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── ExpiryService.js     # ตรวจวันหมดอายุอัตโนมัติ (MT-11) — scan + push + unlink
     │   ├── RenewalService.js    # ต่ออายุสมาชิก (MT-12) — renew:CODE / renew ตัวเอง
+    │   ├── NoticeService.js     # Broadcast ประกาศ (MT-13) — t_notice → push สมาชิก active
     │   ├── EventHandler.js      # Router จัดการ event
     │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
     │   ├── FlexBuilder.js       # สร้าง Flex Message
@@ -70,6 +71,11 @@ MTLineCoopBot/
 **`DateConverter.js`** — แปลงวันที่ระหว่างรูปแบบชีท (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss`) กับ Firestore TIMESTAMP (เฟส 3 — บทที่ 3.1.1, การ์ด MT-31)
 - `toFirestoreTimestamp(value, type)` → `{ seconds, nanos }` (REST Timestamp) — ตีความ wall-clock เป็น UTC เพื่อให้ round-trip ตรงเป๊ะ
 - `fromFirestoreTimestamp(ts, type)` → string มาตรฐานชีท — รองรับ Date / `{seconds,nanos}` / RFC3339 string
+
+**`NoticeRules.js`** — กฎ Broadcast ประกาศ (การ์ด MT-13) — pure
+- `getPendingNotices(notices, now?)` — กรองประกาศที่พร้อมส่ง: `status='published'` + ยังไม่มี `sent_dt` + `published_dt <= now` (เปรียบเทียบ string ตามมาตรฐาน yyyy-mm-dd HH:mm:ss)
+- `buildNoticeText(notice)` — ข้อความ push ประกาศ (📢 ประกาศสหกรณ์ + title + message + published_dt)
+- `getBroadcastTargets(members)` — สมาชิกที่ควรได้รับ: active + มี `line_user_id`
 - `toEpochMillis` / `epochMillisToSheetString` / `timestampToMillis` — helper
 - หมายเหตุ: offset timezone ไทย (+07:00) เป็นจุดตัดสินใจเฟส 3 — ดู data-dictionary.md
 
@@ -144,7 +150,7 @@ Entry point ของ LINE webhook
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
 - `testMemberRepository()` — ทดสอบ interface + factory ตาม `DB_TYPE` (บทที่ 3.2.4)
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
-- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 4 ตาราง (MT-27)
+- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 6 ตาราง (MT-27/32/13)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
@@ -153,13 +159,15 @@ Entry point ของ LINE webhook
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
 - `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate/**renew**) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16/MT-12)
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
+- `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
+- `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
 
 สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
 
-- `createDummyTables()` — สร้างชีท 5 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log`
+- `createDummyTables()` — สร้างชีท 6 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice`
 - `resetDummyTables()` — ล้างข้อมูลแล้วใส่ dummy ใหม่ (ใช้ใน dev/test เท่านั้น)
 - `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
@@ -212,6 +220,12 @@ Entry point ของ LINE webhook
 - `setupExpiryTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
 - ฟังก์ชันระดับบนสุด `runExpiryCheck()` = entry point ของ trigger (ส่งต่อให้ ExpiryService)
 
+**`NoticeService.js`** — Broadcast ประกาศ/ข่าวสารถึงสมาชิก (การ์ด MT-13)
+- `runNoticeBroadcast(token, opts?)` — อ่านประกาศจาก `t_notice` ผ่าน repository (`listNotices`) → `Core.NoticeRules.getPendingNotices` (published + ยังไม่ส่ง + ถึงเวลา) → push ประกาศถึงสมาชิก active ทุกคนที่มี `line_user_id` (`getBroadcastTargets`) → `markNoticeSent` (เขียน `sent_dt` + `status='sent'` กันส่งซ้ำรอบถัดไป)
+  - รับ `opts.repo/sender/now/builder` เพื่อทดสอบใน node · คืน summary `{ notices, pending, sent, targets, pushed }`
+- `setupNoticeTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
+- ฟังก์ชันระดับบนสุด `runNoticeBroadcast()` = entry point ของ trigger (ส่งต่อให้ NoticeService)
+
 **`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27)
 - `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
 - `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข)
@@ -238,6 +252,8 @@ Entry point ของ LINE webhook
 - `getHeaderRow(sheet)` / `getHeaderMap(sheet)` / `readRowsAsObjects(tableKey, sheet)` — อ่าน/แมปคอลัมน์จาก **header row จริง** (การ์ด MT-28: รองรับการสลับตำแหน่งฟิลด์ในตาราง)
 - `findAllMembers()` — ดึงสมาชิกทั้งหมด (สำหรับ `ExpiryService` scan วันหมดอายุ — MT-11)
 - `renewMember(rowIndex, newExpDt, lineUserId?)` — เขียน `mem_exp_dt` ใหม่ + ตั้ง `mem_status='active'` (+ อัปเดต line_user_id ถ้าให้) — การ์ด MT-12
+- `listNotices()` — ดึงประกาศทั้งหมดจาก `t_notice` (สำหรับ `NoticeService` broadcast — MT-13)
+- `markNoticeSent(noticeId, sentDt)` — เขียน `sent_dt` + `status='sent'` ตาม header จริง (กัน broadcast ซ้ำ — MT-13)
 - `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate (map ตาม header)
 - `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)

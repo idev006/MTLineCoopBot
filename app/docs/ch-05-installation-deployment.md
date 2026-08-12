@@ -252,10 +252,13 @@ createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividen
 | 7 | พิมพ์ `renew` (สมาชิกที่ผูก userId แล้ว) หรือ `renew:CODE` | ได้ข้อความยืนยันต่ออายุ + `mem_exp_dt` ในชีทขยาย +1 ปี (log `renewed` ใน `t_activation_log`) · เมนูสมาชิกผูกกลับ (ถ้าเคยถูก unlink ตอนหมดอายุ) |
 | 8 | (หลังตั้ง trigger — ข้อ 5.9) สมาชิกที่เหลือเวลา ≤ `EXPIRY_WARNING_DAYS` วัน | ได้ Push ข้อความเตือน "สิทธิ์จะหมดอายุในอีก X วัน" |
 | 9 | (หลังตั้ง trigger — ข้อ 5.9) สมาชิกที่หมดอายุแล้ว | ได้ Push "สิทธิ์หมดอายุแล้ว" + เมนูสมาชิกถูกยกเลิก (กลับไป Welcome) |
+| 10 | (หลังตั้ง trigger — ข้อ 5.9) เพิ่มประกาศใหม่ใน `t_notice` (status=published, sent_dt ว่าง) | ได้ Push ประกาศถึงสมาชิก active ทุกคน · `t_notice` แถวนั้นมี `sent_dt` + `status='sent'` · รันรอบถัดไปไม่ส่งซ้ำ |
 
-## 5.9 ตั้ง Time-driven Trigger — ตรวจวันหมดอายุอัตโนมัติ (การ์ด MT-11)
+## 5.9 ตั้ง Time-driven Trigger — ตรวจวันหมดอายุ + broadcast ประกาศ (การ์ด MT-11/MT-13)
 
-ระบบตรวจวันหมดอายุสมาชิก (push เตือนก่อนหมดอายุ + แจ้ง expired และยกเลิกเมนู) ต้องมี **Time-driven Trigger**:
+ระบบมีงานอัตโนมัติ 2 อย่างที่ต้อง **Time-driven Trigger**: ① ตรวจวันหมดอายุ (push เตือน + unlink) ② broadcast ประกาศจาก `t_notice` ถึงสมาชิก
+
+### 5.9.1 Trigger ตรวจวันหมดอายุ (`runExpiryCheck`)
 
 1. `clasp push` ให้โค้ดใหม่ขึ้น Apps Script
 2. **Apps Script Editor → (⏰ ปุ่มนาฬิกา) Triggers → Add Trigger**:
@@ -267,7 +270,14 @@ createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividen
 4. ตั้งค่า (ไม่บังคับ): Script Properties → `EXPIRY_WARNING_DAYS` = จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" (ค่า default 30)
 5. ทดสอบ: รัน `runExpiryCheck` ด้วยมือ → ตรวจ Log `[ExpiryCheck] checked=... expiring=... expired=... pushed=...`
 
-> ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง)
+### 5.9.2 Trigger broadcast ประกาศ (`runNoticeBroadcast`)
+
+1. ตรวจว่ามีชีท `t_notice` (รัน `createDummyTables()` — บทที่ 5.6.4 — หรือสร้างเองตาม DataDict)
+2. เพิ่มประกาศที่ต้องการส่ง: `status='published'` + `sent_dt` ว่าง + `published_dt` = เวลาเริ่มส่ง (ประกาศที่ `sent_dt` มีค่าแล้วจะ**ไม่ถูกส่งซ้ำ**)
+3. สร้าง trigger เช่นเดียวกับ 5.9.1 แต่ **Function:** `runNoticeBroadcast` (หรือรัน `setupNoticeTrigger(9)` ครั้งเดียว — ดู `app/LineBot/NoticeService.js`)
+4. ทดสอบ: รัน `runNoticeBroadcast` ด้วยมือ → ตรวจ Log `[NoticeBroadcast] notices=... pending=... sent=... targets=... pushed=...` + แถวประกาศถูก mark `sent`
+
+> ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง) · สมาชิกที่ยังไม่ activate (ไม่มี `line_user_id`) จะถูกข้าม
 
 ## สรุปท้ายบท
 

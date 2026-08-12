@@ -134,6 +134,26 @@ const DataDict = (() => {
         { name: 'mem_exp_dt', type: 'date', required: false, label: 'วันหมดอายุ' },
         { name: 'checked_dt', type: 'datetime', required: false, label: 'เวลาที่ตรวจ' }
       ]
+    },
+
+    /**
+     * ประกาศ/ข่าวสารสำหรับ broadcast (การ์ด MT-13)
+     * Sheet: t_notice
+     * แถวที่พร้อมส่ง: status='published' + ยังไม่มี sent_dt + published_dt <= ตอน broadcast
+     * หลังส่งครบทุกสมาชิก → เขียน sent_dt + status='sent' (กันส่งซ้ำรอบถัดไป)
+     */
+    NOTICE: {
+      name: 't_notice',
+      description: 'ประกาศ/ข่าวสารสำหรับ broadcast ถึงสมาชิก',
+      primaryKey: 'notice_id',
+      columns: [
+        { name: 'notice_id', type: 'string', required: true, label: 'รหัสประกาศ', unique: true },
+        { name: 'title', type: 'string', required: true, label: 'หัวข้อประกาศ' },
+        { name: 'message', type: 'string', required: true, label: 'เนื้อหาประกาศ' },
+        { name: 'published_dt', type: 'datetime', required: false, label: 'วันเวลาที่ประกาศ (เริ่มส่งได้)' },
+        { name: 'sent_dt', type: 'datetime', required: false, label: 'วันเวลาที่ broadcast เสร็จ (ว่าง = ยังไม่ส่ง)' },
+        { name: 'status', type: 'string', required: false, label: 'สถานะ', default: 'published' }
+      ]
     }
   };
 

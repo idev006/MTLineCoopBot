@@ -285,6 +285,47 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ดึงประกาศทั้งหมดจาก t_notice (การ์ด MT-13)
+   * @returns {Array<Object>} รายการประกาศ (ไม่มี _rowIndex)
+   */
+  function listNotices() {
+    return readRowsAsObjects('NOTICE', getSheet('NOTICE'));
+  }
+
+  /**
+   * ทำเครื่องหมายประกาศว่าส่งแล้ว (กัน broadcast ซ้ำรอบถัดไป — การ์ด MT-13)
+   * เขียน sent_dt + status='sent' ตาม header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
+   * @param {string} noticeId - รหัสประกาศ
+   * @param {Date|string} sentDt - เวลาที่ส่งเสร็จ
+   * @returns {boolean} true ถ้าอัปเดตสำเร็จ (พบแถว) / false ถ้าไม่พบ
+   */
+  function markNoticeSent(noticeId, sentDt) {
+    const tableKey = 'NOTICE';
+    const sheet = getSheet(tableKey);
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return false;
+
+    const headers = data[0].map(h => String(h).trim());
+    const idIndex = headers.indexOf('notice_id');
+    const sentIndex = headers.indexOf('sent_dt');
+    const statusIndex = headers.indexOf('status');
+    if (idIndex === -1 || sentIndex === -1) {
+      throw new Error(`ไม่พบคอลัมน์ notice_id/sent_dt ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+    }
+
+    const sentStr = sentDt instanceof Date ? DataDict.formatDateTime(sentDt) : String(sentDt);
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idIndex]).trim() === String(noticeId).trim()) {
+        sheet.getRange(i + 1, sentIndex + 1).setValue(sentStr);
+        if (statusIndex !== -1) sheet.getRange(i + 1, statusIndex + 1).setValue('sent');
+        Logger.log(`[Notice] ${noticeId} mark ส่งแล้ว (${sentStr})`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * อัปเดตข้อมูลการ activate สมาชิก
    * @param {number} rowIndex - 1-based row index
    * @param {string} lineUserId
@@ -416,6 +457,8 @@ LineBot.SheetService = (() => {
     findDividendsByMember,
     logActivation,
     appendExpiryLog,
+    listNotices,
+    markNoticeSent,
     renewMember,
     activateMember,
     isActiveMember,

@@ -125,6 +125,24 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.renewMember(rowIndex, newExpDt, lineUserId);
   }
 
+  /**
+   * ดึงประกาศทั้งหมดจาก t_notice (MT-13)
+   * @returns {Array<Object>}
+   */
+  function listNotices() {
+    return LineBot.SheetService.listNotices();
+  }
+
+  /**
+   * ทำเครื่องหมายประกาศว่าส่งแล้ว (กัน broadcast ซ้ำ — MT-13)
+   * @param {string} noticeId
+   * @param {Date|string} sentDt
+   * @returns {boolean}
+   */
+  function markNoticeSent(noticeId, sentDt) {
+    return LineBot.SheetService.markNoticeSent(noticeId, sentDt);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -137,6 +155,8 @@ Data.SheetsMemberRepository = (() => {
     logActivation,
     listMembers,
     logExpiry,
-    renewMember
+    renewMember,
+    listNotices,
+    markNoticeSent
   };
 })();

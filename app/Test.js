@@ -321,7 +321,7 @@ function testMemberDataService() {
 function testSeedData() {
   const rows = SeedData.getDummyRows();
   const keys = SeedData.SEED_TABLE_KEYS;
-  if (keys.length !== 5) throw new Error('testSeedData: ต้องมี 5 ตาราง (ได้ ' + keys.length + ')');
+  if (keys.length !== 6) throw new Error('testSeedData: ต้องมี 6 ตาราง (ได้ ' + keys.length + ')');
 
   for (const key of keys) {
     const headers = DataDict.getHeaders(key);
@@ -345,7 +345,8 @@ function testSeedData() {
     LOAN_ACCT: ['mem_code', 'loan_no', 'principal', 'outstanding', 'due_dt'],
     DIVIDEND: ['mem_code', 'year', 'dividend_amt', 'share_capital'],
     ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt'],
-    EXPIRY_LOG: ['log_id', 'mem_code', 'line_user_id', 'status', 'days_left', 'mem_exp_dt', 'checked_dt']
+    EXPIRY_LOG: ['log_id', 'mem_code', 'line_user_id', 'status', 'days_left', 'mem_exp_dt', 'checked_dt'],
+    NOTICE: ['notice_id', 'title', 'message', 'published_dt', 'sent_dt', 'status']
   };
   for (const key of Object.keys(expect)) {
     const actual = DataDict.getHeaders(key).join(',');
@@ -354,7 +355,108 @@ function testSeedData() {
     }
   }
 
-  Logger.log('testSeedData OK — 5 ตาราง + dummy rows ตรง DataDict');
+  Logger.log('testSeedData OK — 6 ตาราง + dummy rows ตรง DataDict');
+  return true;
+}
+
+/**
+ * ทดสอบ Core.NoticeRules (MT-13) — pure:
+ * getPendingNotices (published + ยังไม่ส่ง + ถึงเวลา) · buildNoticeText · getBroadcastTargets
+ * @returns {boolean}
+ */
+function testNoticeRules() {
+  const now = new Date('2026-08-06T12:00:00');
+  const notices = [
+    { notice_id: 'N1', title: 'ส่งแล้ว', message: 'x', published_dt: '2026-08-01 09:00:00', sent_dt: '2026-08-01 09:05:00', status: 'published' },
+    { notice_id: 'N2', title: 'พร้อมส่ง', message: 'ยินดีต้อนรับสมาชิกใหม่', published_dt: '2026-08-06 09:00:00', sent_dt: '', status: 'published' },
+    { notice_id: 'N3', title: 'ร่าง', message: 'y', published_dt: '2026-08-10 09:00:00', sent_dt: '', status: 'draft' },
+    { notice_id: 'N4', title: 'ยังไม่ถึงเวลา', message: 'z', published_dt: '2026-08-07 09:00:00', sent_dt: '', status: 'published' }
+  ];
+  const pending = Core.NoticeRules.getPendingNotices(notices, now);
+  if (pending.length !== 1) throw new Error('testNoticeRules: pending ควร 1 (ได้ ' + pending.length + ')');
+  if (pending[0].notice_id !== 'N2') throw new Error('testNoticeRules: ควรเหลือ N2 เท่านั้น');
+
+  const text = Core.NoticeRules.buildNoticeText({ title: 'ประชุม', message: 'เวลา 9 โมง', published_dt: '2026-08-06 09:00:00' });
+  if (!text.includes('📢 ประกาศสหกรณ์')) throw new Error('testNoticeRules: ข้อความต้องมีหัวประกาศ');
+  if (!text.includes('ประชุม') || !text.includes('เวลา 9 โมง')) throw new Error('testNoticeRules: ข้อความต้องมี title + message');
+  if (!text.includes('2026-08-06 09:00:00')) throw new Error('testNoticeRules: ข้อความต้องมี published_dt');
+
+  const members = [
+    { mem_code: 'M1', mem_status: 'active', line_user_id: 'U1' },
+    { mem_code: 'M2', mem_status: 'active', line_user_id: '' },
+    { mem_code: 'M3', mem_status: 'inactive', line_user_id: 'U3' },
+    { mem_code: 'M4', mem_status: 'active', line_user_id: 'U4' }
+  ];
+  const targets = Core.NoticeRules.getBroadcastTargets(members);
+  if (targets.length !== 2) throw new Error('testNoticeRules: targets ควร 2 (ได้ ' + targets.length + ')');
+  if (!targets.some(t => t.mem_code === 'M1') || !targets.some(t => t.mem_code === 'M4')) {
+    throw new Error('testNoticeRules: targets ต้องเป็น active + มี userId เท่านั้น');
+  }
+
+  Logger.log('testNoticeRules OK — pending filter + ข้อความ + กลุ่มเป้าหมาย (pure)');
+  return true;
+}
+
+/**
+ * ทดสอบ LineBot.NoticeService.runNoticeBroadcast (MT-13) — Fake Sheets + fake sender:
+ * broadcast ประกาศที่พร้อมส่งถึงสมาชิก active ทุกคน · mark sent กันส่งซ้ำ ·
+ * ข้ามประกาศที่ส่งแล้ว / draft / ยังไม่ถึงเวลา · ข้าม inactive/ไม่มี userId
+ * @returns {boolean}
+ */
+function testNoticeBroadcast() {
+  // 1) seed fake sheets: t_member_mast (3 active + 1 inactive) + t_notice (dummy 6 คอลัมน์)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
+    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'active', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000],
+    ['M004', 'นาย', 'ยังไม่', 'Activate', 0, '', 0, '', '', 'inactive', 'ACT004', '', 'member', 0, 0, 0]
+  ];
+  delete __fakeSheets['t_notice'];
+  __fakeSheets['t_notice'] = [
+    DataDict.getHeaders('NOTICE'),
+    ['NTC-0001', 'ประกาศปิดทำการ', 'ปิดวันที่ 12 ส.ค. 2569', '2026-08-01 09:00:00', '2026-08-01 09:00:05', 'published'],
+    ['NTC-0002', 'ประชุมใหญ่สามัญ', 'ประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น.', '2026-08-06 09:00:00', '', 'published'],
+    ['NTC-0003', 'แบบร่างประกาศ', 'ยังไม่เผยแพร่', '2026-08-10 09:00:00', '', 'draft']
+  ];
+
+  const sent = [];
+  const summary = LineBot.NoticeService.runNoticeBroadcast('TOKEN', {
+    now: new Date('2026-08-06T12:00:00'),
+    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; }
+  });
+
+  if (summary.notices !== 3) throw new Error('testNoticeBroadcast: notices ควร 3 (' + summary.notices + ')');
+  if (summary.pending !== 1) throw new Error('testNoticeBroadcast: pending ควร 1 (' + summary.pending + ')');
+  if (summary.sent !== 1) throw new Error('testNoticeBroadcast: sent ควร 1 (' + summary.sent + ')');
+  if (summary.targets !== 3) throw new Error('testNoticeBroadcast: targets ควร 3 (' + summary.targets + ')');
+  if (summary.pushed !== 3) throw new Error('testNoticeBroadcast: pushed ควร 3 (' + summary.pushed + ')');
+
+  // ทุก active member ได้รับประกาศ NTC-0002 (มีหัวข้อ) · inactive ไม่ได้รับ
+  if (!sent.every(s => s.text.includes('ประชุมใหญ่สามัญ'))) throw new Error('testNoticeBroadcast: ข้อความต้องเป็น NTC-0002');
+  if (!sent.some(s => s.to === 'U11111111111111111111111111111111')) throw new Error('testNoticeBroadcast: M001 ไม่ได้รับประกาศ');
+  if (!sent.some(s => s.to === 'U22222222222222222222222222222222')) throw new Error('testNoticeBroadcast: M002 ไม่ได้รับประกาศ');
+  if (!sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testNoticeBroadcast: M003 ไม่ได้รับประกาศ');
+  if (sent.some(s => s.to === 'U44444444444444444444444444444444')) throw new Error('testNoticeBroadcast: inactive ไม่ควรได้รับประกาศ');
+
+  // NTC-0002 ถูก mark sent แล้ว (sent_dt + status='sent')
+  const noticeRows = __fakeSheets['t_notice'] || [];
+  const ntc2 = noticeRows.find(r => r[0] === 'NTC-0002');
+  if (!ntc2 || !ntc2[4] || ntc2[5] !== 'sent') {
+    throw new Error('testNoticeBroadcast: NTC-0002 ต้องถูก mark sent (sent_dt + status=sent)');
+  }
+
+  // 2) รันรอบที่ 2 — ไม่ส่งซ้ำ (pending = 0, pushed = 0)
+  const sent2 = [];
+  const summary2 = LineBot.NoticeService.runNoticeBroadcast('TOKEN', {
+    now: new Date('2026-08-06T13:00:00'),
+    sender: (to, text) => { sent2.push({ to, text }); return { ok: true }; }
+  });
+  if (summary2.pending !== 0) throw new Error('testNoticeBroadcast: รอบ 2 pending ควร 0 (กันส่งซ้ำ)');
+  if (summary2.pushed !== 0) throw new Error('testNoticeBroadcast: รอบ 2 pushed ควร 0');
+
+  Logger.log('testNoticeBroadcast OK — broadcast + mark sent + ไม่ส่งซ้ำ (Fake Sheets + fake sender)');
   return true;
 }
 

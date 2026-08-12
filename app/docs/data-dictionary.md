@@ -101,7 +101,21 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | mem_exp_dt | date | No | - | วันหมดอายุของสมาชิก |
 | checked_dt | datetime | No | - | เวลาที่ตรวจ |
 
-> 📌 **หมายเหตุ (การ์ด MT-27/MT-32):** ตารางทั้ง 5 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
+### NOTICE (t_notice) ✅ ทำแล้ว (การ์ด MT-13)
+ประกาศ/ข่าวสารสำหรับ broadcast ถึงสมาชิก — เขียน/อ่านโดย `NoticeService.runNoticeBroadcast` (Time-driven Trigger)
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| notice_id | string | Yes | - | รหัสประกาศ (unique) |
+| title | string | Yes | - | หัวข้อประกาศ |
+| message | string | Yes | - | เนื้อหาประกาศ |
+| published_dt | datetime | No | - | วันเวลาที่ประกาศ (เริ่มส่งได้ตั้งแต่นี้) |
+| sent_dt | datetime | No | - | วันเวลาที่ broadcast เสร็จ (**ว่าง = ยังไม่ส่ง**) — กันส่งซ้ำ |
+| status | string | No | published | สถานะ (draft / published / sent) |
+
+> **เกณฑ์ "พร้อมส่ง":** `status='published'` + ยังไม่มี `sent_dt` + `published_dt <= ตอน broadcast` — หลังส่งครบทุกสมาชิก ระบบเขียน `sent_dt` + `status='sent'` อัตโนมัติ (รอบถัดไปไม่ส่งซ้ำ)
+
+> 📌 **หมายเหตุ (การ์ด MT-27/MT-32/MT-13):** ตารางทั้ง 6 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
 > เมื่อแทนที่ด้วยข้อมูลจริง: แก้ค่าในชีทได้เลย โดยไม่ต้องแก้โค้ด — โครงสร้างคอลัมน์ห้ามแกะเอง ต้องแก้ที่ `DataDict.js` (SSOT) ก่อน
 
 ## รูปแบบข้อมูลวันที่ (มาตรฐานการจัดเก็บ)

@@ -6,20 +6,21 @@
  * โครงสร้างตาราง (SSOT) อยู่ใน DataDict.js — ไฟล์นี้มีแค่ข้อมูลตัวอย่าง
  *
  * วิธีใช้ (รันใน Apps Script Editor หรือ clasp):
- *   createDummyTables()   — สร้างชีท 4 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
- *   resetDummyTables()    — ล้างข้อมูลในตารางทั้ง 4 แล้วใส่ dummy ใหม่ (dev เท่านั้น)
+ *   createDummyTables()   — สร้างชีท 6 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
+ *   resetDummyTables()    — ล้างข้อมูลในตารางทั้ง 6 แล้วใส่ dummy ใหม่ (dev เท่านั้น)
  *
  * หมายเหตุ:
  * - ไม่แตะ t_member_mast (เป็นข้อมูลจริงของสมาชิก) — dummy การเงินใช้รหัส
  *   MEM001–MEM003 ที่ต้องมีใน t_member_mast ถึงจะเห็นข้อมูล (ดูเอกสาร MT-27)
  * - ตารางที่สร้าง: t_savings_acct · t_loan_acct · t_dividend · t_activation_log
+ *   · t_expiry_log · t_notice (MT-13)
  */
 
 const SeedData = (() => {
   'use strict';
 
   /** ตารางที่ SeedData จัดการ (key ใน DataDict) */
-  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG'];
+  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG', 'NOTICE'];
 
   /**
    * ข้อมูลตัวอย่างต่อตาราง (pure — ทดสอบใน node ได้โดยไม่ต้องพึ่ง Sheets)
@@ -53,6 +54,14 @@ const SeedData = (() => {
         ['ELOG-0001', 'MEM001', 'U11111111111111111111111111111111', 'expiring', 14, '2026-08-20', '2026-08-06 09:00:00'],
         ['ELOG-0002', 'MEM002', 'U22222222222222222222222222222222', 'expired', -5, '2026-08-01', '2026-08-06 09:00:00'],
         ['ELOG-0003', 'MEM003', 'U33333333333333333333333333333333', 'valid', 147, '2026-12-31', '2026-08-06 09:00:00']
+      ],
+      NOTICE: [
+        // ส่งแล้วแล้ว (มี sent_dt) — จะไม่ถูก broadcast ซ้ำ
+        ['NTC-0001', 'ประกาศปิดทำการ', 'สหกรณ์ปิดทำการวันที่ 12 ส.ค. 2569 เนื่องจากงานประชุมใหญ่', '2026-08-01 09:00:00', '2026-08-01 09:00:05', 'published'],
+        // พร้อมส่ง (published + ยังไม่มี sent_dt) — จะถูก broadcast ในรอบถัดไป
+        ['NTC-0002', 'ประชุมใหญ่สามัญประจำปี', 'กำหนดประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น. ณ ห้องประชุมสหกรณ์ ขอเชิญสมาชิกทุกท่านเข้าร่วมโดยพร้อมเพรียงกัน', '2026-08-06 09:00:00', '', 'published'],
+        // ร่าง (draft) — ไม่ถูก broadcast
+        ['NTC-0003', 'แบบร่างประกาศ', 'ยังไม่เผยแพร่', '2026-08-10 09:00:00', '', 'draft']
       ]
     };
   }
