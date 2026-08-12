@@ -54,7 +54,7 @@ MTLineCoopBot/
 - `Config.setup(values)` — บันทึกค่าเข้่า Script Properties
 - `Config.validate()` — ตรวจว่าค่าที่จำเป็นครบ (token + secret + webhook secret)
 
-> **ข้อควรระวัง:** ปัจจุบันมี `CHANNEL_ACCESS_TOKEN` แบบ hardcode อยู่ในฟังก์ชัน `setupConfig()` ซึ่งเป็นความเสี่ยงด้านความปลอดภัย ควรย้ายออกและใช้ Script Properties ตั้งค่าผ่าน UI แทน (ดูบทที่ 3 หัวข้อ 3.6)
+> **หมายเหตุความปลอดภัย:** token ที่ hardcode ใน `setupConfig()` ถูกย้ายออกแล้ว (2026-08-12) — ตั้งค่าผ่าน Script Properties UI เท่านั้น · CI มี secret scan ที่จะ fail ถ้า token/secret กลับมา hardcode ในโค้ดอีก (บทที่ 8.1.3) · Runbook การหมุน token ดูบทที่ 5.5.1
 
 ### 4.2.3 `DataDict.js`
 

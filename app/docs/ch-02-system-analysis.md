@@ -245,7 +245,7 @@ const COMMAND_HANDLERS = {
 
 | # | ความเสี่ยง | ระดับ | ผลกระทบ | แนวทางบรรเทา |
 |---|-----------|-------|---------|-------------|
-| R1 | Channel Access Token รั่วไหล (ถูก hardcode ในซอร์ส) | สูง | บุคคลภายนอกควบคุม Bot ได้ | ย้าย token ไป Script Properties ทันที, หมุน (Rotate) token ใน LINE Console, ห้าม commit token ใหม่ |
+| R1 | Channel Access Token รั่วไหล (ถูก hardcode ในซอร์ส) | สูง | บุคคลภายนอกควบคุม Bot ได้ | ✅ ย้ายไป Script Properties แล้ว + secret scan ใน CI กันซ้ำ · หมุน token ตาม Runbook บทที่ 5.5.1 |
 | R2 | Web App deployment เป็น version เก่า | กลาง | ผู้ใช้ยังเห็นพฤติกรรมเดิมหลังแก้โค้ด | Deploy version ใหม่ทุกครั้งหลังแก้โค้ด (บทที่ 5) |
 | R3 | Rich Menu ที่ Deploy ไปแล้วไม่ตรงกับโค้ดล่าสุด | กลาง | Postback format ไม่ตรงกับ Handler | รัน `main()` ใหม่หลังแก้ `MenuData.js`; มี fallback ใน Handler |
 | R4 | ข้อมูลใน Google Sheets ไม่มีอยู่/โครงสร้างไม่ตรง | กลาง | ค้นหาไม่พบ สมาชิก activate ไม่ได้ | ใช้ DataDict สร้าง sheet/header อัตโนมัติ |

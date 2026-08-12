@@ -139,6 +139,53 @@ function setupConfig() {
 
 > แนะนำตั้งค่าผ่าน Script Properties UI เพื่อไม่ให้ secret หลุดลงซอร์สโค้ด/Git
 
+### 5.5.1 Runbook: หมุน (Rotate) Channel Access Token เมื่อสงสัยว่ารั่วไหล
+
+> **เมื่อไหร่ต้องทำ:** token ถูก commit ลง Git (แม้ลบออกแล้ว ยังอยู่ใน history) · สงสัยว่าหลุดสู่บุคคลภายนอก · เปลี่ยนทีม/ผู้ดูแล · ตามรอบนโยบายความปลอดภัย
+
+**1. ออก token ใหม่ที่ LINE Console**
+
+```text
+developers.line.biz → เลือก Provider → เลือก Channel (Messaging API) →
+Messaging API tab → หัวข้อ Channel access token → กด Issue
+```
+
+- LINE อนุญาตให้มี long-lived token หลายตัวพร้อมกัน — **ยังไม่ต้องลบ token เก่า** ตอนนี้
+- คัดลอก token ใหม่เก็บไว้ชั่วคราว (ห้ามวางลงโค้ด/Git)
+
+**2. อัปเดต Script Properties (ผ่าน UI เท่านั้น — ห้าม commit)**
+
+```text
+Apps Script Editor → Project Settings (⚙) → Script Properties →
+แก้ค่า CHANNEL_ACCESS_TOKEN ให้เป็น token ใหม่ → Save
+```
+
+> ระบบอ่านค่า Script Properties ทุกครั้งที่มี request — **การแก้ Script Properties มีผลทันที ไม่ต้อง Deploy ใหม่** (ยกเว้นโค้ดมีการแก้ด้วย ถึงต้อง `clasp push` + Deploy version ใหม่ ตามหัวข้อ 5.4.2)
+
+**3. ทดสอบว่าระบบทำงานกับ token ใหม่**
+
+1. ส่งข้อความ/คลิกเมนูใน LINE ไปที่ Bot
+2. ตรวจ Log: Apps Script Editor → Executions → ต้องเห็น `reply success: 200`
+3. ถ้าเห็น `401 Unauthorized` → token ใหม่ใส่ผิดหรือยังไม่บันทึก → กลับไปข้อ 2
+
+**4. ยกเลิก (Deactivate) token เก่า** — หลังยืนยันว่าระบบทำงานปกติกับ token ใหม่แล้วเท่านั้น
+
+```text
+LINE Console → Channel access token → ที่ token เก่า → Deactivate
+```
+
+> ⚠️ Token ที่รั่วไหลถือว่า compromised — ห้ามเก็บไว้ใช้ต่อเด็ดขาด
+
+**สิ่งที่เปลี่ยนและไม่เปลี่ยน:**
+
+| รายการ | ต้องเปลี่ยน? | หมายเหตุ |
+|---------|------------|----------|
+| `CHANNEL_ACCESS_TOKEN` | ✅ เปลี่ยน (rotate) | ตัวหลักที่ต้องหมุน |
+| `WEBHOOK_SECRET` | เฉพาะถ้าสงสัยว่ารั่วด้วย | ถ้าเปลี่ยน ต้องอัปเดต Webhook URL ใน LINE Console (หัวข้อ 5.4.1) |
+| `CHANNEL_SECRET` | ❌ ไม่เปลี่ยนได้ | เป็นค่าประจำ Channel เปลี่ยนไม่ได้ใน LINE Console |
+
+**การป้องกันซ้ำ:** CI (`.github/workflows/ci.yml`) มี secret scan — จะ **fail** ทันทีถ้ามี token/secret hardcode ลงโค้ดอีก (ดูบทที่ 8.1.3)
+
 ## 5.6 การ Deploy Rich Menu (5 แท็บ)
 
 ### 5.6.1 เตรียมภาพ

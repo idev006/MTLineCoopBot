@@ -23,8 +23,8 @@
 
 ### 7.1.3 การเฝ้าระวังความปลอดภัย
 
-- หมุน (Rotate) Channel Access Token ตามนโยบายหรือเมื่อสงสัยว่ารั่วไหล
-- ตรวจสอบว่าไม่มีการ commit token/secret ลง Git (แนะนำใช้ `.gitignore` หรือกรองใน CI)
+- หมุน (Rotate) Channel Access Token ตามนโยบายหรือเมื่อสงสัยว่ารั่วไหล — ดู Runbook บทที่ 5.5.1
+- ตรวจสอบว่าไม่มีการ commit token/secret ลง Git (CI secret scan ใน `.github/workflows/ci.yml` จะ fail ถ้าพบ — บทที่ 8.1.3)
 - ตรวจสอบ `X-Line-Signature` ทุก request เพื่อยืนยันว่า Webhook มาจาก LINE จริง (ขั้นตอนบังคับ — บทที่ 3.6)
 
 ## 7.2 แผนการพัฒนาในอนาคต (Roadmap)
