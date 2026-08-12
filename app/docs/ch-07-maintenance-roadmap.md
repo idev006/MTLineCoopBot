@@ -49,7 +49,7 @@
 | ~~Gate ตรวจสิทธิ์ใน EventHandler~~ | ✅ ทำแล้ว — `findByLineUserId` + `isActiveMember`/`hasRole` (บทที่ 3.7, การ์ด MT-09) |
 | ~~ดึงข้อมูลสมาชิกจริงตามเมนู~~ | ✅ ทำแล้ว — profile แสดงข้อมูลจริงจาก `t_member_mast` (การ์ด MT-10) · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct` / `t_loan_acct` / `t_dividend` (การ์ด MT-27 — ข้อมูลตัวอย่างผ่าน `SeedData` บทที่ 5.6.4) · ถ้าไม่มีข้อมูลตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข) · เหลือ: แทนที่ dummy ด้วยข้อมูลจริงจากระบบบัญชีสหกรณ์ 📌 |
 | ~~ตรวจสอบวันหมดอายุสมาชิก~~ | ✅ ทำแล้ว (การ์ด MT-11/MT-32) — `Core.MemberRules.getExpiryStatus` (expired/expiring/valid + daysLeft) · `LineBot.ExpiryService.runExpiryCheck` (Time-driven Trigger รายวัน): push เตือนก่อนหมดอายุ (≤ `EXPIRY_WARNING_DAYS`) / แจ้ง expired + unlink เมนู · **ทุกการตรวจบันทึก audit trail ลง `t_expiry_log`** (MT-32) · ตอบกลับแนบคำเตือนเมื่อใกล้หมด · ตั้ง trigger ตามบทที่ 5.9 |
-| Renew / ต่ออายุสมาชิก | เพิ่มคำสั่งหรือ trigger ต่ออายุ `mem_exp_dt` |
+| ~~Renew / ต่ออายุสมาชิก~~ | ✅ ทำแล้ว (การ์ด MT-12) — คำสั่ง `renew:CODE` หรือ `renew` (ต่ออายุตัวเอง) · `Core.MemberRules.computeRenewal`: ใหม่ = max(now, exp เดิม) + 1 ปี · `RenewalService.performRenew/handleRenew` (เขียน `mem_exp_dt` + ตั้ง active + ผูกเมนูกลับ + log `renewed` ใน t_activation_log) · API `POST /api/member/renew` · เหลือ: ต่ออายุโดยเจ้าหน้าที่ (staff/admin — เฟส 3) |
 | แจ้งเตือนตามเวลา | ใช้ Time-driven Trigger ส่งข่าวสาร/ประกาศ/เตือนชำระเป็นกลุ่ม |
 | ปรับปรุงข้อความตอบกลับ | แทนที่ Placeholder ใน `ReplyStore` ด้วยข้อมูลจากฐานข้อมูล |
 
@@ -60,7 +60,7 @@
 | ฟีเจอร์ | รายละเอียด |
 |---------|-----------|
 | ~~แยก Core Business Logic~~ | ✅ ทำแล้ว — `Core/MemberRules.js` (validity/role — delegate จาก SheetService) + `Core/LoanCalculator.js` (Actual/365) + unit tests ใน node (การ์ด MT-15) · เหลือ: เชื่อม Bot/LIFF ใช้ Core เดียวกัน |
-| ~~API Layer (Router + Responder)~~ | ✅ ทำแล้ว (การ์ด MT-16) — `app/Api/`: ApiService → ApiRegistry (ตาราง route) → ApiHandlers (ใช้ Core + Repository) → ApiResponse (envelope `{ok, error, data}`) · 7 endpoints (health/profile/savings/loans/dividends/validity/activate) · เหลือ: Auth per-channel + Mount ใน WebApp (การ์ด MT-17–19) |
+| ~~API Layer (Router + Responder)~~ | ✅ ทำแล้ว (การ์ด MT-16) — `app/Api/`: ApiService → ApiRegistry (ตาราง route) → ApiHandlers (ใช้ Core + Repository) → ApiResponse (envelope `{ok, error, data}`) · 8 endpoints (health/profile/savings/loans/dividends/validity/activate/renew — renew เพิ่มในการ์ด MT-12) · เหลือ: Auth per-channel + Mount ใน WebApp (การ์ด MT-17–19) |
 | LINE Bot เป็น UI Adapter | ให้ Bot เรียกผ่าน API เดียวกัน โดยพฤติกรรมผู้ใช้ไม่เปลี่ยน |
 | LIFF (LINE Frontend Framework) | เปิดฟอร์ม/ตารางภายใน LINE แทนการเปิดเว็บภายนอก ใช้ LINE Login ยืนยันตัวตน |
 | ตรวจสอบ ID Token (JWT) | ตรวจสอบ ID token จาก LIFF ด้วย Channel Secret ก่อนเชื่อถือ `sub` = userId (บทที่ 3.1.1) |

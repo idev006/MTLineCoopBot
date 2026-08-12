@@ -30,7 +30,8 @@ Api.ApiRegistry = (() => {
       { method: 'GET', path: '/api/member/loans', handler: h.getLoans, auth: 'line' },
       { method: 'GET', path: '/api/member/dividends', handler: h.getDividends, auth: 'line' },
       { method: 'GET', path: '/api/member/validity', handler: h.getValidity, auth: 'line' },
-      { method: 'POST', path: '/api/member/activate', handler: h.activate, auth: 'line' }
+      { method: 'POST', path: '/api/member/activate', handler: h.activate, auth: 'line' },
+      { method: 'POST', path: '/api/member/renew', handler: h.renew, auth: 'line' }
     ];
     return ROUTES;
   }

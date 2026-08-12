@@ -79,10 +79,44 @@ Core.MemberRules = (() => {
     return { status: 'valid', daysLeft };
   }
 
+  /**
+   * คำนวณวันหมดอายุใหม่หลังต่ออายุ (การ์ด MT-12)
+   * กฎ: newExpDt = max(now, mem_exp_dt ปัจจุบัน) + 1 ปี
+   *   - ยังไม่หมดอายุ → ต่อจากวันหมดอายุเดิม (ไม่เสียสิทธิ์ที่เหลืออยู่)
+   *   - หมดอายุแล้ว → ต่อจากวันนี้ 1 ปี
+   * @param {Object} member
+   * @param {Date} [now] - เวลาอ้างอิง (ส่งเพื่อ deterministic ใน test)
+   * @returns {{newExpDt: string, fromDt: string, years: number}}
+   */
+  function computeRenewal(member, now) {
+    const n = now || new Date();
+    const current = parseDate(member && member.mem_exp_dt);
+    const base = (current && current.getTime() > n.getTime()) ? current : n;
+    const newDate = new Date(base);
+    newDate.setFullYear(newDate.getFullYear() + 1);
+    return {
+      newExpDt: formatDateStr(newDate),
+      fromDt: formatDateStr(base),
+      years: 1
+    };
+  }
+
+  /**
+   * แปลง Date เป็น yyyy-mm-dd (ตามเวลา local — ตรงกับมาตรฐาน data-dictionary.md)
+   * @param {Date} d
+   * @returns {string}
+   */
+  function formatDateStr(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
   return {
     parseDate,
     isActiveMember,
     hasRole,
-    getExpiryStatus
+    getExpiryStatus,
+    computeRenewal,
+    formatDateStr
   };
 })();

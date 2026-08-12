@@ -98,6 +98,28 @@ Api.ApiHandlers = (() => {
     };
   }
 
+  /** POST /api/member/renew { activateCode?, lineUserId } — ต่ออายุ (การ์ด MT-12) */
+  function renew(ctx) {
+    const activateCode = (ctx.body && ctx.body.activateCode) || (ctx.query && ctx.query.activateCode) || '';
+    const lineUserId = (ctx.body && ctx.body.lineUserId) || (ctx.query && ctx.query.lineUserId);
+    if (!lineUserId) throw Api.ApiError.create('VALIDATION', 'ต้องระบุ lineUserId');
+    const repo = getRepo();
+    const member = activateCode
+      ? repo.findByActivateCode(activateCode)
+      : repo.findByLineUserId(lineUserId);
+    if (!member) {
+      throw Api.ApiError.create('MEMBER_NOT_FOUND', activateCode ? 'ไม่พบรหัสต่ออายุนี้ในระบบ' : 'ไม่พบสมาชิกสำหรับ lineUserId นี้', 404);
+    }
+    const renewal = Core.MemberRules.computeRenewal(member);
+    const result = repo.renewMember(member._rowIndex, renewal.newExpDt, lineUserId);
+    return {
+      mem_code: member.mem_code,
+      mem_exp_dt: result.memExpDt,
+      mem_status: result.memStatus,
+      renewed_from: renewal.fromDt
+    };
+  }
+
   /** POST /api/member/activate { activateCode, lineUserId } — ตรรกะเดียวกับ Bot (ActivationService) */
   function activate(ctx) {
     const activateCode = (ctx.body && ctx.body.activateCode) || (ctx.query && ctx.query.activateCode);
@@ -127,6 +149,7 @@ Api.ApiHandlers = (() => {
     getLoans,
     getDividends,
     getValidity,
-    activate
+    activate,
+    renew
   };
 })();

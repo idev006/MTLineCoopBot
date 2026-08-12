@@ -91,7 +91,8 @@
 | ตรวจรูปแบบวันที่ก่อนเขียน (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss` — ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed) | ✅ ทำแล้ว | data-dictionary.md (มาตรฐาน), 4.2.6 |
 | เลเยอร์แปลงวันที่ชีท ↔ Firestore TIMESTAMP (`Core/DateConverter` — round-trip ตรงเป๊ะ, พร้อมใช้เฟส 3) | ✅ ทำแล้ว (Core) | บทที่ 3.1.1, 4.2.0, data-dictionary.md |
 | ตรวจวันหมดอายุสมาชิกอัตโนมัติ (Time-driven Trigger: push เตือนก่อนหมดอายุ + แจ้ง expired + unlink เมนู + คำเตือนในคำตอบ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9, 4.2.7 |
-| สถาปัตยกรรม API-First — **API Layer ทำแล้ว** (`app/Api/`: registry + envelope `{ok,error,data}` + 7 endpoints ใช้ Core/Repository) · เหลือ: Auth + Mount + LIFF/ID Token (เฟส 3) | ✅ บางส่วน (API Layer) | บทที่ 3.1.1, 4.2.6c, 7 ระยะที่ 3 |
+| ต่ออายุสมาชิก (`renew:CODE` / `renew` ต่ออายุตัวเอง — ขยาย `mem_exp_dt` +1 ปี · เขียน active + log `renewed` ใน `t_activation_log` + ผูกเมนูกลับ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 4.2.7, KANBAN MT-12 |
+| สถาปัตยกรรม API-First — **API Layer ทำแล้ว** (`app/Api/`: registry + envelope `{ok,error,data}` + 8 endpoints ใช้ Core/Repository รวม renew) · เหลือ: Auth + Mount + LIFF/ID Token (เฟส 3) | ✅ บางส่วน (API Layer) | บทที่ 3.1.1, 4.2.6c, 7 ระยะที่ 3 |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
 | Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |
 | KPI Dashboard ทีม (`Dashboard.js` + เทมเพลต) | ✅ ทำแล้ว | บทที่ 8.3, metrics-dashboard-template.md |

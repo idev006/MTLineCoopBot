@@ -15,14 +15,15 @@
 | 6 | **มาตรฐานวันที่** — text `yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss` + validator ก่อนเขียน | data-dictionary.md · `DataDict.isValidDateString/assertValidDateString` | `testDateValidator` (ปฏิเสธ dd-mm-yyyy/T/Z/mixed · ยอมรับ yyyy-mm-dd) | 🧪 | ✅ |
 | 7 | **แปลงวันที่ ↔ Firestore** (เฟส 3) — round-trip ตรงเป๊ะ | `Core/DateConverter.js` | `testDateConverter` (Date/{seconds,nanos}/RFC3339 input · round-trip · ขอบเขตปี) | 🧪 | ✅ (Core พร้อมใช้) |
 | 8 | **Core pure functions** — เทสต์ใน node ไม่ต้อง mock | `Core/MemberRules.js` + `Core/LoanCalculator.js` | `testCoreMemberRules` (10 กรณี deterministic) · `testLoanCalculator` (Actual/365 schedule) | 🧪 | ✅ |
-| 9 | **API Layer** (เฟส 3) — registry + envelope `{ok,error,data}` | `app/Api/` (5 ไฟล์) | `testApiLayer` (7 endpoints + error codes + envelope shape) | 🧪 | ✅ (Auth/Mount 📌 เฟส 3) |
+| 9 | **API Layer** (เฟส 3) — registry + envelope `{ok,error,data}` | `app/Api/` (5 ไฟล์) | `testApiLayer` (8 endpoints + error codes + envelope shape) | 🧪 | ✅ (Auth/Mount 📌 เฟส 3) |
 | 10 | **Activate สมาชิก** — `activate:CODE` ผ่าน repository | `LineBot/ActivationService.js` + repository | `testApiLayer` activate case (สำเร็จ/ซ้ำ ALREADY_ACTIVATED/รหัสผิด) · `testMemberRepository` | 🧪 | ✅ |
 | 11 | **Gate ตรวจสิทธิ์** — findByLineUserId + isActiveMember + บทบาท | `EventHandler.getAuthorizedMember` + `Core.MemberRules` | `testMemberValidity` (ช่วงวัน/สถานะ/บทบาท/fail-safe) · `testExpiryStatus` | 🧪 | ✅ |
 | 12 | **Per-User Rich Menu Gating** — Welcome default + link/unlink | `RichMenu/Gating.js` + `MenuData.buildWelcomeTab` | `testWelcomeMenu` (โครงสร้าง + captions + replies) · Gating logic (manual test 4 กรณี — เอกสาร MT-07) | 🧪 | ✅ |
 | 13 | **วันหมดอายุอัตโนมัติ** — scan + push + unlink + คำเตือนในคำตอบ + **audit log ทุกการตรวจ** | `LineBot/ExpiryService.js` + `Core.MemberRules.getExpiryStatus` + `t_expiry_log` | `testExpiryStatus` (valid/expiring/expired + daysLeft) · `testExpiryService` (scan→push/unlink + **ตรวจแถว t_expiry_log**: 1 แถว/สมาชิก ถูกต้อง) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9) |
-| 14 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
-| 15 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
-| 16 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (30 ไฟล์ .js) + **18/18 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
+| 14 | **ต่ออายุสมาชิก** — `renew:CODE` / `renew` ขยาย `mem_exp_dt` +1 ปี + log `renewed` + ผูกเมนูกลับ | `Core/MemberRules.computeRenewal` + `LineBot/RenewalService.js` + repository `renewMember` | `testRenewal` (ต่อจาก exp เดิม/วันนี้ · รหัส/ตัวเอง · เขียนชีท · active · log renewed) · `testApiLayer` renew case | 🧪 | ✅ |
+| 15 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
+| 16 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
+| 17 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (30 ไฟล์ .js) + **19/19 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 17 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
 | 18 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
 
@@ -30,7 +31,7 @@
 
 ```bash
 # 1) ชุดทดสอบสัญญา 18 ชุด (รันใน CI อัตโนมัติทุก push)
-node scripts/ci-test.js          # → ALL TESTS PASS (18/18)
+node scripts/ci-test.js          # → ALL TESTS PASS (19/19)
 
 # 2) syntax ทุกไฟล์ JS (30 ไฟล์)
 for f in $(find app scripts -name "*.js"); do node --check "$f"; done

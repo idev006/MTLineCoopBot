@@ -114,6 +114,17 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.appendExpiryLog(entry);
   }
 
+  /**
+   * ต่ออายุสมาชิก (MT-12): เขียน mem_exp_dt ใหม่ + สถานะ active
+   * @param {number} rowIndex
+   * @param {string} newExpDt - yyyy-mm-dd
+   * @param {string} [lineUserId]
+   * @returns {Object} { memExpDt, memStatus }
+   */
+  function renewMember(rowIndex, newExpDt, lineUserId) {
+    return LineBot.SheetService.renewMember(rowIndex, newExpDt, lineUserId);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -125,6 +136,7 @@ Data.SheetsMemberRepository = (() => {
     findDividendsByMember,
     logActivation,
     listMembers,
-    logExpiry
+    logExpiry,
+    renewMember
   };
 })();

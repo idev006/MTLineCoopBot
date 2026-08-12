@@ -26,6 +26,7 @@ MTLineCoopBot/
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── ExpiryService.js     # ตรวจวันหมดอายุอัตโนมัติ (MT-11) — scan + push + unlink
+    │   ├── RenewalService.js    # ต่ออายุสมาชิก (MT-12) — renew:CODE / renew ตัวเอง
     │   ├── EventHandler.js      # Router จัดการ event
     │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
     │   ├── FlexBuilder.js       # สร้าง Flex Message
@@ -56,6 +57,7 @@ MTLineCoopBot/
 - `isActiveMember(member, now?)` — สถานะ active + ช่วงวันครอบคลุม `now` (รับ `now` เป็น parameter เพื่อ test deterministic)
 - `hasRole(member, role, now?)` — valid + บทบาทตรง
 - `getExpiryStatus(member, now?, warningDays?)` — สถานะหมดอายุ: `valid`/`expiring` (เหลือ ≤ warningDays)/`expired` + `daysLeft` (การ์ด MT-11)
+- `computeRenewal(member, now?)` — วันหมดอายุใหม่หลังต่ออายุ: `max(now, exp เดิม) + 1 ปี` → `{ newExpDt, fromDt, years }` (การ์ด MT-12)
 - `SheetService` delegate มาที่นี่ (API เดิมไม่เปลี่ยน — Gate/Repository ทำงานเหมือนเดิม)
 
 **`LoanCalculator.js`** — เครื่องคำนวณสินเชื่อ (ย้ายสูตรจาก `loan_calculator.html`)
@@ -149,7 +151,8 @@ Entry point ของ LINE webhook
 - `testDateConverter()` — ทดสอบ Core.DateConverter: round-trip ตรงเป๊ะ · รองรับ Date/`{seconds,nanos}`/RFC3339 · ปฏิเสธรูปแบบผิด (MT-31)
 - `testExpiryStatus()` — ทดสอบ `getExpiryStatus`: valid/expiring/expired + daysLeft + ข้อความเตือน (deterministic now — MT-11)
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
-- `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16)
+- `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate/**renew**) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16/MT-12)
+- `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -175,7 +178,7 @@ Entry point ของ LINE webhook
 |------|--------|
 | **`ApiService.js`** | จุดเข้า — รับ method/path/options → สร้าง ctx (query/body/headers/auth) → ส่ง Registry |
 | **`ApiRegistry.js`** | ตาราง route (lazy) + `dispatch()` — เพิ่ม endpoint = เพิ่ม 1 รายการในตาราง · จับ Api.ApiError → envelope |
-| **`ApiHandlers.js`** | 7 endpoint: `GET /api/health` · `/api/member/profile` · `/savings` · `/loans` · `/dividends` · `/validity` · `POST /api/member/activate` — ใช้ Core + Repository เท่านั้น (ไม่แตะ SpreadsheetApp ตรง ๆ) |
+| **`ApiHandlers.js`** | 8 endpoints: `GET /api/health` · `/api/member/profile` · `/savings` · `/loans` · `/dividends` · `/validity` · `POST /api/member/activate` · `POST /api/member/renew` (ต่ออายุ — MT-12) — ใช้ Core + Repository เท่านั้น (ไม่แตะ SpreadsheetApp ตรง ๆ) |
 | **`ApiResponse.js`** | ok() / error() / notFound() / methodNotAllowed() / validation() / internal() / toHttp() |
 | **`ApiError.js`** | `Api.ApiError.create(code, message, status?)` — throw แล้ว Registry แปลงเป็น envelope |
 
@@ -195,6 +198,10 @@ Entry point ของ LINE webhook
 - `handleActivate(activateCode, lineUserId, replyToken, token)`
 - ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
+
+**`RenewalService.js`** — ต่ออายุสมาชิก (การ์ด MT-12)
+- `performRenew(activateCode, lineUserId, opts?)` — ตรรกะล้วน (DI: repo/gater/logger/now): ค้นสมาชิก (รหัสหรือตัวเอง) → `computeRenewal` → `renewMember` (เขียน exp + active) → log `renewed` ใน t_activation_log → `Gating.linkMemberMenu` (ผูกเมนูกลับ)
+- `handleRenew(activateCode, lineUserId, replyToken, token)` — เรียก performRenew + ตอบกลับสำเร็จ/ไม่พบรหัส
 
 **`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11/MT-32)
 - `runExpiryCheck(token, opts?)` — scan สมาชิกทั้งหมดผ่าน repository (`listMembers`):
@@ -230,6 +237,7 @@ Entry point ของ LINE webhook
 - `getSheet(tableKey)` — ดึง sheet หรือสร้างให้อัตโนมัติจาก DataDict
 - `getHeaderRow(sheet)` / `getHeaderMap(sheet)` / `readRowsAsObjects(tableKey, sheet)` — อ่าน/แมปคอลัมน์จาก **header row จริง** (การ์ด MT-28: รองรับการสลับตำแหน่งฟิลด์ในตาราง)
 - `findAllMembers()` — ดึงสมาชิกทั้งหมด (สำหรับ `ExpiryService` scan วันหมดอายุ — MT-11)
+- `renewMember(rowIndex, newExpDt, lineUserId?)` — เขียน `mem_exp_dt` ใหม่ + ตั้ง `mem_status='active'` (+ อัปเดต line_user_id ถ้าให้) — การ์ด MT-12
 - `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate (map ตาม header)
 - `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)

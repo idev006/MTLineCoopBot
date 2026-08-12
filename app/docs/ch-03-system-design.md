@@ -69,7 +69,7 @@
 { "ok": false, "error": { "code": "MEMBER_INVALID", "message": "..." } }
 ```
 
-> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 7 ตัว: health · profile · savings · loans · dividends · validity · activate · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (18/18) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT / API Key) + Mount ใน WebApp + Bot/LIFF เรียกผ่าน API (การ์ด MT-17–19)
+> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (19/19) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT / API Key) + Mount ใน WebApp + Bot/LIFF เรียกผ่าน API (การ์ด MT-17–19)
 
 **การยืนยันตัวตนรายช่องทาง (Per-Request Auth):**
 
@@ -477,6 +477,7 @@ LineBot.FlexBuilder.messageBox({
 | ข้อความ | การทำงาน |
 |---------|----------|
 | ขึ้นต้นด้วย `activate:` | แยกโค้ด → `ActivationService.handleActivate` |
+| ขึ้นต้นด้วย `renew:` / เท่ากับ `renew` | แยกโค้ด → `RenewalService.handleRenew` — ต่ออายุ `mem_exp_dt` +1 ปี (การ์ด MT-12) |
 | ขึ้นต้นด้วย `คำนวณ` | ตอบ "ระบบกำลังคำนวณผลลัพธ์ให้..." (placeholder) |
 | อื่น ๆ | ไม่ตอบ (รองรับการขยายภายหลัง) |
 

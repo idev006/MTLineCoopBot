@@ -233,6 +233,24 @@ LineBot.EventHandler = (() => {
       return;
     }
 
+    if (text.startsWith('renew') || text.startsWith('ต่ออายุ')) {
+      // การ์ด MT-12: ต่ออายุสมาชิก — renew:CODE (ตามรหัส) หรือ renew (ตัวเอง)
+      const activateCode = (text.startsWith('renew:') || text.startsWith('ต่ออายุ:'))
+        ? text.split(':')[1].trim()
+        : '';
+      if (text.indexOf(':') !== -1 && !activateCode) {
+        deps.MessageService.reply(event.replyToken, 'กรุณาระบุรหัสต่ออายุ เช่น renew:ABC123', token);
+        return;
+      }
+      try {
+        LineBot.RenewalService.handleRenew(activateCode, event.source.userId, event.replyToken, token);
+      } catch (e) {
+        Logger.log('[EventHandler] Error calling RenewalService: ' + e);
+        deps.MessageService.reply(event.replyToken, 'เกิดข้อผิดพลาดในการต่ออายุสมาชิก', token);
+      }
+      return;
+    }
+
     if (text.startsWith('คำนวณ')) {
       // Gate: คำสั่งคำนวณเป็นบริการของสมาชิก ต้องเป็นสมาชิกที่ valid
       if (!getAuthorizedMember(event.source.userId)) {

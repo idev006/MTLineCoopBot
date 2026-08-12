@@ -775,6 +775,16 @@ function testApiLayer() {
   const a3 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'WRONG', lineUserId: 'U33333333333333333333333333333333' } });
   if (a3.ok || a3.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: activate รหัสผิดควร MEMBER_NOT_FOUND');
 
+  // 8b) renew (MT-12): M002 หมดอายุแล้ว → ต่ออายุด้วย ACT002 → mem_exp_dt ขยายอย่างน้อย 1 ปี
+  const rn = api.handleRequest('POST', '/api/member/renew', { body: { activateCode: 'ACT002', lineUserId: 'U22222222222222222222222222222222' } });
+  if (!rn.ok) throw new Error('testApiLayer: renew ควร ok — ' + JSON.stringify(rn));
+  if (rn.data.mem_code !== 'M002') throw new Error('testApiLayer: renew mem_code ผิด');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rn.data.mem_exp_dt)) throw new Error('testApiLayer: renew ต้องคืน yyyy-mm-dd');
+  if (rn.data.mem_exp_dt < '2027-08-01') throw new Error('testApiLayer: renew ควรขยายอย่างน้อย 1 ปี');
+  if (rn.data.mem_status !== 'active') throw new Error('testApiLayer: renew ควรตั้ง active');
+  const rnBad = api.handleRequest('POST', '/api/member/renew', { body: { activateCode: 'WRONG', lineUserId: 'U22222222222222222222222222222222' } });
+  if (rnBad.ok || rnBad.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: renew รหัสผิดควร MEMBER_NOT_FOUND');
+
   // 9) route ไม่มี → NOT_FOUND · method ผิด → METHOD_NOT_ALLOWED
   const nf2 = api.handleRequest('GET', '/api/nope', {});
   if (nf2.ok || nf2.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: route ไม่มีควร NOT_FOUND');
@@ -782,7 +792,7 @@ function testApiLayer() {
   if (mma.ok || mma.error.code !== 'METHOD_NOT_ALLOWED') throw new Error('testApiLayer: method ผิดควร METHOD_NOT_ALLOWED');
 
   // 10) envelope shape: ทุก response มี ok + (data หรือ error.code)
-  const all = [health, p, noId, nf, s, v1, v2, a1, a2, a3, nf2, mma];
+  const all = [health, p, noId, nf, s, v1, v2, a1, a2, a3, rn, rnBad, nf2, mma];
   for (const r of all) {
     if (typeof r.ok !== 'boolean') throw new Error('testApiLayer: envelope ต้องมี ok (boolean)');
     if (r.ok && !('data' in r)) throw new Error('testApiLayer: ok ต้องมี data');
@@ -790,6 +800,72 @@ function testApiLayer() {
   }
 
   Logger.log('testApiLayer OK — registry + envelope {ok,error,data} + handlers (profile/savings/validity/activate)');
+  return true;
+}
+
+/**
+ * ทดสอบการต่ออายุสมาชิก (MT-12): Core.computeRenewal (pure) + RenewalService.performRenew
+ * (ผ่าน Fake Sheets + fake gater — ไม่แตะ LINE API)
+ * @returns {boolean}
+ */
+function testRenewal() {
+  // 1) Core.computeRenewal (pure, deterministic now)
+  const R = Core.MemberRules;
+  const now = new Date('2026-08-12T12:00:00');
+  // ยังไม่หมดอายุ → ต่อจากวันหมดอายุเดิม +1 ปี
+  const r1 = R.computeRenewal({ mem_code: 'M002', mem_exp_dt: '2026-12-31' }, now);
+  if (r1.newExpDt !== '2027-12-31') throw new Error('testRenewal: ยังไม่หมดอายุควรต่อจาก exp เดิม (' + r1.newExpDt + ')');
+  // หมดอายุแล้ว → ต่อจากวันนี้ +1 ปี
+  const r2 = R.computeRenewal({ mem_code: 'M001', mem_exp_dt: '2026-08-01' }, now);
+  if (r2.newExpDt !== '2027-08-12') throw new Error('testRenewal: หมดอายุควรต่อจากวันนี้ (' + r2.newExpDt + ')');
+  // ไม่มี exp → ต่อจากวันนี้
+  const r3 = R.computeRenewal({ mem_code: 'M003' }, now);
+  if (r3.newExpDt !== '2027-08-12') throw new Error('testRenewal: ไม่มี exp ควรต่อจากวันนี้ (' + r3.newExpDt + ')');
+
+  // 2) seed fake sheets: M001 หมดอายุแล้ว / M002 ยัง valid
+  delete __fakeSheets['t_member_mast'];
+  delete __fakeSheets['t_activation_log'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-08-01', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000]
+  ];
+
+  const S = LineBot.RenewalService;
+  const gated = [];
+
+  // 3) ต่ออายุด้วยรหัส (ACT001 — หมดอายุแล้ว) → ใหม่เป็น 2027-08-12 + ตั้ง active + gater ถูกเรียก + log renewed
+  const res = S.performRenew('ACT001', 'U11111111111111111111111111111111', {
+    now: now,
+    gater: (userId) => { gated.push(userId); return { ok: true }; }
+  });
+  if (!res.success) throw new Error('testRenewal: ต่ออายุควรสำเร็จ — ' + JSON.stringify(res));
+  if (res.newExpDt !== '2027-08-12') throw new Error('testRenewal: newExpDt ผิด (' + res.newExpDt + ')');
+  const mRow = __fakeSheets['t_member_mast'][1];
+  if (mRow[8] !== '2027-08-12') throw new Error('testRenewal: mem_exp_dt ในชีทไม่ถูกเขียน');
+  if (mRow[9] !== 'active') throw new Error('testRenewal: mem_status ควรเป็น active');
+  if (!gated.includes('U11111111111111111111111111111111')) throw new Error('testRenewal: ควรผูกเมนูสมาชิกกลับ (gater)');
+  const actLogs = (__fakeSheets['t_activation_log'] || []).slice(1);
+  if (actLogs.length !== 1 || actLogs[0][4] !== 'renewed') {
+    throw new Error('testRenewal: ควรมี audit log renewed ใน t_activation_log');
+  }
+
+  // 4) ต่ออายุตัวเอง (ไม่มีรหัส — renew) สมาชิกที่ยัง valid → ต่อจาก exp เดิม
+  const res2 = S.performRenew('', 'U22222222222222222222222222222222', {
+    now: now,
+    gater: (userId) => { gated.push(userId); return { ok: true }; }
+  });
+  if (!res2.success || res2.newExpDt !== '2027-12-31') {
+    throw new Error('testRenewal: ต่ออายุตัวเองผิด (' + JSON.stringify(res2) + ')');
+  }
+
+  // 5) รหัสผิด → code_not_found · ไม่พบตัวเอง → member_not_found
+  const bad = S.performRenew('WRONG', 'U11111111111111111111111111111111', { now: now, gater: () => ({ ok: true }) });
+  if (bad.success || bad.reason !== 'code_not_found') throw new Error('testRenewal: รหัสผิดควร code_not_found');
+  const nf = S.performRenew('', 'U99999999999999999999999999999999', { now: now, gater: () => ({ ok: true }) });
+  if (nf.success || nf.reason !== 'member_not_found') throw new Error('testRenewal: ไม่พบตัวเองควร member_not_found');
+
+  Logger.log('testRenewal OK — computeRenewal (ต่อจาก exp/วันนี้) + performRenew (รหัส/ตัวเอง + log + gater)');
   return true;
 }
 

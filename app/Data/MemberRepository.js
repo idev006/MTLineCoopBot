@@ -18,6 +18,7 @@
  * - logActivation(entry)         → { log_id, status } (t_activation_log — MT-27)
  * - listMembers()                → Array<Object> สมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
  * - logExpiry(entry)            → { log_id, status } (t_expiry_log — MT-32)
+ * - renewMember(rowIndex, newExpDt, lineUserId?) → { memExpDt, memStatus } (MT-12)
  */
 
 var Data = Data || {};
@@ -28,7 +29,7 @@ Data.MemberRepository = (() => {
   const INTERFACE = [
     'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
     'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation',
-    'listMembers', 'logExpiry'
+    'listMembers', 'logExpiry', 'renewMember'
   ];
 
   /**

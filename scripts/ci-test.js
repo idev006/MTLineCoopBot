@@ -101,6 +101,7 @@ const FILE_ORDER = [
   'LineBot/MessageService.js',
   'LineBot/ActivationService.js',
   'LineBot/ExpiryService.js',
+  'LineBot/RenewalService.js',
   'LineBot/EventHandler.js',
   'RichMenu/MenuData.js',
   'RichMenu/ApiService.js',
@@ -140,6 +141,7 @@ const runner = `
     ['testExpiryStatus', testExpiryStatus],
     ['testExpiryService', testExpiryService],
     ['testApiLayer', testApiLayer],
+    ['testRenewal', testRenewal],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

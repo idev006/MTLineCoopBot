@@ -331,6 +331,39 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ต่ออายุสมาชิก: เขียน mem_exp_dt ใหม่ + ตั้งสถานะ active (การ์ด MT-12)
+   * (วันหมดอายุใหม่คำนวณโดย Core.MemberRules.computeRenewal)
+   * @param {number} rowIndex - 1-based row index ของสมาชิก
+   * @param {string} newExpDt - วันที่ใหม่ รูปแบบ yyyy-mm-dd
+   * @param {string} [lineUserId] - ถ้าให้ จะ bind/update line_user_id ด้วย
+   * @returns {Object} { memExpDt, memStatus }
+   */
+  function renewMember(rowIndex, newExpDt, lineUserId) {
+    const tableKey = 'MEMBER_MASTER';
+    const sheet = getSheet(tableKey);
+    const headerMap = getHeaderMap(sheet);
+    const col = (name) => {
+      const idx = headerMap[name];
+      if (idx === undefined) {
+        throw new Error(`ไม่พบคอลัมน์ ${name} ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+      }
+      return idx + 1; // 1-based
+    };
+    const expDtIndex = col('mem_exp_dt');
+    const statusIndex = col('mem_status');
+
+    sheet.getRange(rowIndex, expDtIndex).setValue(newExpDt);
+    sheet.getRange(rowIndex, statusIndex).setValue('active');
+    if (lineUserId) {
+      const lineIdIndex = col('line_user_id');
+      sheet.getRange(rowIndex, lineIdIndex).setValue(lineUserId);
+    }
+
+    Logger.log('Renewed member at row ' + rowIndex + ' — new exp: ' + newExpDt);
+    return { memExpDt: newExpDt, memStatus: 'active' };
+  }
+
+  /**
    * แปลงวันที่รูปแบบ yyyy-mm-dd[ HH:mm:ss] เป็น Date
    * (parse แบบ manual เพื่อกันปัญหา timezone ของ new Date(string))
    * @param {string|Date} value
@@ -383,6 +416,7 @@ LineBot.SheetService = (() => {
     findDividendsByMember,
     logActivation,
     appendExpiryLog,
+    renewMember,
     activateMember,
     isActiveMember,
     hasRole,
