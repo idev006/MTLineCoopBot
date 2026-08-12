@@ -28,9 +28,9 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | activate_code | string | No | - | รหัส Activate (unique) |
 | line_user_id | string | No | - | LINE User ID |
 | mem_role | string | No | member | บทบาท (member / staff / admin) |
-| mem_kk | number | No | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
-| mem_bk | number | No | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
-| mem_bh | number | No | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
+| mem_kk | number | No | - | คะแนนความดี |
+| mem_bk | number | No | - | เงินกู้คงค้าง (บาท) |
+| mem_bh | number | No | - | เงินหุ้น (บาท) |
 
 ## หลักการออกแบบตาราง
 

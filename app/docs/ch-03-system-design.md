@@ -115,9 +115,9 @@
 | 11 | `activate_code` | string | - | - | รหัส Activate (Unique) |
 | 12 | `line_user_id` | string | - | - | LINE User ID |
 | 13 | `mem_role` | string | - | `member` | บทบาท (member / staff / admin) |
-| 14 | `mem_kk` | number | - | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
-| 15 | `mem_bk` | number | - | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
-| 16 | `mem_bh` | number | - | - | ⚠️ ความหมายรอการยืนยัน (อัปเดต 2026-08-12) |
+| 14 | `mem_kk` | number | - | - | คะแนนความดี |
+| 15 | `mem_bk` | number | - | - | เงินกู้คงค้าง (บาท) |
+| 16 | `mem_bh` | number | - | - | เงินหุ้น (บาท) |
 
 **รูปแบบวันที่:** เก็บเป็นข้อความ
 - date → `yyyy-mm-dd` เช่น `2026-08-12`

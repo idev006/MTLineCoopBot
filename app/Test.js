@@ -272,7 +272,8 @@ function testMemberDataService() {
     mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี',
     mem_code: 'M001', mem_role: 'member', mem_position: 'กรรมการ',
     mem_position_score: 10, mem_rank_score: 25, mem_status: 'active',
-    mem_eff_dt: '2026-08-06', mem_exp_dt: '2027-08-06'
+    mem_eff_dt: '2026-08-06', mem_exp_dt: '2027-08-06',
+    mem_kk: 85, mem_bk: 50000, mem_bh: 10000
   };
 
   // 1) profile มีข้อมูลจริง
@@ -280,6 +281,16 @@ function testMemberDataService() {
   if (!p.includes('นาย สมชาย ใจดี')) throw new Error('testMemberDataService: profile ไม่มีชื่อจริง');
   if (!p.includes('M001')) throw new Error('testMemberDataService: profile ไม่มีรหัสสมาชิก');
   if (!p.includes('2026-08-06')) throw new Error('testMemberDataService: profile ไม่มีช่วงวันสิทธิ์');
+
+  // 1b) ฟิลด์เพิ่มเติม (MT-30): คะแนนความดี / เงินกู้คงค้าง / เงินหุ้น
+  if (!p.includes('คะแนนความดี: 85')) throw new Error('testMemberDataService: profile ไม่มีคะแนนความดี');
+  if (!p.includes('เงินกู้คงค้าง: 50,000.00 บาท')) throw new Error('testMemberDataService: profile ไม่มีเงินกู้คงค้าง (จัดรูปแบบเงิน)');
+  if (!p.includes('เงินหุ้น: 10,000.00 บาท')) throw new Error('testMemberDataService: profile ไม่มีเงินหุ้น');
+
+  // 1c) สมาชิกที่ไม่มีค่าฟิลด์ใหม่ → ไม่แสดงบรรทัดนั้น (ไม่โชว์ว่าง ๆ)
+  const p2 = S.buildProfileText({ ...member, mem_kk: undefined, mem_bk: null, mem_bh: '' });
+  if (p2.includes('คะแนนความดี')) throw new Error('testMemberDataService: ไม่ควรแสดงคะแนนความดีเมื่อไม่มีค่า');
+  if (p2.includes('เงินกู้คงค้าง')) throw new Error('testMemberDataService: ไม่ควรแสดงเงินกู้คงค้างเมื่อไม่มีค่า');
 
   // 2) profile null → ข้อความไม่พบข้อมูล
   if (S.buildProfileText(null) !== 'ไม่พบข้อมูลสมาชิก') {

@@ -35,6 +35,9 @@ LineBot.MemberDataService = (() => {
       `บทบาท: ${member.mem_role || 'member'}`,
       `ตำแหน่ง: ${member.mem_position || '-'}${member.mem_position_score ? ' (คะแนน ' + member.mem_position_score + ')' : ''}`,
       `คะแนนสมาชิก: ${member.mem_rank_score || '-'}`,
+      ...(hasValue(member.mem_kk) ? [`คะแนนความดี: ${member.mem_kk}`] : []),
+      ...(hasValue(member.mem_bk) ? [`เงินกู้คงค้าง: ${formatMoney(member.mem_bk)} บาท`] : []),
+      ...(hasValue(member.mem_bh) ? [`เงินหุ้น: ${formatMoney(member.mem_bh)} บาท`] : []),
       `สถานะ: ${member.mem_status || '-'}`
     ];
     if (member.mem_eff_dt && member.mem_exp_dt) {
@@ -45,6 +48,15 @@ LineBot.MemberDataService = (() => {
     lines.push('━━━━━━━━━━━━━━━━━');
     lines.push('หากข้อมูลไม่ถูกต้อง กรุณาติดต่อสหกรณ์');
     return lines.join('\n');
+  }
+
+  /**
+   * ตรวจว่าค่ามีอยู่จริง (ไม่ใช่ undefined / null / '') — ใช้ตัดสินใจแสดงฟิลด์
+   * @param {*} value
+   * @returns {boolean}
+   */
+  function hasValue(value) {
+    return value !== undefined && value !== null && value !== '';
   }
 
   /**
