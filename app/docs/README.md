@@ -74,7 +74,7 @@
 | Flex Message ตอบกลับเมนู (item-id ตรงกันทั้ง 26 เมนู) | ✅ ทำแล้ว | บทที่ 3.4, 4.2.6 |
 | Welcome Menu (4 ปุ่ม) + ตอบกลับเมนูสาธารณะ (`welcome_*`) | ✅ ทำแล้ว | บทที่ 3.3.6, 4.2.8 |
 | ระบบ Activate สมาชิก (`activate:CODE`) | ✅ ทำแล้ว | บทที่ 2.3.3 |
-| DataDict SSOT (13 คอลัมน์ รวม `mem_role`) | ✅ ทำแล้ว | บทที่ 3.2 |
+| DataDict SSOT (16 คอลัมน์ รวม `mem_role` + `mem_kk`/`mem_bk`/`mem_bh`) | ✅ ทำแล้ว | บทที่ 3.2 |
 | `isActiveMember` / `hasRole` / `parseDate` | ✅ ทำแล้ว | บทที่ 4.2.6 |
 | ฟังก์ชันทดสอบสัญญา (`Test.js`: `verifyMenuContract` / `verifyThaiCaptions` / `MenuData.listItemIds`) | ✅ ทำแล้ว | บทที่ 3.3.7, TC-12 |
 | เครื่องคำนวณสินเชื่อ Actual/365 (GitHub Pages) | ✅ ทำแล้ว | บทที่ 2.3.4 |

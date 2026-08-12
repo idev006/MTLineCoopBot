@@ -48,7 +48,7 @@
 - [x] **[MT-01] Rich Menu 5 แท็บ + Alias + Deploy** — บทที่ 3.3, 5.6
 - [x] **[MT-02] Flex Message ตอบกลับเมนู** — บทที่ 3.4 · รวมแก้บั๊ก item-id ตรงกันครบ 26 เมนู (H1)
 - [x] **[MT-03] ระบบ Activate สมาชิก** — บทที่ 2.3.3 · `activate:CODE`
-- [x] **[MT-04] DataDict SSOT (13 คอลัมน์)** — บทที่ 3.2 · รวม `mem_role`
+- [x] **[MT-04] DataDict SSOT (16 คอลัมน์)** — บทที่ 3.2 · รวม `mem_role` · อัปเดต 2026-08-12: เพิ่ม `mem_kk`/`mem_bk`/`mem_bh` (ความหมายรอการยืนยัน)
 - [x] **[MT-05] ฟังก์ชันตรวจสอบสมาชิก** — `isActiveMember`/`hasRole`/`parseDate` (SheetService)
 - [x] **[MT-06] Contract Test (Item ID)** — บทที่ 3.3.7, TC-12 · `Test.js` + `MenuData.listItemIds()`
 - [x] **[MT-06b] เครื่องคำนวณสินเชื่อ Actual/365** — GitHub Pages (ยังรอรวมเข้ากับ LoanService เฟส 3)

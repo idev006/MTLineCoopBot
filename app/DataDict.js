@@ -35,7 +35,12 @@ const DataDict = (() => {
         { name: 'mem_status', type: 'string', required: false, label: 'สถานะ', default: 'inactive' },
         { name: 'activate_code', type: 'string', required: false, label: 'รหัส Activate', unique: true },
         { name: 'line_user_id', type: 'string', required: false, label: 'LINE User ID' },
-        { name: 'mem_role', type: 'string', required: false, label: 'บทบาท', default: 'member' }
+        { name: 'mem_role', type: 'string', required: false, label: 'บทบาท', default: 'member' },
+        // ฟิลด์เพิ่มเติม 3 รายการ (อัปเดต 2026-08-12 — ความหมายรอการยืนยันจากเจ้าของระบบ)
+        // ลำดับคอลัมน์ 14–16 ต้องตรงกับชีทจริง ดู data-dictionary.md
+        { name: 'mem_kk', type: 'number', required: false, label: 'mem_kk (ความหมายรอการยืนยัน)' },
+        { name: 'mem_bk', type: 'number', required: false, label: 'mem_bk (ความหมายรอการยืนยัน)' },
+        { name: 'mem_bh', type: 'number', required: false, label: 'mem_bh (ความหมายรอการยืนยัน)' }
       ]
     },
 
