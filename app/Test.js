@@ -120,6 +120,61 @@ function testMemberValidity() {
 }
 
 /**
+ * ตรวจสุขภาพ Channel Access Token — เรียก LINE Get Bot Info API
+ * (GET https://api.line.me/v2/bot/info)
+ *
+ * ใช้เมื่อ: หลังหมุน token (Runbook บทที่ 5.5.1) · สงสัยว่า token เสีย/หมดอายุ ·
+ * ตรวจรายเดือนตามนโยบายความปลอดภัย (บทที่ 7.1.3)
+ *
+ * รันใน Apps Script Editor → เลือกฟังก์ชัน checkTokenHealth → Run
+ * (ไม่รันใน CI เพราะต้องใช้ token จริง + network)
+ *
+ * @returns {Object} { ok: boolean, status: number|null, info?: Object, error?: string }
+ */
+function checkTokenHealth() {
+  const cfg = Config.get();
+  const token = cfg.CHANNEL_ACCESS_TOKEN;
+  if (!token) {
+    Logger.log('❌ ไม่พบ CHANNEL_ACCESS_TOKEN ใน Script Properties — กรุณาตั้งค่าก่อน (บทที่ 5.5)');
+    return { ok: false, status: null, error: 'missing token' };
+  }
+
+  const options = {
+    method: 'get',
+    headers: { 'Authorization': 'Bearer ' + token },
+    muteHttpExceptions: true // ไม่ throw — ตรวจ response code เอง
+  };
+
+  let response;
+  try {
+    response = UrlFetchApp.fetch('https://api.line.me/v2/bot/info', options);
+  } catch (err) {
+    Logger.log('❌ เรียก LINE API ไม่ได้ (network/UrlFetchApp): ' + err);
+    return { ok: false, status: null, error: String(err) };
+  }
+
+  const status = response.getResponseCode();
+  const body = response.getContentText();
+
+  if (status === 200) {
+    const info = JSON.parse(body);
+    Logger.log('✅ Token ถูกต้อง (HTTP 200)');
+    Logger.log('   Bot displayName : ' + info.displayName);
+    Logger.log('   Bot userId      : ' + info.userId);
+    Logger.log('   basicId         : ' + info.basicId);
+    Logger.log('   chatMode        : ' + info.chatMode + ' · markAsReadMode: ' + info.markAsReadMode);
+    return { ok: true, status: status, info: info };
+  }
+
+  if (status === 401) {
+    Logger.log('❌ Token ไม่ถูกต้อง/หมดอายุ (HTTP 401) — กรุณาหมุน token ตาม Runbook บทที่ 5.5.1');
+  } else {
+    Logger.log('❌ LINE API ตอบกลับ HTTP ' + status + ': ' + body.substring(0, 300));
+  }
+  return { ok: false, status: status, error: body };
+}
+
+/**
  * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
  * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
  */

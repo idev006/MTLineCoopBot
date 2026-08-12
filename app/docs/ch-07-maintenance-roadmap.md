@@ -24,6 +24,7 @@
 ### 7.1.3 การเฝ้าระวังความปลอดภัย
 
 - [ ] **หมุน (Rotate) Channel Access Token** ตามนโยบายหรือเมื่อสงสัยว่ารั่วไหล — ดู Runbook บทที่ 5.5.1 · ติดตามผ่านการ์ด **[MT-26] ใน KANBAN.md** (กำลังดำเนินการ: หมุน token ที่รั่วจาก initial commit)
+- [ ] **ตรวจสุขภาพ token รายเดือน** — รัน `checkTokenHealth()` ใน Apps Script Editor (Test.js) ต้องได้ `✅ HTTP 200` — ถ้า `401` หมุน token ตาม Runbook 5.5.1
 - [ ] ตรวจสอบว่าไม่มีการ commit token/secret ลง Git — CI secret scan 2 ชั้น (regex ใน `scripts/ci-test.js` + **gitleaks** ตาม `.gitleaks.toml`) จะ fail ถ้าพบ (บทที่ 8.1.3)
 - [ ] ตรวจสอบ `X-Line-Signature` ทุก request เพื่อยืนยันว่า Webhook มาจาก LINE จริง (ขั้นตอนบังคับ — บทที่ 3.6) · หมายเหตุ: Apps Script อ่าน header ไม่ได้ (Issue #67764685) — ใช้ `webhook_secret` ผูกท้าย URL
 - [ ] ทบทวนสิทธิ์การเข้าถึง Google Sheets/Drive และ Script Properties รายเดือน (ใครเข้าถึงได้บ้าง สิทธิ์ยังจำเป็นไหม)

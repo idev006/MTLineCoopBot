@@ -90,6 +90,7 @@ Entry point ของ LINE webhook
 - `testVerifyLineSignature()` — ทดสอบ `Util.verifyLineSignature` (HMAC-SHA256) ด้วย test vector
 - `testVerifyWebhookSecret()` — ทดสอบ `Util.verifyWebhookSecret` (token ใน URL)
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
+- `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 

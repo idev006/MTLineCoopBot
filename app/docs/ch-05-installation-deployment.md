@@ -164,9 +164,10 @@ Apps Script Editor → Project Settings (⚙) → Script Properties →
 
 **3. ทดสอบว่าระบบทำงานกับ token ใหม่**
 
-1. ส่งข้อความ/คลิกเมนูใน LINE ไปที่ Bot
-2. ตรวจ Log: Apps Script Editor → Executions → ต้องเห็น `reply success: 200`
-3. ถ้าเห็น `401 Unauthorized` → token ใหม่ใส่ผิดหรือยังไม่บันทึก → กลับไปข้อ 2
+1. **รัน `checkTokenHealth()`** ใน Apps Script Editor (ฟังก์ชันใน `Test.js`) → ต้องเห็น `✅ Token ถูกต้อง (HTTP 200)` + ข้อมูล Bot (displayName/userId/basicId)
+2. ส่งข้อความ/คลิกเมนูใน LINE ไปที่ Bot
+3. ตรวจ Log: Apps Script Editor → Executions → ต้องเห็น `reply success: 200`
+4. ถ้า `checkTokenHealth()` แจ้ง `401` หรือ Log เห็น `401 Unauthorized` → token ใหม่ใส่ผิดหรือยังไม่บันทึก → กลับไปข้อ 2
 
 **4. ยกเลิก (Deactivate) token เก่า** — หลังยืนยันว่าระบบทำงานปกติกับ token ใหม่แล้วเท่านั้น
 

@@ -91,6 +91,8 @@ clasp push
 
 รันในเครื่องได้ด้วย: `node scripts/ci-test.js` · และรันใน **Apps Script Editor → เลือกฟังก์ชัน → Run** (รายละเอียด: บทที่ 6 + `app/Test.js`)
 
+ฟังก์ชันใน `Test.js`: `verifyMenuContract()` · `verifyThaiCaptions()` · `testVerifyLineSignature()` · `testVerifyWebhookSecret()` · `testMemberValidity()` — รันใน CI · `checkTokenHealth()` — ตรวจสุขภาพ Channel Access Token (ต้องใช้ token จริง จึงรันมือใน Apps Script Editor เท่านั้น)
+
 ## 📌 สถานะโครงการ
 
 ดูตารางสถานะล่าสุด (✅ ทำแล้ว / 📌 ออกแบบไว้ — เฟส 2/3) ได้ที่ [app/docs/README.md](./app/docs/README.md) และบอร์ดงานที่ [KANBAN.md](./app/docs/KANBAN.md)
