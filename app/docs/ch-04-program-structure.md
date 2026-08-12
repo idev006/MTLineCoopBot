@@ -159,6 +159,7 @@ Entry point ของ LINE webhook
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
 - `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate/**renew**) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16/MT-12)
 - `testBotUsesApi()` — ทดสอบ Bot เป็น UI Adapter (MT-17): **spy `Api.ApiService.handleRequest`** + fake `MessageService.reply` — postback profile/saving_acct → เรียกผ่าน `/api/member/profile` + `/api/member/savings` (GET) → ข้อความตอบกลับเหมือนเดิมทุกประการ (ชื่อ/คะแนนตำแหน่ง/formatMoney)
+- `testApiMount()` — ทดสอบ API Mount ใน WebApp (บทที่ 5.10): `/api/health` เปิดสาธารณะ · path อื่นไม่มี/ผิด api_key → `UNAUTHORIZED` · profile/activate ผ่าน mount (key จาก query/body) · **LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม** (webhook_secret ตรวจเหมือนเดิม)
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
 - `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13)
@@ -193,7 +194,7 @@ Entry point ของ LINE webhook
 
 **Error codes:** `VALIDATION` · `MEMBER_NOT_FOUND` · `ALREADY_ACTIVATED` · `NOT_FOUND` · `METHOD_NOT_ALLOWED` · `INTERNAL`
 
-**สถานะ (การ์ด MT-17):** ✅ **Bot เรียกผ่าน API แล้ว** — `EventHandler` ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · **ยังไม่ได้ทำ (เฟส 3):** Auth per-channel (`ctx.auth` เตรียมไว้แล้ว) · Mount ใน WebApp (`doGet`/`doPost` แยก path `/api/...`) · LIFF/Admin เรียกผ่าน API เดียวกัน (การ์ด MT-18–19, MT-21)
+**สถานะ (การ์ด MT-17):** ✅ **Bot เรียกผ่าน API แล้ว** — `EventHandler` ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ **API key** (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **ยังไม่ได้ทำ (เฟส 3):** Auth per-channel — X-Line-Signature / ID Token JWT (`ctx.auth` เตรียมไว้แล้ว) · LIFF/Admin เรียกผ่าน API เดียวกัน (การ์ด MT-18–19, MT-21)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 

@@ -56,6 +56,8 @@ const Config = (() => {
       CHANNEL_ACCESS_TOKEN: _props.getProperty('CHANNEL_ACCESS_TOKEN'),
       CHANNEL_SECRET: _props.getProperty('CHANNEL_SECRET'),
       WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET'),
+      // API Key สำหรับเรียก /api/* (WebApp mount — ดูบทที่ 5.10) — ส่งผ่าน ?api_key= หรือใน body
+      API_KEY: _props.getProperty('API_KEY'),
       // ฐานข้อมูลของระบบ — 'sheets' (ค่า default) / 'firestore' (อนาคต, บทที่ 3.2.4)
       DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets',
       // จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" — แจ้งเตือน + แนบคำเตือนในคำตอบ (การ์ด MT-11)
@@ -68,7 +70,8 @@ const Config = (() => {
     const defaults = {
       'CHANNEL_ACCESS_TOKEN': 'ใส่_TOKEN_ของคุณ_ที่นี่',
       'CHANNEL_SECRET': 'ใส่_CHANNEL_SECRET_ของคุณ_ที่นี่',
-      'WEBHOOK_SECRET': 'ใส่_รหัสยาวสุ่ม_สำหรับ_Webhook_URL_ที่นี่'
+      'WEBHOOK_SECRET': 'ใส่_รหัสยาวสุ่ม_สำหรับ_Webhook_URL_ที่นี่',
+      'API_KEY': 'ใส่_API_KEY_ยาวสุ่ม_สำหรับ_เรียก_API_ที่นี่'
     };
     _props.setProperties({ ...defaults, ...values });
     Logger.log('บันทึก config แล้ว — กรุณาเลือกฟังก์ชัน main แล้วกดรัน');

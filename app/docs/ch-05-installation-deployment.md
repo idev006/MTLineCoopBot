@@ -279,6 +279,39 @@ createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividen
 
 > ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง) · สมาชิกที่ยังไม่ activate (ไม่มี `line_user_id`) จะถูกข้าม
 
+## 5.10 Mount API ใน WebApp (`/api/*`) — doGet/doPost dispatch ผ่าน Api.ApiService
+
+Web App เดียวกันรองรับ **2 เส้นทาง**: LINE webhook (POST) กับ API (`GET|POST /api/*`) — webhook เดิมไม่เปลี่ยน:
+
+```text
+https://script.google.com/macros/s/XXX/exec              ← LINE webhook (POST + webhook_secret)
+https://script.google.com/macros/s/XXX/exec/api/member/profile?api_key=KEY&lineUserId=U...  ← API (GET)
+https://script.google.com/macros/s/XXX/exec/api/member/activate                       ← API (POST, api_key ใน body)
+```
+
+### ตั้งค่า
+
+1. `clasp push` ให้โค้ดใหม่ขึ้น Apps Script
+2. **Script Properties → เพิ่ม `API_KEY`** = รหัสยาวสุ่ม (หรือรัน `setupConfig()` แล้วแก้ค่า)
+3. Deploy Web App ใหม่ (หรือใช้ deployment เดิม — ต้องชี้ไปที่ `doGet`/`doPost` ที่อัปเดตแล้ว)
+
+### เรียกใช้
+
+- **GET:** ส่ง `api_key` ใน query — `?api_key=KEY&lineUserId=U...`
+- **POST:** ส่ง `api_key` ใน body JSON (ลบออกก่อนส่งเข้า handler อัตโนมัติ) เช่น `{"api_key":"KEY","activateCode":"ACT001","lineUserId":"U..."}`
+- **`/api/health` เปิดสาธารณะ** (ตรวจสถานะได้ไม่ต้องใช้ key) · path อื่นต้องมี key ถูกต้อง (ตอบ `UNAUTHORIZED` ถ้าไม่)
+
+```bash
+# ตัวอย่าง curl
+curl -s "https://script.google.com/macros/s/XXX/exec/api/health"
+curl -s "https://script.google.com/macros/s/XXX/exec/api/member/profile?api_key=KEY&lineUserId=U..."
+curl -s -X POST "https://script.google.com/macros/s/XXX/exec/api/member/activate" \
+  -H "Content-Type: application/json" \
+  -d '{"api_key":"KEY","activateCode":"ACT001","lineUserId":"U..."}'
+```
+
+> ⚠️ **ข้อจำกัด Apps Script:** Web App อ่าน HTTP header ไม่ได้ (Issue #67764685) — API key จึงส่งผ่าน **query/body** (ไม่ใช่ `X-API-Key` header) และ webhook ใช้ `webhook_secret` ใน URL ตามเดิม · ค่า default ของ URL เปิดให้ `ANYONE_ANONYMOUS` — ใครก็เรียกได้ แต่ต้องรู้ key ถึงใช้ API ได้ (ยกเว้น health) · `ctx.auth = { apiKey, lineUserId? }` เตรียมไว้สำหรับ Auth per-channel (ID Token JWT — เฟส 3)
+
 ## สรุปท้ายบท
 
 บทนี้เป็นคู่มือการติดตั้งและ Deploy ระบบครบทุกส่วน ตั้งแต่การเตรียมบัญชี LINE การตั้งค่า clasp การ Deploy Web App และ Rich Menu ไปจนถึงการโฮสต์เครื่องคำนวณสินเชื่อ บทที่ 6 จะกล่าวถึงการทดสอบระบบอย่างเป็นระบบและแนวทางการแก้ไขปัญหา

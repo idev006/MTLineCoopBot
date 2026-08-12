@@ -23,6 +23,7 @@
 | **ตรวจสุขภาพ token** | `checkTokenHealth()` ใน `app/Test.js` — เรียก LINE Get Bot Info API → รายงาน `HTTP 200` / `401` | บทที่ 5.5.1, 7.1.3 |
 | **Runbook การหมุน** | บทที่ 5.5.1 — ขั้นตอนหมุน token ครบวงจร | ch-05 |
 | **การเฝ้าระวัง** | Checklist ความปลอดภัยรายเดือน (บทที่ 7.1.3): หมุนตามนโยบาย · ตรวจสุขภาพ token · ทบทวนสิทธิ์ | ch-07 |
+| **API mount** | `/api/*` ใน WebApp ตรวจ **API key** (`Config.API_KEY` — Script Properties) · `/api/health` เปิดสาธารณะ · path อื่นต้องมี key ถูกต้อง (ตอบ `UNAUTHORIZED`) · webhook_secret แยกจาก API key (บทที่ 5.10) | ch-05, 5.10 |
 
 ## 🚑 เมื่อ secret รั่วซ้ำ — ทำตามนี้ทันที (Incident Response)
 
@@ -33,6 +34,7 @@ Apps Script Editor → Script Properties → เปลี่ยนค่า → 
 → ยืนยัน HTTP 200 → Deactivate token เก่า
 ```
 > ถ้าเป็น `WEBHOOK_SECRET` → หลังเปลี่ยน ต้องอัปเดต Webhook URL ใน LINE Console (`?webhook_secret=...`) ด้วย
+> ถ้าเป็น `API_KEY` (API mount — บทที่ 5.10) → เปลี่ยนใน Script Properties แล้วแจ้ง client/ระบบที่เรียก API ให้ใช้ key ใหม่ (key เก่าใช้ไม่ได้ทันที)
 
 ### 2. ลบ secret ออกจากโค้ด/ประวัติ
 1. ลบ hardcoded value ออกจากซอร์ส — ใช้ Script Properties แทน

@@ -972,6 +972,79 @@ function testBotUsesApi() {
 }
 
 /**
+ * ทดสอบ API Mount ใน WebApp (doGet/doPost แยก /api/* → Api.ApiService + API key):
+ * health เปิดสาธารณะ · path อื่นต้องมี api_key ถูกต้อง (401 ถ้าไม่) ·
+ * profile/activate ผ่าน mount · LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม
+ * @returns {boolean}
+ */
+function testApiMount() {
+  // 1) ตั้งค่า Script Properties (sandbox): API_KEY + WEBHOOK_SECRET
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('API_KEY', 'test-api-key-123');
+  props.setProperty('WEBHOOK_SECRET', 'wh-secret');
+
+  // seed fake sheets: สมาชิก 1 คน (ยังไม่ activate)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '', '', 'inactive', 'ACT001', '', 'member', 85, 50000, 10000]
+  ];
+
+  const resp = (r) => JSON.parse(r.getContent());
+
+  // 2) GET /api/health — public (ไม่ต้องมี key)
+  let env = resp(doGet({ pathInfo: 'api/health', parameter: {} }));
+  if (!env.ok || env.data.status !== 'ok') throw new Error('testApiMount: /api/health ต้องตอบ ok (public)');
+
+  // 3) GET /api/member/profile โดยไม่มี key → 401 UNAUTHORIZED
+  env = resp(doGet({ pathInfo: 'api/member/profile', parameter: { lineUserId: 'U11111111111111111111111111111111' } }));
+  if (env.ok || env.error.code !== 'UNAUTHORIZED') {
+    throw new Error('testApiMount: profile ไม่มี api_key ต้องตอบ UNAUTHORIZED (ได้ ' + JSON.stringify(env) + ')');
+  }
+
+  // 4) POST /api/member/activate — api_key ใน body (ไม่ใช่ query) → ผูก line_user_id กับ M001
+  env = resp(doPost({
+    pathInfo: 'api/member/activate',
+    parameter: {},
+    postData: { contents: JSON.stringify({ api_key: 'test-api-key-123', activateCode: 'ACT001', lineUserId: 'U11111111111111111111111111111111' }) }
+  }));
+  if (!env.ok || env.data.mem_status !== 'active') throw new Error('testApiMount: activate ผ่าน mount ต้องสำเร็จ');
+  // activate ซ้ำ → ALREADY_ACTIVATED (ผ่าน mount)
+  env = resp(doPost({
+    pathInfo: 'api/member/activate',
+    parameter: {},
+    postData: { contents: JSON.stringify({ api_key: 'test-api-key-123', activateCode: 'ACT001', lineUserId: 'U11111111111111111111111111111111' }) }
+  }));
+  if (env.ok || env.error.code !== 'ALREADY_ACTIVATED') {
+    throw new Error('testApiMount: activate ซ้ำผ่าน mount ต้องตอบ ALREADY_ACTIVATED');
+  }
+
+  // 5) GET /api/member/profile พร้อม api_key ถูกต้อง (หลัง activate) → ข้อมูลสมาชิก
+  env = resp(doGet({
+    pathInfo: 'api/member/profile',
+    parameter: { api_key: 'test-api-key-123', lineUserId: 'U11111111111111111111111111111111' }
+  }));
+  if (!env.ok || env.data.mem_code !== 'M001') throw new Error('testApiMount: profile ผ่าน api_key ต้องคืน mem_code=M001');
+  // api_key ผิด → UNAUTHORIZED
+  env = resp(doGet({
+    pathInfo: 'api/member/profile',
+    parameter: { api_key: 'wrong-key', lineUserId: 'U11111111111111111111111111111111' }
+  }));
+  if (env.ok || env.error.code !== 'UNAUTHORIZED') throw new Error('testApiMount: api_key ผิดต้องตอบ UNAUTHORIZED');
+
+  // 6) LINE webhook (ไม่มี pathInfo) — ไม่แตะ API mount: ตรวจ webhook_secret เหมือนเดิม
+  env = resp(doPost({ parameter: {}, postData: { contents: JSON.stringify({ events: [] }) } }));
+  if (env.status !== 'error' || env.message !== 'Unauthorized') {
+    throw new Error('testApiMount: webhook ที่ไม่มี webhook_secret ต้องถูกปฏิเสธ (Unauthorized)');
+  }
+  env = resp(doPost({ parameter: { webhook_secret: 'wh-secret' }, postData: { contents: JSON.stringify({ events: [] }) } }));
+  if (env.status !== 'ok') throw new Error('testApiMount: webhook ที่มี webhook_secret ต้องตอบ ok (เส้นทางเดิมไม่เปลี่ยน)');
+
+  Logger.log('testApiMount OK — /api/* ผ่าน Api.ApiService + API key · health public · webhook เดิมไม่เปลี่ยน');
+  return true;
+}
+
+/**
  * ทดสอบการต่ออายุสมาชิก (MT-12): Core.computeRenewal (pure) + RenewalService.performRenew
  * (ผ่าน Fake Sheets + fake gater — ไม่แตะ LINE API)
  * @returns {boolean}

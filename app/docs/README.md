@@ -93,7 +93,7 @@
 | ตรวจวันหมดอายุสมาชิกอัตโนมัติ (Time-driven Trigger: push เตือนก่อนหมดอายุ + แจ้ง expired + unlink เมนู + คำเตือนในคำตอบ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9, 4.2.7 |
 | ต่ออายุสมาชิก (`renew:CODE` / `renew` ต่ออายุตัวเอง — ขยาย `mem_exp_dt` +1 ปี · เขียน active + log `renewed` ใน `t_activation_log` + ผูกเมนูกลับ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 4.2.7, KANBAN MT-12 |
 | Broadcast ประกาศ/ข่าวสาร (Time-driven Trigger: `t_notice` → push ถึงสมาชิก active ทุกคน · mark `sent` กันส่งซ้ำ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9.2, KANBAN MT-13 |
-| สถาปัตยกรรม API-First — **API Layer + Bot เป็น UI Adapter ทำแล้ว** (`app/Api/`: registry + envelope `{ok,error,data}` + 8 endpoints ใช้ Core/Repository · EventHandler เรียกข้อมูลสมาชิกผ่าน `Api.ApiService`) · เหลือ: Auth + Mount + LIFF/ID Token (เฟส 3) | ✅ บางส่วน (API Layer + Bot Adapter) | บทที่ 3.1.1, 4.2.6c, 7 ระยะที่ 3, KANBAN MT-17 |
+| สถาปัตยกรรม API-First — **API Layer + Bot Adapter + Mount ใน WebApp ทำแล้ว** (`app/Api/`: registry + envelope `{ok,error,data}` + 8 endpoints · EventHandler เรียกผ่าน `Api.ApiService` · `doGet`/`doPost` dispatch `/api/*` + ตรวจ API key — บทที่ 5.10) · เหลือ: Auth per-channel + LIFF/ID Token (เฟส 3) | ✅ บางส่วน (API Layer + Bot Adapter + Mount) | บทที่ 3.1.1, 4.2.6c, 5.10, 7 ระยะที่ 3, KANBAN MT-17/MT-16b |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
 | Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |
 | KPI Dashboard ทีม (`Dashboard.js` + เทมเพลต) | ✅ ทำแล้ว | บทที่ 8.3, metrics-dashboard-template.md |
