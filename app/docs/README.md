@@ -85,7 +85,8 @@
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
 | ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · เมนูการเงินตอบ "ไม่เชื่อมต่อ" (ต้องมีตารางการเงิน 📌) | ✅ บางส่วน | บทที่ 7 ระยะ 2, data-dictionary.md |
 | สถาปัตยกรรม API-First + LIFF (`Api/Core/UI-Adapter`, ID Token JWT) | 📌 ออกแบบไว้ — เฟส 3 | บทที่ 3.1.1, 7 ระยะที่ 3 |
-| Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0 |
+| Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
+| Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |
 | KPI Dashboard ทีม (`Dashboard.js` + เทมเพลต) | ✅ ทำแล้ว | บทที่ 8.3, metrics-dashboard-template.md |
 
 > **สัญลักษณ์:** ✅ ทำแล้ว = มีในโค้ดแล้ว · 📌 ออกแบบไว้ — เฟส 2/3 = ระบุการออกแบบไว้ในเอกสาร ยังไม่ได้ implement (ดู Roadmap บทที่ 7)

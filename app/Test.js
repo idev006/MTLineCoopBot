@@ -302,6 +302,100 @@ function testMemberDataService() {
 }
 
 /**
+ * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
+ * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
+ * @returns {boolean}
+ */
+function testCoreMemberRules() {
+  const R = Core.MemberRules;
+  const now = new Date('2026-08-06T12:00:00');
+  const valid = { mem_status: 'active', mem_role: 'member', mem_eff_dt: '2026-01-01', mem_exp_dt: '2027-01-01' };
+
+  const cases = [
+    [valid, true, 'valid'],
+    [{ ...valid, mem_status: 'inactive' }, false, 'status ไม่ active'],
+    [{ ...valid, mem_eff_dt: '2026-09-01' }, false, 'ยังไม่ถึงวันเริ่ม'],
+    [{ ...valid, mem_exp_dt: '2026-07-01' }, false, 'หมดอายุ'],
+    [{ ...valid, mem_eff_dt: '' }, false, 'ไม่มีวันเริ่ม (fail-safe)'],
+    [{ ...valid, mem_exp_dt: null }, false, 'ไม่มีวันหมดอายุ (fail-safe)'],
+    [null, false, 'ไม่มี member'],
+    [valid, true, 'hasRole member ผ่าน'],
+    [{ ...valid, mem_role: 'staff' }, false, 'hasRole(member) ไม่ผ่านเมื่อ role staff'],
+    [{ ...valid, mem_role: 'admin' }, true, 'hasRole(admin) ผ่าน']
+  ];
+
+  for (let i = 0; i < cases.length; i++) {
+    const [member, expected, label] = cases[i];
+    let actual;
+    if (i < 7) actual = R.isActiveMember(member, now);
+    else actual = R.hasRole(member, i === 8 ? 'member' : (i === 9 ? 'admin' : 'member'), now);
+    if (actual !== expected) {
+      throw new Error('testCoreMemberRules FAILED: ' + label + ' (expected ' + expected + ', got ' + actual + ')');
+    }
+  }
+  Logger.log('testCoreMemberRules OK — ' + cases.length + ' กรณี (pure, deterministic now)');
+  return true;
+}
+
+/**
+ * ทดสอบ Core.LoanCalculator (pure — Actual/365 ลดต้นลดดอก)
+ * @returns {boolean}
+ */
+function testLoanCalculator() {
+  const L = Core.LoanCalculator;
+
+  // 1) getDaysDiff / getNextMonthEnd
+  if (L.getDaysDiff(new Date('2026-01-15'), new Date('2026-01-31')) !== 16) {
+    throw new Error('testLoanCalculator: getDaysDiff(15 → 31 ม.ค.) ควรเป็น 16 วัน');
+  }
+  // ตามสูตร HTML: getNextMonthEnd(..., period) = วันสิ้นเดือนของเดือน (start.month + period - 1)
+  if (L.getNextMonthEnd('2026-01-15', 1).getDate() !== 31) {
+    throw new Error('testLoanCalculator: getNextMonthEnd งวด 1 ควรเป็น 31 ม.ค. (สิ้นเดือนเริ่ม)');
+  }
+  if (L.getNextMonthEnd('2026-01-15', 2).getDate() !== 28) {
+    throw new Error('testLoanCalculator: getNextMonthEnd งวด 2 ควรเป็น 28 ก.พ.');
+  }
+
+  // 2) กรณีทั่วไป: กู้ 100,000 · 5% · ลดต้นคงที่ · 12 งวด · เริ่ม 15 ม.ค. 2026
+  const r = L.calculateLoanSchedule({
+    loanAmount: 100000, interestRatePercent: 5,
+    calcMode: 'installment_count', calcValue: 12,
+    paymentType: 'equal_principal', startDate: '2026-01-15'
+  });
+  if (r.error) throw new Error('testLoanCalculator: ' + r.error);
+  if (r.schedule.length !== 12) throw new Error('testLoanCalculator: ควรมี 12 งวด แต่ได้ ' + r.schedule.length);
+  // ดอกเบี้ยงวดแรก = 100000 × 0.05 × 16/365 (15 → 31 ม.ค.)
+  if (r.schedule[0].interest !== 219.18) {
+    throw new Error('testLoanCalculator: ดอกเบี้ยงวดแรกควรเป็น 219.18 แต่ได้ ' + r.schedule[0].interest);
+  }
+  // งวดสุดท้าย (period 12) เงินต้นที่จ่าย = ยอดคงเหลือทั้งหมด (ปิดบัญชี)
+  const lastPrincipal = r.schedule[11].principal;
+  const sumPrincipal = r.schedule.reduce((s, row) => s + row.principal, 0);
+  if (lastPrincipal !== 8333.33) {
+    throw new Error('testLoanCalculator: งวดสุดท้ายควรปิดยอด 8333.33 แต่ได้ ' + lastPrincipal);
+  }
+  // ผลรวมเงินต้นทุกงวด ≈ เงินกู้ (ยอดปิดครบ)
+  if (Math.abs(sumPrincipal - 100000) > 1) {
+    throw new Error('testLoanCalculator: ผลรวมเงินต้นควร ≈ 100000 แต่ได้ ' + sumPrincipal);
+  }
+  // ยอดเงินต้นรวม (จาก return) ≈ เงินกู้
+  if (Math.abs(r.totalPrincipal - 100000) > 1) {
+    throw new Error('testLoanCalculator: totalPrincipal ควร ≈ 100000 แต่ได้ ' + r.totalPrincipal);
+  }
+
+  // 3) error case: ยอดส่งงวดน้อยกว่าดอกเบี้ย
+  const err = L.calculateLoanSchedule({
+    loanAmount: 100000, interestRatePercent: 5,
+    calcMode: 'installment_amount', calcValue: 100,
+    paymentType: 'equal_installment', startDate: '2026-01-15'
+  });
+  if (!err.error) throw new Error('testLoanCalculator: ควรได้ error เมื่อยอดส่งน้อยกว่าดอกเบี้ย');
+
+  Logger.log('testLoanCalculator OK — Actual/365 (days + schedule + error case)');
+  return true;
+}
+
+/**
  * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
  * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
  */

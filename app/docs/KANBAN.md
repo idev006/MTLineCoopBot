@@ -16,7 +16,6 @@
 
 ### ระยะที่ 3 — สถาปัตยกรรม API-First และ LIFF
 
-- [ ] **[MT-15] แยก Core Business Logic** — อ้างอิง: บทที่ 3.1.1 · ย้าย validity/role/loan calc เป็น pure functions ใน `app/Core/` + unit tests
 - [ ] **[MT-16] API Layer (Router + Responder)** — `app/Api/` registry routing + JSON envelope `{ok, error, data}`
 - [ ] **[MT-17] LINE Bot เป็น UI Adapter** — ให้ Bot เรียกผ่าน API เดียวกัน (พฤติกรรมผู้ใช้ไม่เปลี่ยน)
 - [ ] **[MT-18] LIFF แอปแรก** — ฟอร์มใน LINE (เช่น ยื่นขอกู้) + LINE Login
@@ -55,6 +54,7 @@
 - [x] **[MT-06b] เครื่องคำนวณสินเชื่อ Actual/365** — GitHub Pages (ยังรอรวมเข้ากับ LoanService เฟส 3)
 - [x] **[MT-08] ตรวจสอบความถูกต้องของ Webhook** — บทที่ 3.6, 5.5 · `Util.verifyWebhookSecret` + `Util.verifyLineSignature` + guard ใน `doPost` + test ใน Test.js · หมายเหตุ: Apps Script อ่าน header ไม่ได้ จึงใช้ `webhook_secret` ผูกท้าย URL (Issue #67764685)
 - [x] **[MT-09] Gate ตรวจสิทธิ์ใน EventHandler** — บทที่ 3.7, 6 TC-10 · `SheetService.findByLineUserId` + `getAuthorizedMember` (isActiveMember + บทบาท) ใน `EventHandler` ยกเว้น `activate:` + `testMemberValidity`
+- [x] **[MT-15] แยก Core Business Logic** — อ้างอิง: บทที่ 3.1.1 · `Core/MemberRules.js` (parseDate/isActiveMember/hasRole — pure, รับ `now` เพื่อ deterministic) + `Core/LoanCalculator.js` (Actual/365 ลดต้นลดดอก: getDaysDiff/getNextMonthEnd/calculateLoanSchedule) · `SheetService` delegate ไป Core (API เดิมไม่เปลี่ยน) · `testCoreMemberRules` (10 กรณี) + `testLoanCalculator` (days + schedule + error) · ALL TESTS PASS 10/10 · หมายเหตุ: loan_calculator.html ยังมีสำเนาสูตรเอง — รวมใช้ Core เดียวกันในเฟส 3
 - [x] **[MT-10] ดึงข้อมูลจริงตามเมนู** — อ้างอิง: บทที่ 7 ระยะ 2 · `LineBot/MemberDataService.js` (ใหม่): `buildProfileText()` แสดงข้อมูลจริง (ชื่อ/รหัส/บทบาท/ช่วงวัน/ตำแหน่ง+คะแนน) + `buildFinanceText()` ตอบสถานะจริง "ยังไม่เชื่อมต่อ" สำหรับเมนูการเงิน (saving_acct/chk_balance/dividends/share_capital/loan_balance — ตารางการเงินยังไม่มี 📌 บันทึกไว้ใน data-dictionary.md) + EventHandler ใช้ข้อมูลจริงผ่าน repository · `testMemberDataService` (8/8)
 - [x] **[MT-20] แยก Data Layer (Repository Pattern)** — อ้างอิง: บทที่ 3.2.4 · `Data/MemberRepository.js` (interface + `assertImplemented` + `getRepository()` ตาม `Config.DB_TYPE`) + `Data/SheetsMemberRepository.js` ห่อ `SheetService` (5 ฟังก์ชัน) · `ActivationService` + Gate ใน `EventHandler` เรียกผ่าน repository แล้ว · `testMemberRepository` (interface + factory switch) · หมายเหตุ: `DB_TYPE=firestore` ยังไม่ implement — factory throw ชัดเจน (เฟส 3)
 - [x] **[MT-07] Welcome Menu + Per-User Rich Menu Gating** — อ้างอิง: บทที่ 3.3.6 · `MenuData.buildWelcomeTab()` (4 ปุ่ม: เปิดใช้งาน/วิธีใช้/ติดต่อ/ข่าวสาร) + `ApiService.linkUser`/`unlinkUser`/`getRichMenuIdByAlias`/`getUserRichMenu` + `RichMenu.Gating` (link หลัง Activate / unlink เมื่อไม่ valid) + `Deployer.deploy()` ตั้ง **Welcome เป็น default** + EventHandler ตอบ welcome items (ไม่ผ่าน Gate) + `testWelcomeMenu` (CI 6/6) · หมายเหตุ: ภาพ Welcome ใส่ File ID ใน `Config.IMAGE_FILE_IDS.WELCOME` (ว่าง = ข้ามอัปโหลด)
@@ -75,3 +75,4 @@
 | 2026-08-12 | MT-07 | → In Progress → Done | Welcome Menu + Per-User Gating: buildWelcomeTab + linkUser/unlinkUser + Gating (link หลัง Activate / unlink เมื่อไม่ valid) + Welcome เป็น default · testWelcomeMenu + gating logic (4 กรณี) ผ่าน · ALL TESTS PASS 6/6 · DoD ครบ |
 | 2026-08-12 | MT-20 | → In Progress → Done | Repository Pattern: MemberRepository interface + factory (DB_TYPE) + SheetsMemberRepository ห่อ SheetService · ActivationService + Gate เรียกผ่าน repo · testMemberRepository ผ่าน · ALL TESTS PASS 7/7 · DoD ครบ |
 | 2026-08-12 | MT-10 | → In Progress → Done | ดึงข้อมูลจริงตามเมนู: profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (ตารางการเงินยังไม่มี — ออกแบบไว้ใน data-dictionary) · testMemberDataService ผ่าน · ALL TESTS PASS 8/8 · DoD ครบ |
+| 2026-08-12 | MT-15 | → In Progress → Done | แยก Core: MemberRules + LoanCalculator (pure) · SheetService delegate · testCoreMemberRules + testLoanCalculator ผ่าน (แก้ expectation ตามพฤติกรรมจริงของสูตร HTML — งวด 1 = สิ้นเดือนเริ่ม) · ALL TESTS PASS 10/10 · DoD ครบ |

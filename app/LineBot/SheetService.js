@@ -179,11 +179,8 @@ LineBot.SheetService = (() => {
    * @returns {Date|null}
    */
   function parseDate(value) {
-    if (!value) return null;
-    if (value instanceof Date) return value;
-    const m = String(value).trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
-    if (!m) return null;
-    return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+    // delegate ไป Core.MemberRules (pure — บทที่ 3.1.1, การ์ด MT-15)
+    return Core.MemberRules.parseDate(value);
   }
 
   /**
@@ -193,15 +190,8 @@ LineBot.SheetService = (() => {
    * @returns {boolean}
    */
   function isActiveMember(member) {
-    if (!member) return false;
-    if (member.mem_status !== 'active') return false;
-    const eff = parseDate(member.mem_eff_dt);
-    const exp = parseDate(member.mem_exp_dt);
-    // Fail-safe: ต้องมีวันเริ่มและวันหมดอายุครบทั้งคู่
-    if (!eff || !exp) return false;
-    const now = new Date();
-    if (now < eff || now > exp) return false;
-    return true;
+    // delegate ไป Core.MemberRules (pure — บทที่ 3.1.1, การ์ด MT-15)
+    return Core.MemberRules.isActiveMember(member);
   }
 
   /**
@@ -212,7 +202,8 @@ LineBot.SheetService = (() => {
    * @returns {boolean}
    */
   function hasRole(member, role) {
-    return isActiveMember(member) && member.mem_role === role;
+    // delegate ไป Core.MemberRules (pure — บทที่ 3.1.1, การ์ด MT-15)
+    return Core.MemberRules.hasRole(member, role);
   }
 
   /**

@@ -12,6 +12,9 @@ MTLineCoopBot/
     ├── Config.js                # ค่าคอนฟิก + Script Properties
     ├── DataDict.js              # SSOT โครงสร้างข้อมูล (t_member_mast)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
+    ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
+    │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
+    │   └── LoanCalculator.js    # สูตรคำนวณสินเชื่อ Actual/365 (ลดต้นลดดอก)
     ├── Data/                    # Data Access Layer (Repository Pattern — บทที่ 3.2.4)
     │   ├── MemberRepository.js  # สัญญา (interface) + factory เลือก DB ตาม DB_TYPE
     │   └── SheetsMemberRepository.js  # repository สมาชิกบน Google Sheets (ห่อ SheetService)
@@ -37,7 +40,22 @@ MTLineCoopBot/
 
 ## 4.2 คำอธิบายโมดูล
 
-### 4.2.0 `Data/` — Data Access Layer (Repository Pattern)
+### 4.2.0 `Core/` — Business Logic ล้วน (Pure Functions)
+
+**`MemberRules.js`** — กฎความ valid ของสมาชิก (ย้ายจาก SheetService)
+- `parseDate(value)` — แปลง `yyyy-mm-dd[ HH:mm:ss]` เป็น Date (manual parse กัน timezone)
+- `isActiveMember(member, now?)` — สถานะ active + ช่วงวันครอบคลุม `now` (รับ `now` เป็น parameter เพื่อ test deterministic)
+- `hasRole(member, role, now?)` — valid + บทบาทตรง
+- `SheetService` delegate มาที่นี่ (API เดิมไม่เปลี่ยน — Gate/Repository ทำงานเหมือนเดิม)
+
+**`LoanCalculator.js`** — เครื่องคำนวณสินเชื่อ (ย้ายสูตรจาก `loan_calculator.html`)
+- `getDaysDiff(d1, d2)` / `getNextMonthEnd(startStr, period)` / `round2(n)`
+- `calculateLoanSchedule({loanAmount, interestRatePercent, calcMode, calcValue, paymentType, startDate})`
+  → `{ schedule, totalInterest, totalPrincipal, totalPayment }` หรือ `{ error }`
+- สูตร: ดอกเบี้ย = เงินต้นคงเหลือ × อัตรารายปี × จำนวนวันจริง ÷ 365 (Actual/365 ลดต้นลดดอก)
+- หมายเหตุ: `loan_calculator.html` (Vue/GitHub Pages) ยังมีสูตรสำเนาของตัวเอง — จะรวมใช้ Core เดียวกันในเฟส 3 (API-first)
+
+### 4.2.0b `Data/` — Data Access Layer (Repository Pattern)
 
 **`MemberRepository.js`** — สัญญาและ factory (บทที่ 3.2.4)
 - `INTERFACE` — รายการฟังก์ชันที่ทุก repository ต้องมี: `findByLineUserId` · `findByActivateCode` · `activateMember` · `isActiveMember` · `hasRole`
