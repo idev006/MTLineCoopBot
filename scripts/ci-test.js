@@ -106,6 +106,11 @@ const FILE_ORDER = [
   'RichMenu/ApiService.js',
   'RichMenu/Deployer.js',
   'RichMenu/Gating.js',
+  'Api/ApiResponse.js',
+  'Api/ApiError.js',
+  'Api/ApiService.js',
+  'Api/ApiRegistry.js',
+  'Api/ApiHandlers.js',
   'WebApp.js',
   'SeedData.js',
   'Test.js'
@@ -134,6 +139,7 @@ const runner = `
     ['testDateConverter', testDateConverter],
     ['testExpiryStatus', testExpiryStatus],
     ['testExpiryService', testExpiryService],
+    ['testApiLayer', testApiLayer],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

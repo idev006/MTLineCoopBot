@@ -37,6 +37,12 @@ MTLineCoopBot/
     │   ├── Deployer.js          # ขั้นตอน deploy 5 แท็บ + Welcome Menu (default)
     │   ├── Gating.js            # Per-User Gating: ผูก/ยกเลิกเมนูรายบุคคล (บทที่ 3.3.6)
     │   └── MenuData.js          # โครงสร้าง/พิกัดเมนู 5 แท็บ + Welcome
+    ├── Api/                     # API Layer (เฟส 3 — บทที่ 3.1.1, การ์ด MT-16)
+    │   ├── ApiService.js        # จุดเข้า handleRequest(method, path, options)
+    │   ├── ApiRegistry.js       # ตาราง route (registry) + dispatch
+    │   ├── ApiHandlers.js       # implementation ของ endpoint (ใช้ Core + Repository)
+    │   ├── ApiResponse.js       # JSON envelope { ok, data } / { ok, error }
+    │   └── ApiError.js          # error ที่มี code (throw ใน handler)
     ├── assets/line_menu/        # ภาพ Rich Menu (tab1-5 .png/.jpg)
     └── docs/                    # เอกสารโครงการ (เล่มนี้)
 ```
@@ -143,6 +149,7 @@ Entry point ของ LINE webhook
 - `testDateConverter()` — ทดสอบ Core.DateConverter: round-trip ตรงเป๊ะ · รองรับ Date/`{seconds,nanos}`/RFC3339 · ปฏิเสธรูปแบบผิด (MT-31)
 - `testExpiryStatus()` — ทดสอบ `getExpiryStatus`: valid/expiring/expired + daysLeft + ข้อความเตือน (deterministic now — MT-11)
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId (MT-11)
+- `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -154,6 +161,27 @@ Entry point ของ LINE webhook
 - `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
 - **ไม่แตะ `t_member_mast`** (เป็นข้อมูลจริงของสมาชิก)
+
+### 4.2.6c `Api/` — API Layer (การ์ด MT-16 — เฟส 3, บทที่ 3.1.1)
+
+สถาปัตยกรรม API-First — UI Adapter ใด ๆ (LINE Bot / LIFF / Admin) เรียกผ่าน `Api.ApiService.handleRequest(method, path, options)` และได้ **JSON envelope** เดียวกันเสมอ:
+
+```json
+{ "ok": true,  "data": { ... } }
+{ "ok": false, "error": { "code": "MEMBER_NOT_FOUND", "message": "..." } }
+```
+
+| ไฟล์ | บทบาท |
+|------|--------|
+| **`ApiService.js`** | จุดเข้า — รับ method/path/options → สร้าง ctx (query/body/headers/auth) → ส่ง Registry |
+| **`ApiRegistry.js`** | ตาราง route (lazy) + `dispatch()` — เพิ่ม endpoint = เพิ่ม 1 รายการในตาราง · จับ Api.ApiError → envelope |
+| **`ApiHandlers.js`** | 7 endpoint: `GET /api/health` · `/api/member/profile` · `/savings` · `/loans` · `/dividends` · `/validity` · `POST /api/member/activate` — ใช้ Core + Repository เท่านั้น (ไม่แตะ SpreadsheetApp ตรง ๆ) |
+| **`ApiResponse.js`** | ok() / error() / notFound() / methodNotAllowed() / validation() / internal() / toHttp() |
+| **`ApiError.js`** | `Api.ApiError.create(code, message, status?)` — throw แล้ว Registry แปลงเป็น envelope |
+
+**Error codes:** `VALIDATION` · `MEMBER_NOT_FOUND` · `ALREADY_ACTIVATED` · `NOT_FOUND` · `METHOD_NOT_ALLOWED` · `INTERNAL`
+
+**ยังไม่ได้ทำ (เฟส 3):** Auth per-channel (`ctx.auth` เตรียมไว้แล้ว) · Mount ใน WebApp (`doGet`/`doPost` แยก path `/api/...`) · Bot/LIFF เรียกผ่าน API เดียวกัน (การ์ด MT-17–19)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 

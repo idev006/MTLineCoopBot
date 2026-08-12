@@ -695,6 +695,85 @@ function testExpiryService() {
 }
 
 /**
+ * ทดสอบ Api Layer (MT-16): registry routing + JSON envelope {ok,error,data}
+ * + handlers ใช้ Core/Repository (ผ่าน Fake Sheets)
+ * @returns {boolean}
+ */
+function testApiLayer() {
+  const api = Api.ApiService;
+
+  // 1) health
+  const health = api.handleRequest('GET', '/api/health', {});
+  if (!health.ok || health.data.status !== 'ok') throw new Error('testApiLayer: health ควร ok');
+
+  // 2) seed fake sheets: M001 valid / M002 expired / M003 ยังไม่ activate + บัญชีเงินฝาก
+  delete __fakeSheets['t_member_mast'];
+  delete __fakeSheets['t_savings_acct'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2027-01-01', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-08-01', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
+    ['M003', 'นาย', 'ใหม่', 'สมาชิก', 10, '', 2, '', '', 'inactive', 'ACT003', '', 'member', 60, 0, 1000]
+  ];
+  __fakeSheets['t_savings_acct'] = [
+    DataDict.getHeaders('SAVINGS_ACCT'),
+    ['M001', 'SAV-0001', 'ออมทรัพย์', 25000, '2026-08-01']
+  ];
+
+  // 3) profile
+  const p = api.handleRequest('GET', '/api/member/profile', { query: { lineUserId: 'U11111111111111111111111111111111' } });
+  if (!p.ok) throw new Error('testApiLayer: profile ควร ok');
+  if (p.data.mem_code !== 'M001' || p.data.mem_fname !== 'สมชาย') throw new Error('testApiLayer: profile data ผิด');
+  if (p.data.mem_kk !== 85) throw new Error('testApiLayer: profile ไม่มี mem_kk');
+
+  // 4) ไม่มี lineUserId → VALIDATION
+  const noId = api.handleRequest('GET', '/api/member/profile', {});
+  if (noId.ok || noId.error.code !== 'VALIDATION') throw new Error('testApiLayer: ไม่มี lineUserId ควร VALIDATION');
+
+  // 5) ไม่พบสมาชิก → MEMBER_NOT_FOUND
+  const nf = api.handleRequest('GET', '/api/member/profile', { query: { lineUserId: 'U99999999999999999999999999999999' } });
+  if (nf.ok || nf.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: ไม่พบสมาชิกควร MEMBER_NOT_FOUND');
+
+  // 6) savings
+  const s = api.handleRequest('GET', '/api/member/savings', { query: { lineUserId: 'U11111111111111111111111111111111' } });
+  if (!s.ok || s.data.savings.length !== 1) throw new Error('testApiLayer: savings ผิด');
+  if (s.data.savings[0].balance !== 25000) throw new Error('testApiLayer: savings balance ผิด');
+
+  // 7) validity (default now = เวลาจริง): M001 valid / M002 expired
+  const v1 = api.handleRequest('GET', '/api/member/validity', { query: { lineUserId: 'U11111111111111111111111111111111' } });
+  if (!v1.ok || v1.data.valid !== true) throw new Error('testApiLayer: M001 ควร valid');
+  const v2 = api.handleRequest('GET', '/api/member/validity', { query: { lineUserId: 'U22222222222222222222222222222222' } });
+  if (!v2.ok || v2.data.valid !== false) throw new Error('testApiLayer: M002 ควร invalid (หมดอายุ)');
+  if (v2.data.expiry.status !== 'expired') throw new Error('testApiLayer: expiry.status ควร expired');
+
+  // 8) activate สำเร็จ (M003 ยังไม่ activate) → activate ซ้ำ ALREADY_ACTIVATED → รหัสผิด MEMBER_NOT_FOUND
+  const a1 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'ACT003', lineUserId: 'U33333333333333333333333333333333' } });
+  if (!a1.ok) throw new Error('testApiLayer: activate ควร ok — ' + JSON.stringify(a1));
+  if (a1.data.mem_code !== 'M003' || !a1.data.mem_exp_dt) throw new Error('testApiLayer: activate data ผิด');
+  const a2 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'ACT003', lineUserId: 'U33333333333333333333333333333333' } });
+  if (a2.ok || a2.error.code !== 'ALREADY_ACTIVATED') throw new Error('testApiLayer: activate ซ้ำควร ALREADY_ACTIVATED');
+  const a3 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'WRONG', lineUserId: 'U33333333333333333333333333333333' } });
+  if (a3.ok || a3.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: activate รหัสผิดควร MEMBER_NOT_FOUND');
+
+  // 9) route ไม่มี → NOT_FOUND · method ผิด → METHOD_NOT_ALLOWED
+  const nf2 = api.handleRequest('GET', '/api/nope', {});
+  if (nf2.ok || nf2.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: route ไม่มีควร NOT_FOUND');
+  const mma = api.handleRequest('POST', '/api/health', {});
+  if (mma.ok || mma.error.code !== 'METHOD_NOT_ALLOWED') throw new Error('testApiLayer: method ผิดควร METHOD_NOT_ALLOWED');
+
+  // 10) envelope shape: ทุก response มี ok + (data หรือ error.code)
+  const all = [health, p, noId, nf, s, v1, v2, a1, a2, a3, nf2, mma];
+  for (const r of all) {
+    if (typeof r.ok !== 'boolean') throw new Error('testApiLayer: envelope ต้องมี ok (boolean)');
+    if (r.ok && !('data' in r)) throw new Error('testApiLayer: ok ต้องมี data');
+    if (!r.ok && (!r.error || !r.error.code)) throw new Error('testApiLayer: error ต้องมี code');
+  }
+
+  Logger.log('testApiLayer OK — registry + envelope {ok,error,data} + handlers (profile/savings/validity/activate)');
+  return true;
+}
+
+/**
  * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}

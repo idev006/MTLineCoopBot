@@ -60,7 +60,7 @@
 | ฟีเจอร์ | รายละเอียด |
 |---------|-----------|
 | ~~แยก Core Business Logic~~ | ✅ ทำแล้ว — `Core/MemberRules.js` (validity/role — delegate จาก SheetService) + `Core/LoanCalculator.js` (Actual/365) + unit tests ใน node (การ์ด MT-15) · เหลือ: เชื่อม Bot/LIFF ใช้ Core เดียวกัน |
-| API Layer (Router + Responder) | สร้าง `app/Api/` — registry routing + JSON envelope `{ok, error, data}` (บทที่ 3.1.1) |
+| ~~API Layer (Router + Responder)~~ | ✅ ทำแล้ว (การ์ด MT-16) — `app/Api/`: ApiService → ApiRegistry (ตาราง route) → ApiHandlers (ใช้ Core + Repository) → ApiResponse (envelope `{ok, error, data}`) · 7 endpoints (health/profile/savings/loans/dividends/validity/activate) · เหลือ: Auth per-channel + Mount ใน WebApp (การ์ด MT-17–19) |
 | LINE Bot เป็น UI Adapter | ให้ Bot เรียกผ่าน API เดียวกัน โดยพฤติกรรมผู้ใช้ไม่เปลี่ยน |
 | LIFF (LINE Frontend Framework) | เปิดฟอร์ม/ตารางภายใน LINE แทนการเปิดเว็บภายนอก ใช้ LINE Login ยืนยันตัวตน |
 | ตรวจสอบ ID Token (JWT) | ตรวจสอบ ID token จาก LIFF ด้วย Channel Secret ก่อนเชื่อถือ `sub` = userId (บทที่ 3.1.1) |
