@@ -1,0 +1,43 @@
+name: CI — Contract Tests & Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  contract-tests:
+    name: node --check + Test.js contract tests + secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check (node --check ทุกไฟล์ app/*.js)
+        shell: bash
+        run: |
+          set -e
+          while IFS= read -r -d '' f; do
+            node --check "$f"
+            echo "OK  $f"
+          done < <(find app -name '*.js' -type f -print0)
+          echo "--- SYNTAX OK (ทุกไฟล์) ---"
+
+      - name: Contract tests (Test.js ใน sandbox จำลอง Apps Script runtime)
+        run: node scripts/ci-test.js
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-log
+          path: |
+            **/*.log
+          if-no-files-found: ignore

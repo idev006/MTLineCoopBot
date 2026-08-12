@@ -2,6 +2,8 @@
 
 LINE Bot บริการสมาชิกสหกรณ์ — Frontend/UI ผ่าน LINE Messaging API (Rich Menu + Flex Message) · Backend บน Google Apps Script · ข้อมูลใน Google Sheets
 
+![CI — Contract Tests & Lint](https://github.com/idev006/MTLineCoopBot/actions/workflows/ci.yml/badge.svg)
+
 ## 📚 เอกสารโครงการ (Project Book)
 
 เอกสารฉบับสมบูรณ์ (ปกหน้า · คำนำ · สารบัญ · 8 บท · บรรณานุกรม) อยู่ที่:
@@ -77,11 +79,16 @@ clasp push
 
 ## 🧪 ทดสอบ
 
-ฟังก์ชันทดสอบรันใน **Apps Script Editor → เลือกฟังก์ชัน → Run** (รายละเอียด: บทที่ 6 + `app/Test.js`)
+**CI (GitHub Actions)** รันอัตโนมัติทุก push ขึ้น `main` — mirror DoD บทที่ 8.1.3:
 
-- `verifyMenuContract()` — ตรวจ item id ครบใน CAPTIONS (ห้าม Deploy ถ้า fail)
-- `verifyThaiCaptions()` — ตรวจ caption เป็นภาษาไทย
-- `testVerifyLineSignature()` · `testVerifyWebhookSecret()` · `testMemberValidity()`
+1. `node --check` ทุกไฟล์ `app/*.js` — ตรวจ syntax
+2. `node scripts/ci-test.js` — รันชุดทดสอบสัญญา (จำลอง Apps Script runtime ด้วย vm + mock services):
+   - `verifyMenuContract()` — item id ครบใน CAPTIONS (ห้าม Deploy ถ้า fail)
+   - `verifyThaiCaptions()` — caption เป็นภาษาไทย
+   - `testVerifyLineSignature()` · `testVerifyWebhookSecret()` · `testMemberValidity()`
+3. **Secret scan** — ห้าม hardcoded token/secret ในโค้ด (fail ถ้าพบ)
+
+รันในเครื่องได้ด้วย: `node scripts/ci-test.js` · และรันใน **Apps Script Editor → เลือกฟังก์ชัน → Run** (รายละเอียด: บทที่ 6 + `app/Test.js`)
 
 ## 📌 สถานะโครงการ
 

@@ -94,10 +94,17 @@ const Config = (() => {
 
 /**
  * รันฟังก์ชันนี้ครั้งเดียวเพื่อบันทึกค่าลง Script Properties
+ *
+ * ⚠️ ความปลอดภัย: ห้ามใส่ token จริงในโค้ดนี้ (repo เป็น public)
+ * ให้ใส่ค่าจริงผ่าน Script Properties โดยตรง:
+ * Apps Script Editor → Project Settings → Script Properties
+ * หรือแก้ไขตรงนี้ชั่วคราวเฉพาะเครื่อง (ห้าม commit)
  */
 function setupConfig() {
   Config.setup({
-    'CHANNEL_ACCESS_TOKEN': '***REMOVED***'
+    // 'CHANNEL_ACCESS_TOKEN': 'ใส่_TOKEN_จริง_ที่นี่_เฉพาะเครื่อง_ห้าม_commit',
+    // 'CHANNEL_SECRET': 'ใส่_CHANNEL_SECRET_จริง_ที่นี่_เฉพาะเครื่อง_ห้าม_commit',
+    // 'WEBHOOK_SECRET': 'ใส่_WEBHOOK_SECRET_จริง_ที่นี่_เฉพาะเครื่อง_ห้าม_commit'
     // IMAGE_FILE_IDS ถูกกำหนดไว้ใน Config.IMAGE_FILE_IDS โดยตรงแล้ว
   });
 }
