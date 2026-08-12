@@ -44,7 +44,7 @@
 | 3 | [บทที่ 3 การออกแบบระบบ](./ch-03-system-design.md) | ข้อมูล · Data Layer/Repository Pattern · Rich Menu + Per-User Gating · Item-ID Contract · Flex Message · Webhook · ความปลอดภัย/Auth Chain · RBAC · API-First/Multi-UI |
 | 4 | [บทที่ 4 โครงสร้างโปรแกรม](./ch-04-program-structure.md) | โครงสร้างไฟล์ · คำอธิบายโมดูล · มาตรฐานโค้ด · Configuration |
 | 5 | [บทที่ 5 การติดตั้งและการใช้งาน](./ch-05-installation-deployment.md) | clasp · GitHub Workflow (Git → clasp → Apps Script) · Script Properties · Deploy Web App · Deploy Rich Menu · LINE Console |
-| 6 | [บทที่ 6 การทดสอบระบบ](./ch-06-testing.md) | กลยุทธ์การทดสอบ · Test Cases (TC-01–12) · การตรวจสอบ Log · Troubleshooting |
+| 6 | [บทที่ 6 การทดสอบระบบ](./ch-06-testing.md) | กลยุทธ์การทดสอบ · Test Cases (TC-01–13) · การตรวจสอบ Log · Troubleshooting |
 | 7 | [บทที่ 7 การบำรุงรักษาและการพัฒนาในอนาคต](./ch-07-maintenance-roadmap.md) | การบำรุงรักษา · Roadmap 4 ระยะ · แนวทางการขยายระบบ |
 | 8 | [บทที่ 8 กระบวนการพัฒนา](./ch-08-process.md) | Document-Driven (เอกสารนำโค้ด) · Agile Kanban · Dashboard · DoD |
 | — | [KANBAN.md](./KANBAN.md) | บอร์ดงานทีม (Backlog / To Do / In Progress / Done) |
@@ -83,7 +83,8 @@
 | หมุน Channel Access Token (SEC) — หมุนแล้ว + purge ประวัติ git + CI กันซ้ำ (regex + gitleaks) | ✅ ทำแล้ว | บทที่ 5.5.1, KANBAN MT-26 |
 | `checkTokenHealth()` — ตรวจสุขภาพ token ผ่าน LINE Get Bot Info API (รันมือใน Apps Script Editor) | ✅ ทำแล้ว | บทที่ 5.5.1, 7.1.3 |
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
-| ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · เมนูการเงินตอบ "ไม่เชื่อมต่อ" (ต้องมีตารางการเงิน 📌) | ✅ บางส่วน | บทที่ 7 ระยะ 2, data-dictionary.md |
+| ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (dummy data ผ่าน `SeedData`) | ✅ ทำแล้ว (dummy) | บทที่ 7 ระยะ 2, 5.6.4, data-dictionary.md |
+| ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
 | สถาปัตยกรรม API-First + LIFF (`Api/Core/UI-Adapter`, ID Token JWT) | 📌 ออกแบบไว้ — เฟส 3 | บทที่ 3.1.1, 7 ระยะที่ 3 |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
 | Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |

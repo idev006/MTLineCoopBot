@@ -291,13 +291,117 @@ function testMemberDataService() {
   if (!S.isFinancialItem('loan_balance')) throw new Error('testMemberDataService: loan_balance ควรเป็นเมนูการเงิน');
   if (S.isFinancialItem('profile')) throw new Error('testMemberDataService: profile ไม่ควรเป็นเมนูการเงิน');
 
-  // 4) เมนูการเงินตอบสถานะชัดเจน (ไม่ปลอมตัวเลข) + มี caption
+  // 4) เมนูการเงินไม่มีข้อมูล → ตอบสถานะจริง (ไม่ปลอมตัวเลข) + มี caption
   const f = S.buildFinanceText('saving_acct', member);
   if (!f.includes('บัญชีเงินฝาก')) throw new Error('testMemberDataService: finance text ไม่มี caption');
-  if (!f.includes('ยังไม่เชื่อมต่อข้อมูลการเงิน')) throw new Error('testMemberDataService: finance text ควรแจ้งสถานะชัดเจน');
+  if (!f.includes('ไม่พบข้อมูลบัญชีเงินฝาก')) throw new Error('testMemberDataService: finance text ควรแจ้งไม่พบข้อมูล');
   if (/\d{3,}[.,]\d{2}\s*บาท/.test(f)) throw new Error('testMemberDataService: ห้ามมีตัวเลขยอดเงินปลอม');
 
   Logger.log('testMemberDataService OK — profile จริง + เมนูการเงินตอบสถานะจริง');
+  return true;
+}
+
+/**
+ * ทดสอบ SeedData (MT-27):
+ * dummy rows ตรงกับคอลัมน์ใน DataDict (SSOT) · ครบ 4 ตาราง · mem_code เป็น MEMxxx
+ * (pure — ตรวจโครงสร้างได้โดยไม่ต้องพึ่ง SpreadsheetApp)
+ * @returns {boolean}
+ */
+function testSeedData() {
+  const rows = SeedData.getDummyRows();
+  const keys = SeedData.SEED_TABLE_KEYS;
+  if (keys.length !== 4) throw new Error('testSeedData: ต้องมี 4 ตาราง (ได้ ' + keys.length + ')');
+
+  for (const key of keys) {
+    const headers = DataDict.getHeaders(key);
+    const rowsForKey = rows[key] || [];
+    if (rowsForKey.length === 0) throw new Error('testSeedData: ' + key + ' ไม่มี dummy rows');
+    for (const row of rowsForKey) {
+      if (row.length !== headers.length) {
+        throw new Error('testSeedData: ' + key + ' แถวมี ' + row.length + ' ค่า แต่ DataDict กำหนด ' + headers.length + ' คอลัมน์');
+      }
+    }
+  }
+
+  // FK ใช้ได้จริง: mem_code ในตารางการเงินเป็น MEMxxx (ต้องมีใน t_member_mast)
+  for (const s of rows.SAVINGS_ACCT) {
+    if (!/^MEM\d{3}$/.test(String(s[0]))) throw new Error('testSeedData: mem_code ต้องเป็น MEMxxx');
+  }
+
+  // คอลัมน์หลักของแต่ละตารางตรงตามที่ออกแบบไว้
+  const expect = {
+    SAVINGS_ACCT: ['mem_code', 'acct_no', 'acct_type', 'balance', 'updated_dt'],
+    LOAN_ACCT: ['mem_code', 'loan_no', 'principal', 'outstanding', 'due_dt'],
+    DIVIDEND: ['mem_code', 'year', 'dividend_amt', 'share_capital'],
+    ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt']
+  };
+  for (const key of Object.keys(expect)) {
+    const actual = DataDict.getHeaders(key).join(',');
+    if (actual !== expect[key].join(',')) {
+      throw new Error('testSeedData: ' + key + ' คอลัมน์ไม่ตรงแบบ (' + actual + ')');
+    }
+  }
+
+  Logger.log('testSeedData OK — 4 ตาราง + dummy rows ตรง DataDict');
+  return true;
+}
+
+/**
+ * ทดสอบ Data Layer การเงิน (MT-27) — ผ่าน Fake SpreadsheetApp (ใน CI harness):
+ * seed ด้วย path จริง (SheetService.getSheet) → repository อ่าน →
+ * buildFinanceText จัดรูปแบบข้อมูลจริง (ไม่มีตัวเลขปลอม)
+ * @returns {boolean}
+ */
+function testFinanceData() {
+  // 1) ล้าง fake sheets ของตารางการเงิน แล้ว seed ด้วย path จริง
+  delete __fakeSheets['t_savings_acct'];
+  delete __fakeSheets['t_loan_acct'];
+  delete __fakeSheets['t_dividend'];
+
+  const rowsByTable = SeedData.getDummyRows();
+  for (const key of ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND']) {
+    const sheet = LineBot.SheetService.getSheet(key);
+    for (const row of rowsByTable[key]) {
+      sheet.appendRow(row);
+    }
+  }
+
+  // 2) repository อ่านข้อมูลจริง (Data Layer เต็ม path)
+  const repo = Data.MemberRepository.getRepository();
+  const savings = repo.findSavingsByMember('MEM001');
+  if (savings.length !== 2) throw new Error('testFinanceData: MEM001 ควรมี 2 บัญชี (ได้ ' + savings.length + ')');
+  const loans = repo.findLoansByMember('MEM001');
+  if (loans.length !== 1) throw new Error('testFinanceData: MEM001 ควรมี 1 สัญญา (ได้ ' + loans.length + ')');
+  const dividends = repo.findDividendsByMember('MEM001');
+  if (dividends.length !== 2) throw new Error('testFinanceData: MEM001 ควรมีปันผล 2 ปี (ได้ ' + dividends.length + ')');
+  if (repo.findSavingsByMember('MEM999').length !== 0) throw new Error('testFinanceData: MEM999 ไม่ควรมีข้อมูล');
+
+  // 3) buildFinanceText จัดรูปแบบข้อมูลจริง
+  const S = LineBot.MemberDataService;
+  const member = { mem_code: 'MEM001' };
+  const fd = { savings: savings, loans: loans, dividends: dividends };
+
+  const savingText = S.buildFinanceText('saving_acct', member, fd);
+  if (!savingText.includes('25,000.00 บาท')) throw new Error('testFinanceData: saving ไม่มียอด 25,000.00');
+  if (!savingText.includes('รวมเงินฝาก: 125,000.00 บาท')) throw new Error('testFinanceData: รวมเงินฝากผิด');
+
+  const loanText = S.buildFinanceText('loan_balance', member, fd);
+  if (!loanText.includes('45,000.00 บาท')) throw new Error('testFinanceData: loan ไม่มียอด 45,000.00');
+
+  const divText = S.buildFinanceText('dividends', member, fd);
+  if (!divText.includes('ปันผล 1,250.00 บาท')) throw new Error('testFinanceData: dividends ผิด');
+
+  const shareText = S.buildFinanceText('share_capital', member, fd);
+  if (!shareText.includes('10,000.00 บาท')) throw new Error('testFinanceData: share_capital ผิด');
+
+  // ไม่มีข้อมูล → ตอบสถานะจริง ไม่มีตัวเลขปลอม
+  const emptyText = S.buildFinanceText('loan_balance', { mem_code: 'MEM003' }, { savings: [], loans: [], dividends: [] });
+  if (!emptyText.includes('ไม่พบข้อมูลยอดหนี้')) throw new Error('testFinanceData: no-data ควรแจ้งไม่พบข้อมูล');
+
+  // formatMoney
+  if (S.formatMoney(25000) !== '25,000.00') throw new Error('testFinanceData: formatMoney(25000) ผิด');
+
+  Logger.log('testFinanceData OK — seed → repository → buildFinanceText (ข้อมูลจริง)');
   return true;
 }
 

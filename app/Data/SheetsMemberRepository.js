@@ -61,11 +61,51 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.hasRole(member, role);
   }
 
+  /**
+   * ดึงบัญชีเงินฝากของสมาชิก (MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findSavingsByMember(memCode) {
+    return LineBot.SheetService.findSavingsByMember(memCode);
+  }
+
+  /**
+   * ดึงบัญชีหนี้เงินกู้ของสมาชิก (MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findLoansByMember(memCode) {
+    return LineBot.SheetService.findLoansByMember(memCode);
+  }
+
+  /**
+   * ดึงเงินปันผล/หุ้นของสมาชิก (MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findDividendsByMember(memCode) {
+    return LineBot.SheetService.findDividendsByMember(memCode);
+  }
+
+  /**
+   * บันทึกเหตุการณ์ Activate (MT-27)
+   * @param {Object} entry
+   * @returns {Object} { log_id, status }
+   */
+  function logActivation(entry) {
+    return LineBot.SheetService.logActivation(entry);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
     activateMember,
     isActiveMember,
-    hasRole
+    hasRole,
+    findSavingsByMember,
+    findLoansByMember,
+    findDividendsByMember,
+    logActivation
   };
 })();

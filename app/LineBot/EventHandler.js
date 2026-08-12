@@ -20,7 +20,8 @@ LineBot.EventHandler = (() => {
       ReplyStore: LineBot.ReplyStore,
       FlexBuilder: LineBot.FlexBuilder,
       SheetService: LineBot.SheetService,
-      MemberData: LineBot.MemberDataService
+      MemberData: LineBot.MemberDataService,
+      MemberRepo: Data.MemberRepository
     };
   }
 
@@ -137,9 +138,16 @@ LineBot.EventHandler = (() => {
         return;
       }
       if (deps.MemberData.isFinancialItem(params.item)) {
-        const financeText = deps.MemberData.buildFinanceText(params.item, member);
+        // MT-27: ดึงข้อมูลจริงจากตารางการเงินผ่าน repository
+        const repo = deps.MemberRepo.getRepository();
+        const financeData = {
+          savings: repo.findSavingsByMember(member.mem_code),
+          loans: repo.findLoansByMember(member.mem_code),
+          dividends: repo.findDividendsByMember(member.mem_code)
+        };
+        const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
         deps.MessageService.reply(replyToken, financeText, token);
-        Logger.log(`Financial menu replied (unavailable): ${params.item}`);
+        Logger.log(`Financial menu replied with data: ${params.item}`);
         return;
       }
       const caption = deps.ReplyStore.getCaption(params.item);

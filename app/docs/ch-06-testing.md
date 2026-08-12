@@ -115,6 +115,18 @@
 - [ ] caption ทุกตัวเป็นภาษาไทย
 - [ ] รัน `verifyMenuContract()` ผ่าน แล้วจึงรัน `main()` Deploy Rich Menu (บทที่ 5.6.2)
 
+### 6.2.13 TC-13: เมนูการเงินแสดงข้อมูลจริงจากตาราง (dummy data — การ์ด MT-27)
+
+> **รันได้กับโค้ดปัจจุบัน** — ต้องรัน `createDummyTables()` (บทที่ 5.6.4) ก่อน และต้องมีรหัสสมาชิก `MEM001`–`MEM003` ใน `t_member_mast`
+
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| วัตถุประสงค์ | ยืนยันว่าเมนูการเงิน (เงินฝาก/เช็คยอด/หนี้/ปันผล/หุ้น) แสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` ผ่าน repository — ไม่ตอบ "ไม่เชื่อมต่อ" อีกต่อไป |
+| ข้อมูลตั้งต้น | รัน `createDummyTables()` แล้ว (4 ตาราง + dummy data) · สมาชิก LINE ที่ activate และผูกกับ `MEM001` |
+| ขั้นตอน | 1. คลิกเมนู "บัญชีเงินฝาก" 2. คลิก "ยอดหนี้" 3. คลิก "เงินปันผล" 4. (ผู้ใช้ที่ไม่มีข้อมูล — เช่น `MEM003`) คลิก "ยอดหนี้" |
+| ผลที่คาดหวัง | 1. รายการบัญชี + รวมยอด (`25,000.00 บาท` / `รวมเงินฝาก: 125,000.00 บาท`) 2. เลขสัญญา + ยอดคงค้าง + วันครบกำหนด 3. ปันผลรายปี 4. "ไม่พบข้อมูลยอดหนี้สำหรับรหัสสมาชิกนี้" (ไม่ปลอมตัวเลข) |
+| ผ่าน/ไม่ผ่าน | ☐ |
+
 ## 6.3 การตรวจสอบ Log (Log Inspection)
 
 Log ทั้งหมดอยู่ใน **Apps Script Editor → Executions** (หรือ Stackdriver Logging)
@@ -127,10 +139,12 @@ events count: 1
 event[0] type: postback
 postback received: action=menu_item&item=saving_acct
 postback params: {"action":"menu_item","item":"saving_acct"}
-Replying flex message for menu: บัญชีเงินฝาก
+Financial menu replied with data: saving_acct   ← (MT-27: ดึงจาก t_savings_acct ผ่าน repository)
 reply success: 200 {}
 === doPost completed ===
 ```
+
+หมายเหตุ: เมนูอื่น (เช่น `loan_calc`) ยังตอบ Flex Message เหมือนเดิม (`Replying flex message for menu: ...`)
 
 ### 6.3.2 Log ระบบ Activate
 
@@ -187,4 +201,4 @@ reply success: 200 {}
 
 ## สรุปท้ายบท
 
-บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 12 กรณี (TC-01–12) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต
+บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 13 กรณี (TC-01–13) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต

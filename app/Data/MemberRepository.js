@@ -12,6 +12,10 @@
  * - activateMember(rowIndex, lineUserId) → { memEffDt, memExpDt }
  * - isActiveMember(member)       → boolean (กฎความ valid — จะย้ายไป Core ในเฟส 3)
  * - hasRole(member, role)        → boolean
+ * - findSavingsByMember(memCode) → Array<Object> (t_savings_acct — MT-27)
+ * - findLoansByMember(memCode)   → Array<Object> (t_loan_acct — MT-27)
+ * - findDividendsByMember(memCode) → Array<Object> (t_dividend — MT-27)
+ * - logActivation(entry)         → { log_id, status } (t_activation_log — MT-27)
  */
 
 var Data = Data || {};
@@ -19,7 +23,10 @@ var Data = Data || {};
 Data.MemberRepository = (() => {
   'use strict';
 
-  const INTERFACE = ['findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole'];
+  const INTERFACE = [
+    'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
+    'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation'
+  ];
 
   /**
    * ตรวจว่า repository ครบตามสัญญา (interface) หรือไม่

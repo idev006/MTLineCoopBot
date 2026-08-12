@@ -59,9 +59,30 @@ const sandbox = {
     createTextOutput: (content) => ({ setMimeType: () => ({ getContent: () => content }) }),
     MimeType: { JSON: 'application/json' }
   },
-  SpreadsheetApp: {}, // ไม่ถูกเรียกใน Test.js — กัน error ถ้าโค้ดเผลอเรียก
   UrlFetchApp: {}
 };
+
+// ── 2.5) Fake SpreadsheetApp (in-memory) — ทดสอบ Data Layer ได้จริงใน node (MT-27) ──
+// จำลอง getSheetByName / insertSheet / getDataRange / appendRow / getRange().setValue / deleteRows
+const __fakeSheets = {};
+function makeFakeSheet(name, rows) {
+  return {
+    getName: () => name,
+    getDataRange: () => ({ getValues: () => rows.map(r => [...r]) }),
+    appendRow: (row) => { rows.push([...row]); },
+    getRange: (r, c) => ({ setValue: (v) => { rows[r - 1][c - 1] = v; } }),
+    getLastRow: () => rows.length,
+    getLastColumn: () => (rows[0] ? rows[0].length : 0),
+    deleteRows: (start, count) => { rows.splice(start - 1, count); }
+  };
+}
+sandbox.SpreadsheetApp = {
+  getActiveSpreadsheet: () => ({
+    getSheetByName: (name) => (name in __fakeSheets ? makeFakeSheet(name, __fakeSheets[name]) : null),
+    insertSheet: (name) => { __fakeSheets[name] = []; return makeFakeSheet(name, __fakeSheets[name]); }
+  })
+};
+sandbox.__fakeSheets = __fakeSheets;
 
 // ── 3) เรียงไฟล์ให้ namespace (var LineBot / var RichMenu / const Config) ครบก่อนใช้ ──
 const FILE_ORDER = [
@@ -84,6 +105,7 @@ const FILE_ORDER = [
   'RichMenu/Deployer.js',
   'RichMenu/Gating.js',
   'WebApp.js',
+  'SeedData.js',
   'Test.js'
 ];
 
@@ -103,6 +125,8 @@ const runner = `
     ['testWelcomeMenu', testWelcomeMenu],
     ['testMemberRepository', testMemberRepository],
     ['testMemberDataService', testMemberDataService],
+    ['testSeedData', testSeedData],
+    ['testFinanceData', testFinanceData],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

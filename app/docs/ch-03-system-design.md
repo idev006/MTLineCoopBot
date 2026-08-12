@@ -127,6 +127,21 @@
 
 > เอกสารฉบับเต็มของ Data Dictionary ดูได้ที่ [data-dictionary.md](./data-dictionary.md)
 
+### 3.2.2b ตารางเพิ่มเติมตาม use case (การ์ด MT-27) ✅ ทำแล้ว (dummy data)
+
+สร้างตารางใหม่ตาม use case/กลุ่มเมนู โดยใช้หลักการตั้งชื่อ **lower case + ขึ้นต้น `t_`** (ขยายได้ในอนาคต — บทที่ 2.4.3):
+
+| ตาราง | ใช้กับเมนู/use case | ข้อมูล |
+|-------|--------------------|--------|
+| `t_savings_acct` | saving_acct / chk_balance | บัญชีเงินฝาก + ยอดคงเหลือ |
+| `t_loan_acct` | loan_balance | ยอดหนี้เงินกู้ (เลขสัญญา/วงเงิน/คงค้าง/ครบกำหนด) |
+| `t_dividend` | dividends / share_capital | เงินปันผล + เงินหุ้นรายปี |
+| `t_activation_log` | audit trail (Activate) — เตรียม Actor staff/admin | บันทึกการ Activate (log_id/mem_code/status/เวลา) |
+
+- โครงสร้างคอลัมน์นิยามใน `DataDict.js` (SSOT) — ดูรายละเอียด [data-dictionary.md](./data-dictionary.md)
+- สร้างตาราง + ข้อมูลตัวอย่าง (dummy) ด้วย `SeedData.createDummyTables()` (บทที่ 5.6.4) — ไม่ทับข้อมูลเดิม
+- เมนูการเงินอ่านข้อมูลจริงผ่าน repository (`findSavingsByMember`/`findLoansByMember`/`findDividendsByMember`)
+
 ### 3.2.3 ฟังก์ชันหลักของ DataDict
 
 | ฟังก์ชัน | หน้าที่ |

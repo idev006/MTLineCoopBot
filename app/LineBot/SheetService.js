@@ -135,6 +135,82 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ค้นหาทุกแถวที่ columnName ตรงกับ value (ใช้กับตารางการเงิน — MT-27)
+   * @param {string} tableKey - key ใน DataDict เช่น 'SAVINGS_ACCT'
+   * @param {string} columnName - ชื่อคอลัมน์ เช่น 'mem_code'
+   * @param {*} value
+   * @returns {Array<Object>} รายการ object (rowToObject) — ว่างถ้าไม่พบ
+   */
+  function findAllByColumn(tableKey, columnName, value) {
+    if (!value) return [];
+    const sheet = getSheet(tableKey);
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return [];
+
+    const colIndex = DataDict.getColumnIndex(tableKey, columnName);
+    if (colIndex === -1) {
+      throw new Error(`Column ${columnName} not found in ${DataDict.getTable(tableKey).name}`);
+    }
+
+    const results = [];
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][colIndex]).trim() === String(value).trim()) {
+        results.push(DataDict.rowToObject(tableKey, data[i]));
+      }
+    }
+    return results;
+  }
+
+  /**
+   * ดึงบัญชีเงินฝากของสมาชิก (เมนู saving_acct / chk_balance — MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findSavingsByMember(memCode) {
+    return findAllByColumn('SAVINGS_ACCT', 'mem_code', memCode);
+  }
+
+  /**
+   * ดึงบัญชีหนี้เงินกู้ของสมาชิก (เมนู loan_balance — MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findLoansByMember(memCode) {
+    return findAllByColumn('LOAN_ACCT', 'mem_code', memCode);
+  }
+
+  /**
+   * ดึงเงินปันผล/หุ้นของสมาชิก (เมนู dividends / share_capital — MT-27)
+   * @param {string} memCode
+   * @returns {Array<Object>}
+   */
+  function findDividendsByMember(memCode) {
+    return findAllByColumn('DIVIDEND', 'mem_code', memCode);
+  }
+
+  /**
+   * บันทึกเหตุการณ์ Activate ลง t_activation_log (audit trail — MT-27)
+   * @param {Object} entry - { memCode, lineUserId, activateCode, status }
+   * @returns {Object} ข้อมูลที่บันทึก
+   */
+  function logActivation(entry) {
+    const tableKey = 'ACTIVATION_LOG';
+    const sheet = getSheet(tableKey);
+    const logId = 'LOG-' + String(Date.now());
+    const row = DataDict.objectToRow(tableKey, {
+      log_id: logId,
+      mem_code: entry.memCode || '',
+      line_user_id: entry.lineUserId || '',
+      activate_code: entry.activateCode || '',
+      status: entry.status || 'success',
+      activated_dt: DataDict.formatDateTime(new Date())
+    });
+    sheet.appendRow(row);
+    Logger.log(`[ActivationLog] ${logId} — ${entry.status} (${entry.memCode})`);
+    return { log_id: logId, status: entry.status || 'success' };
+  }
+
+  /**
    * อัปเดตข้อมูลการ activate สมาชิก
    * @param {number} rowIndex - 1-based row index
    * @param {string} lineUserId
@@ -218,6 +294,11 @@ LineBot.SheetService = (() => {
   return {
     findByActivateCode,
     findByLineUserId,
+    findAllByColumn,
+    findSavingsByMember,
+    findLoansByMember,
+    findDividendsByMember,
+    logActivation,
     activateMember,
     isActiveMember,
     hasRole,

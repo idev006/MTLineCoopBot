@@ -216,6 +216,21 @@ function checkRichMenuStatus() {
 }
 ```
 
+### 5.6.4 สร้างตารางข้อมูล + dummy data (SeedData — การ์ด MT-27)
+
+สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
+
+```javascript
+// ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run
+createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log + dummy data
+// resetDummyTables(); // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
+```
+
+- **Non-destructive:** ถ้าชีทมีข้อมูลอยู่แล้วจะข้าม — ไม่ทับข้อมูลจริง
+- ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — **ต้องมีรหัสเหล่านี้ใน `t_member_mast`** ถึงจะเห็นข้อมูลการเงินในเมนู (หรือแก้ `mem_code` ในชีทให้ตรงกับสมาชิกจริง)
+- ไม่แตะ `t_member_mast` (เป็นข้อมูลจริงของสมาชิก)
+- หลังสร้างตารางแล้ว คลิกเมนูการเงินใน LINE → เห็นข้อมูลตัวอย่าง (ดู Smoke Test 5.8)
+
 ## 5.7 การ Deploy เครื่องคำนวณสินเชื่อ (GitHub Pages)
 
 1. อัปโหลดไฟล์ `loan_calculator.html` ขึ้น repository (เช่น `MTP6LineCoopBot`)
@@ -228,7 +243,7 @@ function checkRichMenuStatus() {
 | ลำดับ | ขั้นตอน | ผลที่คาดหวัง |
 |-------|---------|-------------|
 | 1 | เพิ่ม Bot เป็นเพื่อน | เห็น Rich Menu แท็บ 1 (ข้อมูลส่วนตัว) เป็น default |
-| 2 | คลิกเมนู "บัญชีเงินฝาก" | ได้ Flex Message "คุณเลือกเมนู บัญชีเงินฝาก" |
+| 2 | คลิกเมนู "บัญชีเงินฝาก" | (หลังรัน `createDummyTables()` แล้ว) เห็นยอดเงินฝากจริง/รวมยอดจาก `t_savings_acct` — ถ้ายังไม่ seed จะเห็น "ไม่พบข้อมูลบัญชีเงินฝาก" |
 | 3 | สลับไปแท็บ 2 แล้วคลิก "เครื่องคำนวณเงินกู้" | เปิดหน้า loan_calculator.html |
 | 4 | พิมพ์ `activate:ABC123` (รหัสที่เตรียมไว้) | ได้ Flex "🎉 ยินดีต้อนรับ..." และข้อมูลใน Sheets อัปเดต |
 | 5 | พิมพ์ `activate:ABC123` ซ้ำ | ได้ข้อความ "รหัสนี้ถูกใช้ไปแล้ว..." |

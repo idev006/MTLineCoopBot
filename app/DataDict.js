@@ -37,6 +37,78 @@ const DataDict = (() => {
         { name: 'line_user_id', type: 'string', required: false, label: 'LINE User ID' },
         { name: 'mem_role', type: 'string', required: false, label: 'บทบาท', default: 'member' }
       ]
+    },
+
+    /**
+     * บัญชีเงินฝากสมาชิก (เมนู saving_acct / chk_balance)
+     * Sheet: t_savings_acct
+     * การ์ด MT-27 — dummy data
+     */
+    SAVINGS_ACCT: {
+      name: 't_savings_acct',
+      description: 'บัญชีเงินฝากสมาชิก',
+      primaryKey: 'acct_no',
+      columns: [
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก (FK → t_member_mast)' },
+        { name: 'acct_no', type: 'string', required: true, label: 'เลขบัญชี', unique: true },
+        { name: 'acct_type', type: 'string', required: false, label: 'ประเภทบัญชี', default: 'ออมทรัพย์' },
+        { name: 'balance', type: 'number', required: true, label: 'ยอดเงินฝากคงเหลือ' },
+        { name: 'updated_dt', type: 'date', required: false, label: 'วันที่อัปเดตล่าสุด' }
+      ]
+    },
+
+    /**
+     * ยอดหนี้เงินกู้สมาชิก (เมนู loan_balance)
+     * Sheet: t_loan_acct
+     * การ์ด MT-27 — dummy data
+     */
+    LOAN_ACCT: {
+      name: 't_loan_acct',
+      description: 'บัญชีหนี้เงินกู้สมาชิก',
+      primaryKey: 'loan_no',
+      columns: [
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก (FK → t_member_mast)' },
+        { name: 'loan_no', type: 'string', required: true, label: 'เลขสัญญา', unique: true },
+        { name: 'principal', type: 'number', required: true, label: 'วงเงินกู้' },
+        { name: 'outstanding', type: 'number', required: true, label: 'ยอดหนี้คงค้าง' },
+        { name: 'due_dt', type: 'date', required: false, label: 'วันครบกำหนด' }
+      ]
+    },
+
+    /**
+     * เงินปันผลและหุ้น (เมนู dividends / share_capital)
+     * Sheet: t_dividend
+     * การ์ด MT-27 — dummy data
+     */
+    DIVIDEND: {
+      name: 't_dividend',
+      description: 'เงินปันผลและหุ้นรายปี',
+      primaryKey: 'mem_code',
+      columns: [
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก (FK → t_member_mast)' },
+        { name: 'year', type: 'number', required: true, label: 'ปีบัญชี (พ.ศ.)' },
+        { name: 'dividend_amt', type: 'number', required: false, label: 'เงินปันผล' },
+        { name: 'share_capital', type: 'number', required: false, label: 'เงินหุ้น/ทุนเรือนหุ้น' }
+      ]
+    },
+
+    /**
+     * บันทึกการ Activate สมาชิก (audit trail — เตรียม Actor staff/admin ในอนาคต)
+     * Sheet: t_activation_log
+     * การ์ด MT-27 — dummy data
+     */
+    ACTIVATION_LOG: {
+      name: 't_activation_log',
+      description: 'บันทึกการ Activate สมาชิก (audit trail)',
+      primaryKey: 'log_id',
+      columns: [
+        { name: 'log_id', type: 'string', required: true, label: 'รหัสบันทึก', unique: true },
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก' },
+        { name: 'line_user_id', type: 'string', required: false, label: 'LINE User ID' },
+        { name: 'activate_code', type: 'string', required: false, label: 'รหัส Activate' },
+        { name: 'status', type: 'string', required: false, label: 'ผลลัพธ์', default: 'success' },
+        { name: 'activated_dt', type: 'datetime', required: false, label: 'เวลาที่บันทึก' }
+      ]
     }
   };
 

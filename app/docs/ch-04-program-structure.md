@@ -10,7 +10,7 @@ MTLineCoopBot/
 └── app/                         # rootDir ของ Apps Script project
     ├── appsscript.json          # manifest: timezone, runtime, webapp settings
     ├── Config.js                # ค่าคอนฟิก + Script Properties
-    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (t_member_mast)
+    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (5 ตาราง: t_member_mast + 4 ตาราง MT-27)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
     ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
     │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
@@ -21,6 +21,7 @@ MTLineCoopBot/
     ├── WebApp.js                # Entry point doPost(e)
     ├── Test.js                  # ฟังก์ชันทดสอบระบบ (verifyMenuContract ฯลฯ)
     ├── Dashboard.js             # สร้าง KPI Dashboard ของทีม (createDashboard)
+    ├── SeedData.js              # สร้างตาราง 4 ตาราง + dummy data (MT-27)
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── EventHandler.js      # Router จัดการ event
@@ -126,7 +127,19 @@ Entry point ของ LINE webhook
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
 - `testMemberRepository()` — ทดสอบ interface + factory ตาม `DB_TYPE` (บทที่ 3.2.4)
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
+- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 4 ตาราง (MT-27)
+- `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
+
+### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
+
+สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
+
+- `createDummyTables()` — สร้างชีท 4 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log`
+- `resetDummyTables()` — ล้างข้อมูลแล้วใส่ dummy ใหม่ (ใช้ใน dev/test เท่านั้น)
+- `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
+- ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
+- **ไม่แตะ `t_member_mast`** (เป็นข้อมูลจริงของสมาชิก)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 
@@ -141,10 +154,11 @@ Entry point ของ LINE webhook
 - ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
 
-**`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10)
+**`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27)
 - `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
-- `buildFinanceText(item, member)` — เมนูการเงินตอบสถานะจริง "ยังไม่เชื่อมต่อ" (ตารางการเงินยังไม่มี — ดูบทที่ 7)
-- `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูที่ต้องใช้ตารางการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
+- `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข)
+- `formatMoney(value)` — จัดรูปแบบตัวเลขเป็นเงินไทย (เช่น `25,000.00`)
+- `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
 
 **`FlexBuilder.js`** — ตัวสร้าง Flex Message
 - `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)`
@@ -163,6 +177,8 @@ Entry point ของ LINE webhook
 - `getSheet(tableKey)` — ดึง sheet หรือสร้างให้อัตโนมัติจาก DataDict
 - `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id`
+- `findSavingsByMember(memCode)` / `findLoansByMember(memCode)` / `findDividendsByMember(memCode)` — อ่านข้อมูลการเงินจากตารางใหม่ (MT-27) ผ่าน `findAllByColumn()`
+- `logActivation(entry)` — บันทึก audit trail ลง `t_activation_log` (MT-27)
 - `isActiveMember(member)` — ตรวจว่าสมาชิก valid: ช่วงวัน `[mem_eff_dt, mem_exp_dt]` + `mem_status='active'` (fail-safe เมื่อวันที่ไม่ครบ)
 - `hasRole(member, role)` — ตรวจว่า valid และมีบทบาทตรงตามที่กำหนด (`member`/`staff`/`admin`)
 - `parseDate(value)` — แปลงวันที่จาก string (กันปัญหา timezone ของ `new Date(string)`)

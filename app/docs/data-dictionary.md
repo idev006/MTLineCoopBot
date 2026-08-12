@@ -29,15 +29,58 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | line_user_id | string | No | - | LINE User ID |
 | mem_role | string | No | member | บทบาท (member / staff / admin) |
 
-> ⚠️ **หมายเหตุ (2026-08-12, การ์ด MT-10):** `t_member_mast` มีเฉพาะข้อมูลสมาชิก + คะแนน — **ไม่มีข้อมูลการเงิน** (เงินฝาก/หนี้/ปันผล) เมนูการเงินในระบบจึงตอบ "ยังไม่เชื่อมต่อ" จนกว่าจะมีตารางใหม่:
->
-> | ตาราง (ออกแบบไว้ 📌) | ข้อมูล | คอลัมน์หลักที่คาดว่า
-> |----------------------|--------|-------------------|
-> | `t_savings_acct` | บัญชีเงินฝาก/เช็คยอด | mem_code, acct_no, balance, updated_dt |
-> | `t_loan_acct` | ยอดหนี้เงินกู้ | mem_code, loan_no, principal, outstanding, due_dt |
-> | `t_dividend` | เงินปันผล/หุ้น | mem_code, year, dividend_amt, share_capital |
->
-> เมื่อมีตารางเหล่านี้ ต้องเพิ่มใน `DataDict.js` (SSOT) + repository แล้วเชื่อมใน `MemberDataService.buildFinanceText()`
+## หลักการตั้งชื่อตาราง
+
+- **lower case ทั้งหมด** และ **ขึ้นต้นด้วย `t_`** เช่น `t_member_mast`
+- ตารางหนึ่งสร้างตาม **หนึ่ง use case / กลุ่มเมนู** (ขยายได้ในอนาคต — บทที่ 2.4.3)
+- ทุกตารางนิยามใน `DataDict.js` (SSOT) เพียงจุดเดียว — ห้ามแก้คอลัมน์ที่ Sheet ตรง ๆ
+
+### SAVINGS_ACCT (t_savings_acct) ✅ ทำแล้ว (การ์ด MT-27)
+บัญชีเงินฝากสมาชิก — ใช้กับเมนู `saving_acct` / `chk_balance`
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| mem_code | string | Yes | - | รหัสสมาชิก (FK → t_member_mast) |
+| acct_no | string | Yes | - | เลขบัญชี (unique) |
+| acct_type | string | No | ออมทรัพย์ | ประเภทบัญชี (ออมทรัพย์/ออมทรัพย์พิเศษ/ประจำ) |
+| balance | number | Yes | - | ยอดเงินฝากคงเหลือ |
+| updated_dt | date | No | - | วันที่อัปเดตล่าสุด |
+
+### LOAN_ACCT (t_loan_acct) ✅ ทำแล้ว (การ์ด MT-27)
+บัญชีหนี้เงินกู้สมาชิก — ใช้กับเมนู `loan_balance`
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| mem_code | string | Yes | - | รหัสสมาชิก (FK → t_member_mast) |
+| loan_no | string | Yes | - | เลขสัญญา (unique) |
+| principal | number | Yes | - | วงเงินกู้ |
+| outstanding | number | Yes | - | ยอดหนี้คงค้าง |
+| due_dt | date | No | - | วันครบกำหนด |
+
+### DIVIDEND (t_dividend) ✅ ทำแล้ว (การ์ด MT-27)
+เงินปันผลและหุ้นรายปี — ใช้กับเมนู `dividends` / `share_capital`
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| mem_code | string | Yes | - | รหัสสมาชิก (FK → t_member_mast) |
+| year | number | Yes | - | ปีบัญชี (พ.ศ.) |
+| dividend_amt | number | No | - | เงินปันผล |
+| share_capital | number | No | - | เงินหุ้น/ทุนเรือนหุ้น |
+
+### ACTIVATION_LOG (t_activation_log) ✅ ทำแล้ว (การ์ด MT-27)
+บันทึกการ Activate สมาชิก (audit trail — เตรียม Actor staff/admin ในอนาคต บทที่ 2.4.3)
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| log_id | string | Yes | - | รหัสบันทึก (unique) |
+| mem_code | string | Yes | - | รหัสสมาชิก |
+| line_user_id | string | No | - | LINE User ID |
+| activate_code | string | No | - | รหัส Activate |
+| status | string | No | success | ผลลัพธ์ (success / failed) |
+| activated_dt | datetime | No | - | เวลาที่บันทึก |
+
+> 📌 **หมายเหตุ (การ์ด MT-27):** ตารางทั้ง 4 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
+> เมื่อแทนที่ด้วยข้อมูลจริง: แก้ค่าในชีทได้เลย โดยไม่ต้องแก้โค้ด — โครงสร้างคอลัมน์ห้ามแกะเอง ต้องแก้ที่ `DataDict.js` (SSOT) ก่อน
 
 ## รูปแบบข้อมูลวันที่
 
