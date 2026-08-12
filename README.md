@@ -86,7 +86,8 @@ clasp push
    - `verifyMenuContract()` — item id ครบใน CAPTIONS (ห้าม Deploy ถ้า fail)
    - `verifyThaiCaptions()` — caption เป็นภาษาไทย
    - `testVerifyLineSignature()` · `testVerifyWebhookSecret()` · `testMemberValidity()`
-3. **Secret scan** — ห้าม hardcoded token/secret ในโค้ด (fail ถ้าพบ)
+3. **Secret scan (regex)** — ห้าม hardcoded token/secret ในโค้ด (fail ถ้าพบ)
+4. **gitleaks** (job แยก) — ตรวจ API keys / private keys / generic secrets ครอบคลุม pattern กว้างกว่า + ตรวจ**ประวัติ git ทั้งหมด** (config: `.gitleaks.toml`)
 
 รันในเครื่องได้ด้วย: `node scripts/ci-test.js` · และรันใน **Apps Script Editor → เลือกฟังก์ชัน → Run** (รายละเอียด: บทที่ 6 + `app/Test.js`)
 
