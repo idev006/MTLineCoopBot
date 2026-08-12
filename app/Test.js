@@ -321,7 +321,7 @@ function testMemberDataService() {
 function testSeedData() {
   const rows = SeedData.getDummyRows();
   const keys = SeedData.SEED_TABLE_KEYS;
-  if (keys.length !== 4) throw new Error('testSeedData: ต้องมี 4 ตาราง (ได้ ' + keys.length + ')');
+  if (keys.length !== 5) throw new Error('testSeedData: ต้องมี 5 ตาราง (ได้ ' + keys.length + ')');
 
   for (const key of keys) {
     const headers = DataDict.getHeaders(key);
@@ -344,7 +344,8 @@ function testSeedData() {
     SAVINGS_ACCT: ['mem_code', 'acct_no', 'acct_type', 'balance', 'updated_dt'],
     LOAN_ACCT: ['mem_code', 'loan_no', 'principal', 'outstanding', 'due_dt'],
     DIVIDEND: ['mem_code', 'year', 'dividend_amt', 'share_capital'],
-    ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt']
+    ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt'],
+    EXPIRY_LOG: ['log_id', 'mem_code', 'line_user_id', 'status', 'days_left', 'mem_exp_dt', 'checked_dt']
   };
   for (const key of Object.keys(expect)) {
     const actual = DataDict.getHeaders(key).join(',');
@@ -353,7 +354,7 @@ function testSeedData() {
     }
   }
 
-  Logger.log('testSeedData OK — 4 ตาราง + dummy rows ตรง DataDict');
+  Logger.log('testSeedData OK — 5 ตาราง + dummy rows ตรง DataDict');
   return true;
 }
 
@@ -669,6 +670,7 @@ function testExpiryService() {
   });
 
   if (summary.checked !== 4) throw new Error('testExpiryService: checked ควร 4 (' + summary.checked + ')');
+  if (summary.logged !== 3) throw new Error('testExpiryService: logged ควร 3 (ทุก active+userId ที่ถูกตรวจ)');
   if (summary.expiring !== 1) throw new Error('testExpiryService: expiring ควร 1');
   if (summary.expired !== 1) throw new Error('testExpiryService: expired ควร 1');
   if (summary.pushed !== 2) throw new Error('testExpiryService: pushed ควร 2 (' + summary.pushed + ')');
@@ -685,12 +687,30 @@ function testExpiryService() {
   if (sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testExpiryService: valid ไม่ควรถูก push');
   if (sent.some(s => s.to === 'U44444444444444444444444444444444')) throw new Error('testExpiryService: inactive ไม่ควรถูก push');
 
-  // 2) repository มี listMembers ครบสัญญา
+  // 2) audit trail: ทุกการตรวจถูกบันทึกลง t_expiry_log (การ์ด MT-32)
+  const logs = __fakeSheets['t_expiry_log'] || [];
+  const logRows = logs.length > 0 ? logs.slice(1) : []; // ข้าม header
+  if (logRows.length !== 3) throw new Error('testExpiryService: t_expiry_log ควรมี 3 แถว (ได้ ' + logRows.length + ')');
+  const byMember = {};
+  for (const r of logRows) byMember[r[1]] = r;
+  if (!byMember['M001'] || byMember['M001'][3] !== 'expiring' || byMember['M001'][4] !== 14) {
+    throw new Error('testExpiryService: log M001 ผิด (ควร expiring 14 วัน)');
+  }
+  if (!byMember['M002'] || byMember['M002'][3] !== 'expired' || byMember['M002'][4] !== -5) {
+    throw new Error('testExpiryService: log M002 ผิด (ควร expired -5 วัน)');
+  }
+  if (!byMember['M003'] || byMember['M003'][3] !== 'valid' || byMember['M003'][4] !== 147) {
+    throw new Error('testExpiryService: log M003 ผิด (ควร valid 147 วัน)');
+  }
+  if (byMember['M004']) throw new Error('testExpiryService: inactive ไม่ควรมี log');
+
+  // 3) repository มี listMembers + logExpiry ครบสัญญา
   const repo = Data.MemberRepository.getRepository();
   if (typeof repo.listMembers !== 'function') throw new Error('testExpiryService: repository ต้องมี listMembers');
+  if (typeof repo.logExpiry !== 'function') throw new Error('testExpiryService: repository ต้องมี logExpiry');
   if (repo.listMembers().length !== 4) throw new Error('testExpiryService: listMembers ควรคืน 4 รายการ');
 
-  Logger.log('testExpiryService OK — scan + push (expiring/expired) + unlink expired + ข้าม inactive');
+  Logger.log('testExpiryService OK — scan + push + unlink + audit log t_expiry_log (ทุกการตรวจ)');
   return true;
 }
 

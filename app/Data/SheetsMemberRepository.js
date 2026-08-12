@@ -105,6 +105,15 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.findAllMembers();
   }
 
+  /**
+   * บันทึกผลการตรวจวันหมดอายุ (MT-32)
+   * @param {Object} entry - { memCode, lineUserId, status, daysLeft, memExpDt }
+   * @returns {Object} { log_id, status }
+   */
+  function logExpiry(entry) {
+    return LineBot.SheetService.appendExpiryLog(entry);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -115,6 +124,7 @@ Data.SheetsMemberRepository = (() => {
     findLoansByMember,
     findDividendsByMember,
     logActivation,
-    listMembers
+    listMembers,
+    logExpiry
   };
 })();

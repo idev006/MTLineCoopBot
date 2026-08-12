@@ -48,7 +48,7 @@
 | ~~ตรวจสอบ X-Line-Signature~~ | ✅ ทำแล้ว — `verifyWebhookSecret` (URL token) + ฟังก์ชัน HMAC พร้อมใช้ (บทที่ 3.6, การ์ด MT-08) |
 | ~~Gate ตรวจสิทธิ์ใน EventHandler~~ | ✅ ทำแล้ว — `findByLineUserId` + `isActiveMember`/`hasRole` (บทที่ 3.7, การ์ด MT-09) |
 | ~~ดึงข้อมูลสมาชิกจริงตามเมนู~~ | ✅ ทำแล้ว — profile แสดงข้อมูลจริงจาก `t_member_mast` (การ์ด MT-10) · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct` / `t_loan_acct` / `t_dividend` (การ์ด MT-27 — ข้อมูลตัวอย่างผ่าน `SeedData` บทที่ 5.6.4) · ถ้าไม่มีข้อมูลตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข) · เหลือ: แทนที่ dummy ด้วยข้อมูลจริงจากระบบบัญชีสหกรณ์ 📌 |
-| ~~ตรวจสอบวันหมดอายุสมาชิก~~ | ✅ ทำแล้ว (การ์ด MT-11) — `Core.MemberRules.getExpiryStatus` (expired/expiring/valid + daysLeft) · `LineBot.ExpiryService.runExpiryCheck` (Time-driven Trigger รายวัน): push เตือนก่อนหมดอายุ (≤ `EXPIRY_WARNING_DAYS`) / แจ้ง expired + unlink เมนู · ตอบกลับแนบคำเตือนเมื่อใกล้หมด · ตั้ง trigger ตามบทที่ 5.9 |
+| ~~ตรวจสอบวันหมดอายุสมาชิก~~ | ✅ ทำแล้ว (การ์ด MT-11/MT-32) — `Core.MemberRules.getExpiryStatus` (expired/expiring/valid + daysLeft) · `LineBot.ExpiryService.runExpiryCheck` (Time-driven Trigger รายวัน): push เตือนก่อนหมดอายุ (≤ `EXPIRY_WARNING_DAYS`) / แจ้ง expired + unlink เมนู · **ทุกการตรวจบันทึก audit trail ลง `t_expiry_log`** (MT-32) · ตอบกลับแนบคำเตือนเมื่อใกล้หมด · ตั้ง trigger ตามบทที่ 5.9 |
 | Renew / ต่ออายุสมาชิก | เพิ่มคำสั่งหรือ trigger ต่ออายุ `mem_exp_dt` |
 | แจ้งเตือนตามเวลา | ใช้ Time-driven Trigger ส่งข่าวสาร/ประกาศ/เตือนชำระเป็นกลุ่ม |
 | ปรับปรุงข้อความตอบกลับ | แทนที่ Placeholder ใน `ReplyStore` ด้วยข้อมูลจากฐานข้อมูล |

@@ -8,7 +8,7 @@
 | # | เสาหลัก (Pillar) | ที่อยู่ (Where) | หลักฐานการทดสอบ (Test Evidence) | รัน | สถานะ |
 |---|------------------|-----------------|----------------------------------|-----|--------|
 | 1 | **Document-Driven** — เอกสารเป็นสัญญา โค้ดตามเอกสาร (DoD 6 ข้อ) | บทที่ 8 · KANBAN.md | ทุกการ์ด Done มีบันทึก DoD ครบใน KANBAN Change Log | ✋ | ✅ |
-| 2 | **SSOT โครงสร้างข้อมูล** — DataDict จุดเดียว · 16 คอลัมน์ + 4 ตารางการเงิน | `DataDict.js` | `testSeedData` (dummy rows ตรง DataDict 4 ตาราง) · `testMemberDataService` (profile อ่านฟิลด์จริง) | 🧪 | ✅ |
+| 2 | **SSOT โครงสร้างข้อมูล** — DataDict จุดเดียว · 16 คอลัมน์ + 5 ตาราง (ข้อมูล + audit) | `DataDict.js` | `testSeedData` (dummy rows ตรง DataDict 5 ตาราง) · `testMemberDataService` (profile อ่านฟิลด์จริง) | 🧪 | ✅ |
 | 3 | **SSOT เมนู (Item-ID Contract)** — MenuData ↔ ReplyStore.CAPTIONS ตรงกัน | `MenuData.js` / `ReplyStore.js` | `verifyMenuContract` (25 postback + 1 uri) · `verifyThaiCaptions` · `testWelcomeMenu` (4 เมนู) | 🧪 | ✅ |
 | 4 | **Repository Pattern** — สลับ DB ได้ (`DB_TYPE`), SpreadsheetApp จำกัดใน layer เดียว | `Data/MemberRepository.js` + `SheetsMemberRepository.js` | `testMemberRepository` (interface + `assertImplemented` + factory switch — `firestore` throw ชัดเจน) | 🧪 | ✅ (Firestore 📌 เฟส 3) |
 | 5 | **Header-driven** — สลับตำแหน่งคอลัมน์ในชีทได้ | `SheetService.getHeaderMap/readRowsAsObjects` + `DataDict.rowToObjectByHeaders` | `testColumnReordering` (สลับคอลัมน์ t_member_mast/t_savings_acct → อ่าน/เขียนยังถูก) | 🧪 | ✅ |
@@ -19,12 +19,12 @@
 | 10 | **Activate สมาชิก** — `activate:CODE` ผ่าน repository | `LineBot/ActivationService.js` + repository | `testApiLayer` activate case (สำเร็จ/ซ้ำ ALREADY_ACTIVATED/รหัสผิด) · `testMemberRepository` | 🧪 | ✅ |
 | 11 | **Gate ตรวจสิทธิ์** — findByLineUserId + isActiveMember + บทบาท | `EventHandler.getAuthorizedMember` + `Core.MemberRules` | `testMemberValidity` (ช่วงวัน/สถานะ/บทบาท/fail-safe) · `testExpiryStatus` | 🧪 | ✅ |
 | 12 | **Per-User Rich Menu Gating** — Welcome default + link/unlink | `RichMenu/Gating.js` + `MenuData.buildWelcomeTab` | `testWelcomeMenu` (โครงสร้าง + captions + replies) · Gating logic (manual test 4 กรณี — เอกสาร MT-07) | 🧪 | ✅ |
-| 13 | **วันหมดอายุอัตโนมัติ** — scan + push + unlink + คำเตือนในคำตอบ | `LineBot/ExpiryService.js` + `Core.MemberRules.getExpiryStatus` | `testExpiryStatus` (valid/expiring/expired + daysLeft) · `testExpiryService` (scan→push/unlink ผ่าน fake sender) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9) |
+| 13 | **วันหมดอายุอัตโนมัติ** — scan + push + unlink + คำเตือนในคำตอบ + **audit log ทุกการตรวจ** | `LineBot/ExpiryService.js` + `Core.MemberRules.getExpiryStatus` + `t_expiry_log` | `testExpiryStatus` (valid/expiring/expired + daysLeft) · `testExpiryService` (scan→push/unlink + **ตรวจแถว t_expiry_log**: 1 แถว/สมาชิก ถูกต้อง) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9) |
 | 14 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
 | 15 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
 | 16 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (30 ไฟล์ .js) + **18/18 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 17 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
-| 18 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + `t_activation_log` (dummy) | ✋ | ✅ |
+| 18 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
 
 ## วิธีรันหลักฐานทั้งหมด
 

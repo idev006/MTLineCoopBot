@@ -20,8 +20,8 @@ LineBot.ExpiryService = (() => {
   /**
    * รันรอบตรวจวันหมดอายุ (entry point ของ scheduled trigger)
    * @param {string} token - CHANNEL_ACCESS_TOKEN
-   * @param {Object} [opts] - { warningDays, now, sender, unlinker, repo }
-   * @returns {{checked: number, expiring: number, expired: number, pushed: number}}
+   * @param {Object} [opts] - { warningDays, now, sender, unlinker, logger, repo }
+   * @returns {{checked: number, logged: number, expiring: number, expired: number, pushed: number}}
    */
   function runExpiryCheck(token, opts) {
     const o = opts || {};
@@ -32,9 +32,20 @@ LineBot.ExpiryService = (() => {
     const unlinker = o.unlinker || function (lineUserId, tk) {
       try { return RichMenu.Gating.unlinkMemberMenu(lineUserId, tk); } catch (e) { return { ok: false }; }
     };
+    // audit trail: ทุกสมาชิกที่ถูกตรวจ (active + มี userId) จะถูกบันทึกลง t_expiry_log (การ์ด MT-32)
+    const logger = o.logger || function (member, expiry) {
+      return repo.logExpiry({
+        memCode: member.mem_code,
+        lineUserId: member.line_user_id,
+        status: expiry.status,
+        daysLeft: expiry.daysLeft,
+        memExpDt: member.mem_exp_dt,
+        checkedDt: now
+      });
+    };
 
     const members = repo.listMembers();
-    const summary = { checked: members.length, expiring: 0, expired: 0, pushed: 0 };
+    const summary = { checked: members.length, logged: 0, expiring: 0, expired: 0, pushed: 0 };
 
     for (const member of members) {
       // ตรวจเฉพาะสมาชิก active และมี LINE userId (activated)
@@ -42,6 +53,9 @@ LineBot.ExpiryService = (() => {
       if (!member.line_user_id) continue;
 
       const expiry = Core.MemberRules.getExpiryStatus(member, now, warningDays);
+      logger(member, expiry); // บันทึกผลการตรวจทุกราย (valid/expiring/expired)
+      summary.logged++;
+
       if (expiry.status === 'expired') {
         summary.expired++;
         const text = LineBot.MemberDataService.buildExpiryWarning(member, expiry);
@@ -56,7 +70,7 @@ LineBot.ExpiryService = (() => {
       }
     }
 
-    Logger.log(`[ExpiryCheck] checked=${summary.checked} expiring=${summary.expiring} expired=${summary.expired} pushed=${summary.pushed}`);
+    Logger.log(`[ExpiryCheck] checked=${summary.checked} logged=${summary.logged} expiring=${summary.expiring} expired=${summary.expired} pushed=${summary.pushed}`);
     return summary;
   }
 

@@ -85,7 +85,8 @@
 | `checkTokenHealth()` — ตรวจสุขภาพ token ผ่าน LINE Get Bot Info API (รันมือใน Apps Script Editor) | ✅ ทำแล้ว | บทที่ 5.5.1, 7.1.3 |
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
 | ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (dummy data ผ่าน `SeedData`) | ✅ ทำแล้ว (dummy) | บทที่ 7 ระยะ 2, 5.6.4, data-dictionary.md |
-| ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
+| ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
+| Audit trail ตรวจวันหมดอายุ — ทุกการตรวจบันทึกลง `t_expiry_log` (1 แถว/สมาชิก: valid/expiring/expired + days_left) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, KANBAN MT-32 |
 | สลับตำแหน่งฟิลด์ในตารางได้ (Header-driven — อ่าน/เขียน map จาก header จริง, `getHeaderMap`/`rowToObjectByHeaders`) | ✅ ทำแล้ว | บทที่ 3.2.1, 4.2.7, data-dictionary.md |
 | ตรวจรูปแบบวันที่ก่อนเขียน (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss` — ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed) | ✅ ทำแล้ว | data-dictionary.md (มาตรฐาน), 4.2.6 |
 | เลเยอร์แปลงวันที่ชีท ↔ Firestore TIMESTAMP (`Core/DateConverter` — round-trip ตรงเป๊ะ, พร้อมใช้เฟส 3) | ✅ ทำแล้ว (Core) | บทที่ 3.1.1, 4.2.0, data-dictionary.md |

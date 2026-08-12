@@ -222,7 +222,7 @@ function checkRichMenuStatus() {
 
 ```javascript
 // ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run
-createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log + dummy data
+createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log + dummy data
 // resetDummyTables(); // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
 ```
 
@@ -230,6 +230,7 @@ createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividen
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — **ต้องมีรหัสเหล่านี้ใน `t_member_mast`** ถึงจะเห็นข้อมูลการเงินในเมนู (หรือแก้ `mem_code` ในชีทให้ตรงกับสมาชิกจริง)
 - ไม่แตะ `t_member_mast` (เป็นข้อมูลจริงของสมาชิก)
 - หลังสร้างตารางแล้ว คลิกเมนูการเงินใน LINE → เห็นข้อมูลตัวอย่าง (ดู Smoke Test 5.8)
+- `t_expiry_log` ถูกเขียนโดยอัตโนมัติทุกครั้งที่ `runExpiryCheck` รัน (การ์ด MT-32) — SeedData มี dummy ตัวอย่างให้ดูรูปแบบ
 
 ## 5.7 การ Deploy เครื่องคำนวณสินเชื่อ (GitHub Pages)
 

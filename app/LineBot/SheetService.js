@@ -261,6 +261,30 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * บันทึกผลการตรวจวันหมดอายุลง t_expiry_log (audit trail — การ์ด MT-32)
+   * @param {Object} entry - { memCode, lineUserId, status, daysLeft, memExpDt }
+   * @returns {Object} ข้อมูลที่บันทึก
+   */
+  function appendExpiryLog(entry) {
+    const tableKey = 'EXPIRY_LOG';
+    const sheet = getSheet(tableKey);
+    const logId = 'ELOG-' + String(Date.now());
+    const headers = getHeaderRow(sheet);
+    const row = DataDict.objectToRowByHeaders(tableKey, headers, {
+      log_id: logId,
+      mem_code: entry.memCode || '',
+      line_user_id: entry.lineUserId || '',
+      status: entry.status || 'valid',
+      days_left: entry.daysLeft,
+      mem_exp_dt: entry.memExpDt || '',
+      checked_dt: DataDict.formatDateTime(entry.checkedDt || new Date())
+    });
+    sheet.appendRow(row);
+    Logger.log(`[ExpiryLog] ${logId} — ${entry.memCode} (${entry.status}, ${entry.daysLeft} วัน)`);
+    return { log_id: logId, status: entry.status || 'valid' };
+  }
+
+  /**
    * อัปเดตข้อมูลการ activate สมาชิก
    * @param {number} rowIndex - 1-based row index
    * @param {string} lineUserId
@@ -358,6 +382,7 @@ LineBot.SheetService = (() => {
     findLoansByMember,
     findDividendsByMember,
     logActivation,
+    appendExpiryLog,
     activateMember,
     isActiveMember,
     hasRole,

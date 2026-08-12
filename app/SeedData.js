@@ -19,7 +19,7 @@ const SeedData = (() => {
   'use strict';
 
   /** ตารางที่ SeedData จัดการ (key ใน DataDict) */
-  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG'];
+  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG'];
 
   /**
    * ข้อมูลตัวอย่างต่อตาราง (pure — ทดสอบใน node ได้โดยไม่ต้องพึ่ง Sheets)
@@ -48,6 +48,11 @@ const SeedData = (() => {
         ['LOG-0001', 'MEM001', 'U11111111111111111111111111111111', 'ACT001', 'success', '2026-08-01 09:00:00'],
         ['LOG-0002', 'MEM002', 'U22222222222222222222222222222222', 'ACT002', 'success', '2026-08-02 10:30:00'],
         ['LOG-0003', 'MEM999', '', 'BADCODE', 'failed', '2026-08-03 14:00:00']
+      ],
+      EXPIRY_LOG: [
+        ['ELOG-0001', 'MEM001', 'U11111111111111111111111111111111', 'expiring', 14, '2026-08-20', '2026-08-06 09:00:00'],
+        ['ELOG-0002', 'MEM002', 'U22222222222222222222222222222222', 'expired', -5, '2026-08-01', '2026-08-06 09:00:00'],
+        ['ELOG-0003', 'MEM003', 'U33333333333333333333333333333333', 'valid', 147, '2026-12-31', '2026-08-06 09:00:00']
       ]
     };
   }

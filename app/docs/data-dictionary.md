@@ -88,7 +88,20 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | status | string | No | success | ผลลัพธ์ (success / failed) |
 | activated_dt | datetime | No | - | เวลาที่บันทึก |
 
-> 📌 **หมายเหตุ (การ์ด MT-27):** ตารางทั้ง 4 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
+### EXPIRY_LOG (t_expiry_log) ✅ ทำแล้ว (การ์ด MT-32)
+บันทึกผลการตรวจวันหมดอายุสมาชิกแต่ละรอบ (audit trail — เขียนโดย `ExpiryService.runExpiryCheck` ทุกการตรวจ: 1 แถวต่อสมาชิกที่ถูกตรวจ)
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| log_id | string | Yes | - | รหัสบันทึก (unique) |
+| mem_code | string | Yes | - | รหัสสมาชิก |
+| line_user_id | string | No | - | LINE User ID |
+| status | string | No | valid | สถานะตรวจ (valid / expiring / expired) |
+| days_left | number | No | - | จำนวนวันเหลือ (ปัดขึ้น, ติดลบ = เลยกำหนด) |
+| mem_exp_dt | date | No | - | วันหมดอายุของสมาชิก |
+| checked_dt | datetime | No | - | เวลาที่ตรวจ |
+
+> 📌 **หมายเหตุ (การ์ด MT-27/MT-32):** ตารางทั้ง 5 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
 > เมื่อแทนที่ด้วยข้อมูลจริง: แก้ค่าในชีทได้เลย โดยไม่ต้องแก้โค้ด — โครงสร้างคอลัมน์ห้ามแกะเอง ต้องแก้ที่ `DataDict.js` (SSOT) ก่อน
 
 ## รูปแบบข้อมูลวันที่ (มาตรฐานการจัดเก็บ)

@@ -148,7 +148,7 @@ Entry point ของ LINE webhook
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
 - `testDateConverter()` — ทดสอบ Core.DateConverter: round-trip ตรงเป๊ะ · รองรับ Date/`{seconds,nanos}`/RFC3339 · ปฏิเสธรูปแบบผิด (MT-31)
 - `testExpiryStatus()` — ทดสอบ `getExpiryStatus`: valid/expiring/expired + daysLeft + ข้อความเตือน (deterministic now — MT-11)
-- `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId (MT-11)
+- `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
 - `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
@@ -156,7 +156,7 @@ Entry point ของ LINE webhook
 
 สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
 
-- `createDummyTables()` — สร้างชีท 4 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log`
+- `createDummyTables()` — สร้างชีท 5 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log`
 - `resetDummyTables()` — ล้างข้อมูลแล้วใส่ dummy ใหม่ (ใช้ใน dev/test เท่านั้น)
 - `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
@@ -196,11 +196,12 @@ Entry point ของ LINE webhook
 - ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
 
-**`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11)
+**`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11/MT-32)
 - `runExpiryCheck(token, opts?)` — scan สมาชิกทั้งหมดผ่าน repository (`listMembers`):
+  - **log ทุกการตรวจ** ลง `t_expiry_log` (audit trail — การ์ด MT-32): 1 แถวต่อสมาชิกที่ถูกตรวจ (valid/expiring/expired + days_left)
   - `expiring` (เหลือ ≤ `EXPIRY_WARNING_DAYS` วัน) → push คำเตือนก่อนหมดอายุ
   - `expired` → push แจ้งหมดอายุ + `Gating.unlinkMemberMenu` (กลับไป Welcome)
-  - ข้าม inactive / ไม่มี `line_user_id` · รับ `opts.sender/unlinker/now/warningDays` เพื่อทดสอบใน node
+  - ข้าม inactive / ไม่มี `line_user_id` · รับ `opts.sender/unlinker/logger/now/warningDays` เพื่อทดสอบใน node
 - `setupExpiryTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
 - ฟังก์ชันระดับบนสุด `runExpiryCheck()` = entry point ของ trigger (ส่งต่อให้ ExpiryService)
 
@@ -233,7 +234,7 @@ Entry point ของ LINE webhook
 - `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)
 - `findSavingsByMember(memCode)` / `findLoansByMember(memCode)` / `findDividendsByMember(memCode)` — อ่านข้อมูลการเงินจากตารางใหม่ (MT-27) ผ่าน `findAllByColumn()` (map ตาม header)
-- `logActivation(entry)` — บันทึก audit trail ลง `t_activation_log` (MT-27) — เขียนตามลำดับ header จริง
+- `logActivation(entry)` — บันทึก audit trail ลง `t_activation_log` (MT-27) · `appendExpiryLog(entry)` — บันทึกผลตรวจวันหมดอายุลง `t_expiry_log` (MT-32) — เขียนตามลำดับ header จริง
 - `isActiveMember(member)` — ตรวจว่าสมาชิก valid: ช่วงวัน `[mem_eff_dt, mem_exp_dt]` + `mem_status='active'` (fail-safe เมื่อวันที่ไม่ครบ)
 - `hasRole(member, role)` — ตรวจว่า valid และมีบทบาทตรงตามที่กำหนด (`member`/`staff`/`admin`)
 - `parseDate(value)` — แปลงวันที่จาก string (กันปัญหา timezone ของ `new Date(string)`)

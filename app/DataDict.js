@@ -114,6 +114,26 @@ const DataDict = (() => {
         { name: 'status', type: 'string', required: false, label: 'ผลลัพธ์', default: 'success' },
         { name: 'activated_dt', type: 'datetime', required: false, label: 'เวลาที่บันทึก' }
       ]
+    },
+
+    /**
+     * บันทึกการตรวจวันหมดอายุแต่ละรอบ (audit trail — การ์ด MT-32)
+     * Sheet: t_expiry_log
+     * ทุกสมาชิกที่ถูกตรวจ (active + มี line_user_id) จะมี 1 แถวต่อรอบ
+     */
+    EXPIRY_LOG: {
+      name: 't_expiry_log',
+      description: 'บันทึกการตรวจวันหมดอายุสมาชิก (audit trail)',
+      primaryKey: 'log_id',
+      columns: [
+        { name: 'log_id', type: 'string', required: true, label: 'รหัสบันทึก', unique: true },
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก' },
+        { name: 'line_user_id', type: 'string', required: false, label: 'LINE User ID' },
+        { name: 'status', type: 'string', required: false, label: 'สถานะตรวจ', default: 'valid' },
+        { name: 'days_left', type: 'number', required: false, label: 'วันเหลือ (ปัดขึ้น)' },
+        { name: 'mem_exp_dt', type: 'date', required: false, label: 'วันหมดอายุ' },
+        { name: 'checked_dt', type: 'datetime', required: false, label: 'เวลาที่ตรวจ' }
+      ]
     }
   };
 
