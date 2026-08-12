@@ -139,6 +139,18 @@
 | ผลที่คาดหวัง | 1. สมาชิก active ทุกคนได้รับข้อความ `📢 ประกาศสหกรณ์` 2. Log `[NoticeBroadcast] notices=... pending=1 sent=1 targets=N pushed=N` · สมาชิก inactive/ไม่มี userId ไม่ได้รับ 3. แถวประกาศมี `sent_dt` + `status='sent'` 4. รอบที่ 2: `pending=0 pushed=0` (ไม่ส่งซ้ำ) |
 | ผ่าน/ไม่ผ่าน | ☐ |
 
+### 6.2.15 TC-15: Bot เรียกข้อมูลผ่าน API เดียวกัน (Bot เป็น UI Adapter — การ์ด MT-17)
+
+> **รันได้กับโค้ดปัจจุบัน** — เป็นการทดสอบใน CI (`testBotUsesApi`); สำหรับมือตรวจพฤติกรรมผู้ใช้:
+
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| วัตถุประสงค์ | ยืนยันว่า Bot (EventHandler) เรียกข้อมูลสมาชิกผ่าน `Api.ApiService` (endpoint เดียวกับ UI อื่น ๆ) โดยข้อความที่ผู้ใช้เห็น**ไม่เปลี่ยน** |
+| ข้อมูลตั้งต้น | สมาชิก activate ที่ผูกกับ `M001` (มีเงินฝากใน `t_savings_acct` จาก `createDummyTables()`) |
+| ขั้นตอน | 1. คลิกเมนู "ข้อมูลส่วนตัว" 2. คลิก "บัญชีเงินฝาก" 3. (CI) รัน `testBotUsesApi` — spy `Api.ApiService.handleRequest` |
+| ผลที่คาดหวัง | 1. โปรไฟล์เหมือนเดิม: ชื่อ/รหัส/ตำแหน่ง (คะแนน)/คะแนนความดี/เงินกู้คงค้าง/เงินหุ้น 2. ยอดเงินฝากจริง + รวมยอด 3. CI: เรียก `/api/member/profile` + `/api/member/savings` (GET) — ไม่เรียก repo ตรง ๆ |
+| ผ่าน/ไม่ผ่าน | ☐ |
+
 ## 6.3 การตรวจสอบ Log (Log Inspection)
 
 Log ทั้งหมดอยู่ใน **Apps Script Editor → Executions** (หรือ Stackdriver Logging)

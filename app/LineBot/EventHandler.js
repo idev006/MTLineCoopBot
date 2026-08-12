@@ -20,9 +20,47 @@ LineBot.EventHandler = (() => {
       ReplyStore: LineBot.ReplyStore,
       FlexBuilder: LineBot.FlexBuilder,
       SheetService: LineBot.SheetService,
-      MemberData: LineBot.MemberDataService,
-      MemberRepo: Data.MemberRepository
+      MemberData: LineBot.MemberDataService
     };
+  }
+
+  /**
+   * เรียก API Layer สำหรับข้อมูลสมาชิก (Bot เป็น UI Adapter — การ์ด MT-17)
+   * Bot ใช้ endpoint เดียวกันกับ UI อื่น (LIFF/Admin — เฟส 3):
+   *   GET /api/member/profile · /api/member/savings · /api/member/loans · /api/member/dividends
+   * ผ่าน Api.ApiService.handleRequest → envelope { ok, data } | { ok, error }
+   * (Auth = ฝั่ง Gate: getAuthorizedMember ตรวจสิทธิ์ก่อน — ข้อมูลผ่าน API เดียวกัน)
+   * @param {string} path - เส้นทาง API เช่น '/api/member/profile'
+   * @param {string} lineUserId
+   * @returns {Object} envelope จาก Api.ApiService
+   */
+  function apiGet(path, lineUserId) {
+    return Api.ApiService.handleRequest('GET', path, { auth: { lineUserId } });
+  }
+
+  /**
+   * map item id ของเมนูการเงิน → คีย์ endpoint API (ตารางที่เกี่ยวข้อง)
+   * (saving_acct/chk_balance → savings · loan_balance → loans · dividends/share_capital → dividends)
+   */
+  const FINANCIAL_API = {
+    saving_acct: 'savings',
+    chk_balance: 'savings',
+    loan_balance: 'loans',
+    dividends: 'dividends',
+    share_capital: 'dividends'
+  };
+
+  /**
+   * ตอบข้อความเมื่อ API คืน error (fallback — ควรเกิดขึ้นได้ยากเพราะ Gate ผ่านแล้ว)
+   * @param {string} replyToken
+   * @param {string} token
+   * @param {Object} env - envelope { ok:false, error }
+   */
+  function replyApiDataError(replyToken, token, env) {
+    const detail = (env && env.error && env.error.message) ? (' (' + env.error.message + ')') : '';
+    getDependencies().MessageService.reply(replyToken,
+      'ขออภัย เกิดข้อผิดพลาดในการดึงข้อมูล' + detail + ' — กรุณาลองใหม่อีกครั้ง', token);
+    Logger.log(`[API] data request failed: ${detail}`);
   }
 
   /**
@@ -143,24 +181,26 @@ LineBot.EventHandler = (() => {
         replyUnauthorized(replyToken, token, event.source.userId);
         return;
       }
-      // MT-10: เมนูที่ดึงข้อมูลจริงจาก t_member_mast (ผ่าน MemberRepository)
+      // MT-17 (Bot เป็น UI Adapter): ข้อมูลสมาชิกเรียกผ่าน Api.ApiService —
+      // endpoint เดียวกับ UI อื่น ๆ · ยังจัดรูปแบบข้อความที่ MemberDataService (UI layer)
       if (params.item === 'profile') {
-        const profileText = deps.MemberData.buildProfileText(member);
+        const env = apiGet('/api/member/profile', event.source.userId);
+        if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
+        const profileText = deps.MemberData.buildProfileText(env.data);
         deps.MessageService.reply(replyToken, withExpiryWarning(profileText, member), token);
-        Logger.log(`Profile replied with real data for ${member.mem_code}`);
+        Logger.log(`Profile replied via API for ${member.mem_code}`);
         return;
       }
       if (deps.MemberData.isFinancialItem(params.item)) {
-        // MT-27: ดึงข้อมูลจริงจากตารางการเงินผ่าน repository
-        const repo = deps.MemberRepo.getRepository();
-        const financeData = {
-          savings: repo.findSavingsByMember(member.mem_code),
-          loans: repo.findLoansByMember(member.mem_code),
-          dividends: repo.findDividendsByMember(member.mem_code)
-        };
+        // ดึงเฉพาะตารางของเมนูนั้น ๆ ผ่าน API (savings/loans/dividends)
+        const key = FINANCIAL_API[params.item];
+        const env = apiGet('/api/member/' + key, event.source.userId);
+        if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
+        const financeData = { savings: [], loans: [], dividends: [] };
+        financeData[key] = (env.data && env.data[key]) || [];
         const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
         deps.MessageService.reply(replyToken, withExpiryWarning(financeText, member), token);
-        Logger.log(`Financial menu replied with data: ${params.item}`);
+        Logger.log(`Financial menu replied via API: ${params.item}`);
         return;
       }
       const caption = deps.ReplyStore.getCaption(params.item);

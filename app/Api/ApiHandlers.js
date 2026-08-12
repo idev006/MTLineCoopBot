@@ -53,6 +53,7 @@ Api.ApiHandlers = (() => {
       mem_lname: member.mem_lname,
       mem_role: member.mem_role,
       mem_position: member.mem_position,
+      mem_position_score: member.mem_position_score,
       mem_rank_score: member.mem_rank_score,
       mem_kk: member.mem_kk,
       mem_bk: member.mem_bk,

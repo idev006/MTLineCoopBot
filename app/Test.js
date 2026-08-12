@@ -906,6 +906,72 @@ function testApiLayer() {
 }
 
 /**
+ * ทดสอบ Bot เป็น UI Adapter (MT-17): EventHandler เรียกข้อมูลสมาชิกผ่าน Api.ApiService
+ * (spy handleRequest + fake MessageService.reply) — postback → API → ข้อความตอบกลับ
+ * เหมือนเดิมทุกประการ (ไม่เปลี่ยนพฤติกรรมผู้ใช้)
+ * @returns {boolean}
+ */
+function testBotUsesApi() {
+  // 1) seed fake sheets: สมาชิก active 1 คน + บัญชีเงินฝาก 1 บัญชี
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
+  ];
+  delete __fakeSheets['t_savings_acct'];
+  __fakeSheets['t_savings_acct'] = [
+    DataDict.getHeaders('SAVINGS_ACCT'),
+    ['M001', 'SAV-0001', 'ออมทรัพย์', 25000, '2026-08-01']
+  ];
+
+  // 2) spy: ตรวจว่า EventHandler เรียกผ่าน Api.ApiService.handleRequest (ไม่เรียก repo ตรง ๆ)
+  const origHandle = Api.ApiService.handleRequest;
+  const apiCalls = [];
+  Api.ApiService.handleRequest = function (method, path, opts) {
+    apiCalls.push({ method, path });
+    return origHandle(method, path, opts);
+  };
+  // fake MessageService.reply — เก็บข้อความที่ตอบผู้ใช้
+  const replies = [];
+  const origReply = LineBot.MessageService.reply;
+  LineBot.MessageService.reply = function (replyToken, text) {
+    replies.push(text);
+    return { ok: true };
+  };
+
+  const user = { source: { userId: 'U11111111111111111111111111111111' } };
+  try {
+    // profile ผ่าน API
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT1', postback: { data: 'action=menu_item&item=profile' } }, 'TOKEN');
+    // saving_acct ผ่าน API
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT2', postback: { data: 'action=menu_item&item=saving_acct' } }, 'TOKEN');
+  } finally {
+    Api.ApiService.handleRequest = origHandle;
+    LineBot.MessageService.reply = origReply;
+  }
+
+  // 3) ตรวจว่าเรียก API ครบทั้ง 2 เส้นทาง (GET)
+  const paths = apiCalls.map(c => c.path);
+  if (!paths.includes('/api/member/profile')) throw new Error('testBotUsesApi: profile ต้องเรียกผ่าน /api/member/profile');
+  if (!paths.includes('/api/member/savings')) throw new Error('testBotUsesApi: saving_acct ต้องเรียกผ่าน /api/member/savings');
+  if (apiCalls.length !== 2) throw new Error('testBotUsesApi: ควรเรียก API 2 ครั้ง (ได้ ' + apiCalls.length + ')');
+  if (apiCalls.some(c => c.method !== 'GET')) throw new Error('testBotUsesApi: data read ต้องเป็น GET');
+
+  // 4) user-visible behavior เหมือนเดิม: profile มีชื่อ/คะแนนตำแหน่ง/ฟิลด์ใหม่ · finance มีข้อมูลจริง
+  if (!replies[0] || !replies[0].includes('สมชาย ใจดี')) throw new Error('testBotUsesApi: profile ต้องมีชื่อ');
+  if (!replies[0] || !replies[0].includes('คะแนน 10')) throw new Error('testBotUsesApi: profile ต้องมีคะแนนตำแหน่ง (mem_position_score ผ่าน API)');
+  if (!replies[0] || !replies[0].includes('คะแนนความดี: 85')) throw new Error('testBotUsesApi: profile ต้องมี mem_kk ผ่าน API');
+  if (!replies[0] || !replies[0].includes('50,000.00 บาท')) throw new Error('testBotUsesApi: profile ต้องมี mem_bk (formatMoney) ผ่าน API');
+  if (!replies[1] || !replies[1].includes('25,000.00 บาท')) throw new Error('testBotUsesApi: saving reply ต้องมีข้อมูลจริงจาก t_savings_acct ผ่าน API');
+  if (!replies[1] || !replies[1].includes('รวมเงินฝาก')) throw new Error('testBotUsesApi: saving reply ต้องมีรวมยอด');
+
+  Logger.log('testBotUsesApi OK — postback → Api.ApiService (profile/savings) → ข้อความเหมือนเดิม');
+  return true;
+}
+
+/**
  * ทดสอบการต่ออายุสมาชิก (MT-12): Core.computeRenewal (pure) + RenewalService.performRenew
  * (ผ่าน Fake Sheets + fake gater — ไม่แตะ LINE API)
  * @returns {boolean}

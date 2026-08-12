@@ -158,6 +158,7 @@ Entry point ของ LINE webhook
 - `testExpiryStatus()` — ทดสอบ `getExpiryStatus`: valid/expiring/expired + daysLeft + ข้อความเตือน (deterministic now — MT-11)
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
 - `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate/**renew**) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16/MT-12)
+- `testBotUsesApi()` — ทดสอบ Bot เป็น UI Adapter (MT-17): **spy `Api.ApiService.handleRequest`** + fake `MessageService.reply` — postback profile/saving_acct → เรียกผ่าน `/api/member/profile` + `/api/member/savings` (GET) → ข้อความตอบกลับเหมือนเดิมทุกประการ (ชื่อ/คะแนนตำแหน่ง/formatMoney)
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
 - `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13)
@@ -192,14 +193,16 @@ Entry point ของ LINE webhook
 
 **Error codes:** `VALIDATION` · `MEMBER_NOT_FOUND` · `ALREADY_ACTIVATED` · `NOT_FOUND` · `METHOD_NOT_ALLOWED` · `INTERNAL`
 
-**ยังไม่ได้ทำ (เฟส 3):** Auth per-channel (`ctx.auth` เตรียมไว้แล้ว) · Mount ใน WebApp (`doGet`/`doPost` แยก path `/api/...`) · Bot/LIFF เรียกผ่าน API เดียวกัน (การ์ด MT-17–19)
+**สถานะ (การ์ด MT-17):** ✅ **Bot เรียกผ่าน API แล้ว** — `EventHandler` ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · **ยังไม่ได้ทำ (เฟส 3):** Auth per-channel (`ctx.auth` เตรียมไว้แล้ว) · Mount ใน WebApp (`doGet`/`doPost` แยก path `/api/...`) · LIFF/Admin เรียกผ่าน API เดียวกัน (การ์ด MT-18–19, MT-21)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 
-**`EventHandler.js`** — Router กลาง
+**`EventHandler.js`** — Router กลาง (การ์ด MT-17: Bot เป็น UI Adapter)
+- `getAuthorizedMember(lineUserId)` — **Gate ตรวจสิทธิ์ (auth)** ผ่าน repository (`findByLineUserId` + `isActiveMember` + บทบาท) — ยกเว้น `activate:`/Welcome items
+- `apiGet(path, lineUserId)` — เรียกข้อมูลสมาชิกผ่าน **`Api.ApiService.handleRequest`** (endpoint เดียวกับ UI อื่น ๆ): profile → `/api/member/profile` · เมนูการเงิน → `/api/member/savings` | `/loans` | `/dividends` (ตาม `FINANCIAL_API` map — ดึงเฉพาะตารางที่เมนูนั้นใช้) · ถ้า API คืน error → `replyApiDataError` (ข้อความแจ้งเตือน ไม่พัง)
+- จัดรูปแบบข้อความ (MemberDataService) ยังอยู่ใน UI layer — พฤติกรรมผู้ใช้ไม่เปลี่ยน
+- `handlePostback(event, token)` — postback: switch_tab/stay_tab/menu_item (Welcome ผ่านก่อน Gate → profile/finance ผ่าน API → flex อื่น ๆ) + fallback Rich Menu เดิม
 - `handlePostback(event, token)` — แยก `params` ด้วย `Util.parseQueryString` แล้วตัดสินใจตามตารางในบทที่ 3.5.3
-- `handleTextMessage(event, token)` — ตรวจ `activate:...` และ `คำนวณ...`
-- `getAuthorizedMember(lineUserId)` — Gate ตรวจสิทธิ์: `findByLineUserId` + `isActiveMember` + บทบาทที่รู้จัก ก่อนตอบสนองเมนู/คำสั่งสมาชิก (ยกเว้น `activate:` — เป็นขั้นตอนลงทะเบียน)
 - ใช้ `getDependencies()` resolve บริการตอน runtime (กันปัญหา Apps Script load order)
 
 **`ActivationService.js`** — ตรรกะ Activate สมาชิก
