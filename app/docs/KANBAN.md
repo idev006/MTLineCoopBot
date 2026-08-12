@@ -43,7 +43,7 @@
 
 ## 🔄 In Progress (WIP ≤ 3)
 
-- _(ว่าง)_
+- [ ] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · token ถูก commit ใน initial commit (`add945b`, 2026-08-12) แล้วลบออกจากโค้ดแล้ว (b3c3366) · ขั้นตอน: ① ออก token ใหม่ใน LINE Console ② อัปเดต `CHANNEL_ACCESS_TOKEN` ใน Script Properties (ผ่าน UI เท่านั้น — ห้าม commit) ③ ทดสอบ reply `200` ④ Deactivate token เก่า ⑤ _(หลังยืนยัน)_ purge ประวัติ git + ลบ allowlist ใน `.gitleaks.toml`
 
 ---
 
@@ -68,3 +68,4 @@
 | 2026-08-12 | MT-01 – MT-06b | → Done | งานระยะที่ 1 เสร็จ (สถานะตรงกับ README) |
 | 2026-08-12 | MT-08 | To Do → In Progress → Done | implement `webhook_secret` + ฟังก์ชัน HMAC; DoD ครบ 6 ข้อ (test ผ่าน, syntax ผ่าน, README ✅, เอกสารตรงโค้ด) |
 | 2026-08-12 | MT-09 | To Do → In Progress → Done | Gate ตรวจสิทธิ์ (findByLineUserId + isActiveMember + บทบาท); ALL TESTS PASS; DoD ครบ 6 ข้อ |
+| 2026-08-12 | MT-26 | → In Progress | หมุน token (SEC) — ตรวจพบ token hardcode ใน initial commit → ลบออกจากโค้ด + CI secret scan 2 ชั้นกันซ้ำ (regex + gitleaks) · รอผู้ดูแลหมุน token ใน LINE Console |
