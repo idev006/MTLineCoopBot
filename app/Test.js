@@ -1,0 +1,138 @@
+/**
+ * @fileoverview Test.js
+ * ฟังก์ชันทดสอบระบบ — เลือกฟังก์ชันใน Apps Script Editor แล้วกด Run
+ *
+ * ฟังก์ชันหลัก:
+ * - verifyMenuContract() — ตรวจสัญญา Item ID ระหว่าง MenuData.js ↔ ReplyStore.js
+ *   ควรใช้ก่อนทุกครั้งที่ Deploy Rich Menu (บทที่ 3.3.7, 5.6.2, TC-12 ในบทที่ 6)
+ */
+
+/**
+ * ตรวจสัญญา Item ID:
+ * ทุก item id ใน RichMenu/MenuData.js ต้องมี key ตรงกันใน LineBot.ReplyStore.CAPTIONS
+ * และมีข้อความตอบกลับใน TAB_1..TAB_5 (ไม่คืน "ไม่พบข้อมูลสำหรับรายการนี้")
+ * @returns {number} จำนวน item id ที่ตรวจผ่าน
+ */
+function verifyMenuContract() {
+  const ids = RichMenu.MenuData.listItemIds();
+  Logger.log('MenuData postback item ids: ' + ids.length);
+
+  // 1. ตรวจ CAPTIONS ครบทุก id
+  const missingCaptions = ids.filter(id => !LineBot.ReplyStore.CAPTIONS[id]);
+  if (missingCaptions.length > 0) {
+    throw new Error('Missing CAPTIONS for: ' + missingCaptions.join(', '));
+  }
+
+  // 2. ตรวจข้อความตอบกลับครบ (fallback string บ่งว่าไม่มีข้อความ)
+  const missingReplies = ids.filter(id => {
+    const text = LineBot.ReplyStore.get(id);
+    return !text || text === 'ไม่พบข้อมูลสำหรับรายการนี้';
+  });
+  if (missingReplies.length > 0) {
+    throw new Error('Missing reply text for: ' + missingReplies.join(', '));
+  }
+
+  Logger.log('Contract OK — ครบ ' + ids.length + ' เมนู (CAPTIONS + reply text)');
+  return ids.length;
+}
+
+/**
+ * ทดสอบ Util.verifyLineSignature (HMAC-SHA256 + base64) ด้วย test vector
+ * ค่าที่ใช้คำนวณด้วย crypto.createHmac('sha256', secret).update(body).digest('base64')
+ * @returns {boolean}
+ */
+function testVerifyLineSignature() {
+  const cases = [
+    // [body, signature, secret, คาดหวัง]
+    ['hello', 'iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=', 'secret', true],
+    ['{"events":[]}', 'PPa4QqevUGV8UO2apjR9ZWG24X4aYwLsG3KzECKE81c=', 'line-secret', true],
+    // ผิด secret / ผิด body / ไม่มีค่า
+    ['hello', 'iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=', 'wrong-secret', false],
+    ['hello-changed', 'iKqz7ejTrflNJquQ07r9SiCDBww7zOnAFO4EpEOEfAs=', 'secret', false],
+    ['', 'x', 'secret', false],
+    ['hello', '', 'secret', false]
+  ];
+  const failed = cases.filter(([body, sig, secret, expected]) =>
+    Util.verifyLineSignature(body, sig, secret) !== expected
+  );
+  if (failed.length > 0) {
+    throw new Error('testVerifyLineSignature FAILED: ' + JSON.stringify(failed));
+  }
+  Logger.log('testVerifyLineSignature OK — ' + cases.length + ' กรณี');
+  return true;
+}
+
+/**
+ * ทดสอบ Util.verifyWebhookSecret (token จาก query parameter)
+ * @returns {boolean}
+ */
+function testVerifyWebhookSecret() {
+  const ok = Util.verifyWebhookSecret({ parameter: { webhook_secret: 's3cret' } }, 's3cret');
+  const bad = Util.verifyWebhookSecret({ parameter: { webhook_secret: 'wrong' } }, 's3cret');
+  const missing = Util.verifyWebhookSecret({ parameter: {} }, 's3cret');
+  const noConfig = Util.verifyWebhookSecret({ parameter: { webhook_secret: 's3cret' } }, '');
+  if (!ok || bad || missing || noConfig) {
+    throw new Error('testVerifyWebhookSecret FAILED');
+  }
+  Logger.log('testVerifyWebhookSecret OK');
+  return true;
+}
+
+/**
+ * ทดสอบ SheetService.isActiveMember / hasRole (กฎความ valid บทที่ 3.7.2)
+ * @returns {boolean}
+ */
+function testMemberValidity() {
+  const S = LineBot.SheetService;
+  const DAY = 24 * 3600 * 1000;
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} 00:00:00`;
+  const past = new Date(Date.now() - 3650 * DAY);   // 10 ปีก่อน
+  const future = new Date(Date.now() + 3650 * DAY); // 10 ปีหน้า
+  const valid = { mem_status: 'active', mem_role: 'member', mem_eff_dt: fmt(past), mem_exp_dt: fmt(future) };
+
+  const cases = [
+    [valid, true, 'valid member'],
+    [{ ...valid, mem_status: 'inactive' }, false, 'status ไม่ใช่ active'],
+    [{ ...valid, mem_eff_dt: fmt(future) }, false, 'ยังไม่ถึงวันเริ่ม'],
+    [{ ...valid, mem_exp_dt: fmt(past) }, false, 'หมดอายุแล้ว'],
+    [{ ...valid, mem_eff_dt: '' }, false, 'ไม่มีวันเริ่ม (fail-safe)'],
+    [{ ...valid, mem_exp_dt: null }, false, 'ไม่มีวันหมดอายุ (fail-safe)'],
+    [null, false, 'ไม่มี member'],
+    [valid, true, 'hasRole(member, member) ผ่าน'],
+    [{ ...valid, mem_role: 'staff' }, false, 'hasRole(member, member) ไม่ผ่านเมื่อ role เป็น staff'],
+    [{ ...valid, mem_role: 'admin' }, true, 'hasRole(member, admin) ผ่าน']
+  ];
+
+  // ข้อ 1–7 ใช้ isActiveMember; ข้อ 8–10 ใช้ hasRole
+  const failed = [];
+  for (let i = 0; i < cases.length; i++) {
+    const [member, expected, label] = cases[i];
+    let actual;
+    if (i < 7) actual = S.isActiveMember(member);
+    else actual = S.hasRole(member, i === 8 ? 'member' : (i === 9 ? 'admin' : 'member'));
+    if (actual !== expected) failed.push(label + ' (expected ' + expected + ', got ' + actual + ')');
+  }
+  if (failed.length > 0) {
+    throw new Error('testMemberValidity FAILED: ' + failed.join(' | '));
+  }
+  Logger.log('testMemberValidity OK — ' + cases.length + ' กรณี');
+  return true;
+}
+
+/**
+ * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
+ * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
+ */
+function verifyThaiCaptions() {
+  const ids = RichMenu.MenuData.listItemIds();
+  const thaiRegex = /[\u0E00-\u0E7F]/; // ช่วงอักขระภาษาไทย
+  const notThai = ids.filter(id => {
+    const caption = LineBot.ReplyStore.getCaption(id);
+    return !thaiRegex.test(caption);
+  });
+  if (notThai.length > 0) {
+    throw new Error('Captions not Thai for: ' + notThai.join(', '));
+  }
+  Logger.log('Thai captions OK — ครบ ' + ids.length + ' เมนู');
+  return ids.length;
+}

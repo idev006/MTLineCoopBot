@@ -1,0 +1,13 @@
+# ── Local tooling / environment ──
+.freebuff/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# ── clasp credentials (ห้าม commit — มี token จริง) ──
+.clasprc.json
+*.clasprc*
+
+# ── Temp test files ──
+_tmp_*.js
