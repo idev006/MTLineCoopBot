@@ -105,5 +105,6 @@
 | [metrics-dashboard-template.md](./metrics-dashboard-template.md) | เทมเพลต Dashboard KPI ทีม (โครงสร้างชีท + สูตร + วิธีใช้) |
 | [project-line-bot-rich-menu.md](./project-line-bot-rich-menu.md) | โครงสร้าง Rich Menu และ Flex Reply เบื้องต้น |
 | [data-dictionary.md](./data-dictionary.md) | พจนานุกรมข้อมูล (Data Dictionary / SSOT) |
+| [foundation-readiness.md](./foundation-readiness.md) | **Checklist ความพร้อมรากฐาน** — เมทริกซ์เสาหลัก ↔ หลักฐานการทดสอบ (รันได้จริง) |
 | [use-case-member-activation.md](./use-case-member-activation.md) | Use Case การ Activate สมาชิกผ่าน LINE Bot |
 | [lesson-learned-rich-menu-flex-reply.md](./lesson-learned-rich-menu-flex-reply.md) | บทเรียนการแก้ไขปัญหา Rich Menu ไม่ตอบกลับ |

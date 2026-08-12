@@ -14,6 +14,7 @@ LINE Bot บริการสมาชิกสหกรณ์ — Frontend/UI 
 |--------|----------|
 | [KANBAN.md](./app/docs/KANBAN.md) | บอร์ดงานทีม (Backlog / To Do / In Progress / Done) |
 | [data-dictionary.md](./app/docs/data-dictionary.md) | พจนานุกรมข้อมูล (SSOT — ตาราง `t_member_mast` 16 คอลัมน์) |
+| [foundation-readiness.md](./app/docs/foundation-readiness.md) | Checklist ความพร้อมรากฐาน — เมทริกซ์เสาหลัก ↔ หลักฐานการทดสอบ |
 | [metrics-dashboard-template.md](./app/docs/metrics-dashboard-template.md) | เทมเพลต Dashboard KPI ของทีม |
 | [use-case-member-activation.md](./app/docs/use-case-member-activation.md) | Use Case ระบบ Activate สมาชิก |
 
