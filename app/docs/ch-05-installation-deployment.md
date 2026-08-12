@@ -248,6 +248,24 @@ createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividen
 | 4 | พิมพ์ `activate:ABC123` (รหัสที่เตรียมไว้) | ได้ Flex "🎉 ยินดีต้อนรับ..." และข้อมูลใน Sheets อัปเดต |
 | 5 | พิมพ์ `activate:ABC123` ซ้ำ | ได้ข้อความ "รหัสนี้ถูกใช้ไปแล้ว..." |
 | 6 | พิมพ์ `activate:WRONG` | ได้ข้อความ "ไม่พบรหัส activate นี้ในระบบ..." |
+| 7 | (หลังตั้ง trigger — ข้อ 5.9) สมาชิกที่เหลือเวลา ≤ `EXPIRY_WARNING_DAYS` วัน | ได้ Push ข้อความเตือน "สิทธิ์จะหมดอายุในอีก X วัน" |
+| 8 | (หลังตั้ง trigger — ข้อ 5.9) สมาชิกที่หมดอายุแล้ว | ได้ Push "สิทธิ์หมดอายุแล้ว" + เมนูสมาชิกถูกยกเลิก (กลับไป Welcome) |
+
+## 5.9 ตั้ง Time-driven Trigger — ตรวจวันหมดอายุอัตโนมัติ (การ์ด MT-11)
+
+ระบบตรวจวันหมดอายุสมาชิก (push เตือนก่อนหมดอายุ + แจ้ง expired และยกเลิกเมนู) ต้องมี **Time-driven Trigger**:
+
+1. `clasp push` ให้โค้ดใหม่ขึ้น Apps Script
+2. **Apps Script Editor → (⏰ ปุ่มนาฬิกา) Triggers → Add Trigger**:
+   - **Function:** `runExpiryCheck`
+   - **Event source:** Time-driven
+   - **Type:** Day timer · **Time:** 09:00 (หรือเวลาที่ต้องการ)
+   - **Failure notification settings:** รับอีเมลแจ้งเตือนเมื่อล้มเหลว
+3. หรือรัน `setupExpiryTrigger(9)` ครั้งเดียวใน Editor เพื่อสร้าง trigger ด้วยโค้ด (ดู `app/LineBot/ExpiryService.js`)
+4. ตั้งค่า (ไม่บังคับ): Script Properties → `EXPIRY_WARNING_DAYS` = จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" (ค่า default 30)
+5. ทดสอบ: รัน `runExpiryCheck` ด้วยมือ → ตรวจ Log `[ExpiryCheck] checked=... expiring=... expired=... pushed=...`
+
+> ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง)
 
 ## สรุปท้ายบท
 

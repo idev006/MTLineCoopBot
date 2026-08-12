@@ -95,6 +95,14 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ดึงสมาชิกทั้งหมด (สำหรับ scan วันหมดอายุ — การ์ด MT-11)
+   * @returns {Array<Object>} รายการสมาชิก (ไม่มี _rowIndex)
+   */
+  function findAllMembers() {
+    return readRowsAsObjects('MEMBER_MASTER', getSheet('MEMBER_MASTER'));
+  }
+
+  /**
    * ค้นหาสมาชิกโดย activate_code
    * @param {string} activateCode
    * @returns {Object|null} ข้อมูลสมาชิกหรือ null ถ้าไม่พบ
@@ -344,6 +352,7 @@ LineBot.SheetService = (() => {
   return {
     findByActivateCode,
     findByLineUserId,
+    findAllMembers,
     findAllByColumn,
     findSavingsByMember,
     findLoansByMember,

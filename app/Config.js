@@ -12,6 +12,7 @@ const Config = (() => {
     BASE: 'https://api.line.me/v2/bot/richmenu',
     UPLOAD_BASE: 'https://api-data.line.me/v2/bot/richmenu',
     REPLY: 'https://api.line.me/v2/bot/message/reply',
+    PUSH: 'https://api.line.me/v2/bot/message/push',
     DEFAULT: (richMenuId) => `https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`
   };
 
@@ -56,7 +57,9 @@ const Config = (() => {
       CHANNEL_SECRET: _props.getProperty('CHANNEL_SECRET'),
       WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET'),
       // ฐานข้อมูลของระบบ — 'sheets' (ค่า default) / 'firestore' (อนาคต, บทที่ 3.2.4)
-      DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets'
+      DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets',
+      // จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" — แจ้งเตือน + แนบคำเตือนในคำตอบ (การ์ด MT-11)
+      EXPIRY_WARNING_DAYS: Number(_props.getProperty('EXPIRY_WARNING_DAYS') || 30)
       // IMAGE_FILE_IDS ถูกกำหนดไว้ใน Config.IMAGE_FILE_IDS โดยตรง
     };
   }

@@ -25,6 +25,7 @@ MTLineCoopBot/
     ├── SeedData.js              # สร้างตาราง 4 ตาราง + dummy data (MT-27)
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
+    │   ├── ExpiryService.js     # ตรวจวันหมดอายุอัตโนมัติ (MT-11) — scan + push + unlink
     │   ├── EventHandler.js      # Router จัดการ event
     │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
     │   ├── FlexBuilder.js       # สร้าง Flex Message
@@ -48,20 +49,21 @@ MTLineCoopBot/
 - `parseDate(value)` — แปลง `yyyy-mm-dd[ HH:mm:ss]` เป็น Date (manual parse กัน timezone)
 - `isActiveMember(member, now?)` — สถานะ active + ช่วงวันครอบคลุม `now` (รับ `now` เป็น parameter เพื่อ test deterministic)
 - `hasRole(member, role, now?)` — valid + บทบาทตรง
+- `getExpiryStatus(member, now?, warningDays?)` — สถานะหมดอายุ: `valid`/`expiring` (เหลือ ≤ warningDays)/`expired` + `daysLeft` (การ์ด MT-11)
 - `SheetService` delegate มาที่นี่ (API เดิมไม่เปลี่ยน — Gate/Repository ทำงานเหมือนเดิม)
 
 **`LoanCalculator.js`** — เครื่องคำนวณสินเชื่อ (ย้ายสูตรจาก `loan_calculator.html`)
+- `getDaysDiff(d1, d2)` / `getNextMonthEnd(startStr, period)` / `round2(n)`
+- `calculateLoanSchedule({loanAmount, interestRatePercent, calcMode, calcValue, paymentType, startDate})`
+  → `{ schedule, totalInterest, totalPrincipal, totalPayment }` หรือ `{ error }`
+- สูตร: ดอกเบี้ย = เงินต้นคงเหลือ × อัตรารายปี × จำนวนวันจริง ÷ 365 (Actual/365 ลดต้นลดดอก)
+- หมายเหตุ: `loan_calculator.html` (Vue/GitHub Pages) ยังมีสูตรสำเนาของตัวเอง — จะรวมใช้ Core เดียวกันในเฟส 3 (API-first)
 
 **`DateConverter.js`** — แปลงวันที่ระหว่างรูปแบบชีท (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss`) กับ Firestore TIMESTAMP (เฟส 3 — บทที่ 3.1.1, การ์ด MT-31)
 - `toFirestoreTimestamp(value, type)` → `{ seconds, nanos }` (REST Timestamp) — ตีความ wall-clock เป็น UTC เพื่อให้ round-trip ตรงเป๊ะ
 - `fromFirestoreTimestamp(ts, type)` → string มาตรฐานชีท — รองรับ Date / `{seconds,nanos}` / RFC3339 string
 - `toEpochMillis` / `epochMillisToSheetString` / `timestampToMillis` — helper
 - หมายเหตุ: offset timezone ไทย (+07:00) เป็นจุดตัดสินใจเฟส 3 — ดู data-dictionary.md
-- `getDaysDiff(d1, d2)` / `getNextMonthEnd(startStr, period)` / `round2(n)`
-- `calculateLoanSchedule({loanAmount, interestRatePercent, calcMode, calcValue, paymentType, startDate})`
-  → `{ schedule, totalInterest, totalPrincipal, totalPayment }` หรือ `{ error }`
-- สูตร: ดอกเบี้ย = เงินต้นคงเหลือ × อัตรารายปี × จำนวนวันจริง ÷ 365 (Actual/365 ลดต้นลดดอก)
-- หมายเหตุ: `loan_calculator.html` (Vue/GitHub Pages) ยังมีสูตรสำเนาของตัวเอง — จะรวมใช้ Core เดียวกันในเฟส 3 (API-first)
 
 ### 4.2.0b `Data/` — Data Access Layer (Repository Pattern)
 
@@ -139,6 +141,8 @@ Entry point ของ LINE webhook
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
 - `testDateConverter()` — ทดสอบ Core.DateConverter: round-trip ตรงเป๊ะ · รองรับ Date/`{seconds,nanos}`/RFC3339 · ปฏิเสธรูปแบบผิด (MT-31)
+- `testExpiryStatus()` — ทดสอบ `getExpiryStatus`: valid/expiring/expired + daysLeft + ข้อความเตือน (deterministic now — MT-11)
+- `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId (MT-11)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -164,18 +168,28 @@ Entry point ของ LINE webhook
 - ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
 
+**`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11)
+- `runExpiryCheck(token, opts?)` — scan สมาชิกทั้งหมดผ่าน repository (`listMembers`):
+  - `expiring` (เหลือ ≤ `EXPIRY_WARNING_DAYS` วัน) → push คำเตือนก่อนหมดอายุ
+  - `expired` → push แจ้งหมดอายุ + `Gating.unlinkMemberMenu` (กลับไป Welcome)
+  - ข้าม inactive / ไม่มี `line_user_id` · รับ `opts.sender/unlinker/now/warningDays` เพื่อทดสอบใน node
+- `setupExpiryTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
+- ฟังก์ชันระดับบนสุด `runExpiryCheck()` = entry point ของ trigger (ส่งต่อให้ ExpiryService)
+
 **`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27)
 - `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
 - `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข)
 - `formatMoney(value)` — จัดรูปแบบตัวเลขเป็นเงินไทย (เช่น `25,000.00`)
+- `buildExpiryWarning(member, expiry)` / `appendExpiryWarning(text, member, expiry)` — ข้อความเตือนวันหมดอายุ (การ์ด MT-11) — ใช้ใน ExpiryService (push) + EventHandler (แนบท้ายคำตอบ)
 - `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
 
 **`FlexBuilder.js`** — ตัวสร้าง Flex Message
 - `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)`
 
-**`MessageService.js`** — ส่งข้อความผ่าน LINE Reply API
-- `reply()` / `replyFlex()` / `send()`
-- `send()` คืนค่า `{ ok, statusCode, body }` เพื่อการ debug
+**`MessageService.js`** — ส่งข้อความผ่าน LINE Messaging API
+- `reply()` / `replyFlex()` / `send()` — ตอบกลับ (ต้องมี replyToken)
+- `push(to, text, token)` — **Push API** ใช้ใน scheduled trigger (MT-11) — ส่งด้วย userId ได้ทุกเวลา (ต่างจาก reply ที่จำกัด 60 วินาที)
+- ทุกฟังก์ชันคืนค่า `{ ok, statusCode, body }` เพื่อการ debug
 
 **`ReplyStore.js`** — คลังข้อความและชื่อเมนู
 - `TAB_1`…`TAB_5` — ข้อความตอบกลับแยกตามแท็บ (key ต้องตรงกับ item id ใน MenuData)
@@ -186,6 +200,7 @@ Entry point ของ LINE webhook
 **`SheetService.js`** — ติดต่อ Google Sheets + ตรวจสอบสถานะสมาชิก
 - `getSheet(tableKey)` — ดึง sheet หรือสร้างให้อัตโนมัติจาก DataDict
 - `getHeaderRow(sheet)` / `getHeaderMap(sheet)` / `readRowsAsObjects(tableKey, sheet)` — อ่าน/แมปคอลัมน์จาก **header row จริง** (การ์ด MT-28: รองรับการสลับตำแหน่งฟิลด์ในตาราง)
+- `findAllMembers()` — ดึงสมาชิกทั้งหมด (สำหรับ `ExpiryService` scan วันหมดอายุ — MT-11)
 - `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate (map ตาม header)
 - `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)

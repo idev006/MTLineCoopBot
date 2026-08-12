@@ -16,6 +16,7 @@
  * - findLoansByMember(memCode)   → Array<Object> (t_loan_acct — MT-27)
  * - findDividendsByMember(memCode) → Array<Object> (t_dividend — MT-27)
  * - logActivation(entry)         → { log_id, status } (t_activation_log — MT-27)
+ * - listMembers()                → Array<Object> สมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
  */
 
 var Data = Data || {};
@@ -25,7 +26,8 @@ Data.MemberRepository = (() => {
 
   const INTERFACE = [
     'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
-    'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation'
+    'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation',
+    'listMembers'
   ];
 
   /**

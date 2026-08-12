@@ -56,9 +56,33 @@ Core.MemberRules = (() => {
     return isActiveMember(member, now) && member.mem_role === role;
   }
 
+  /**
+   * ตรวจสถานะวันหมดอายุของสมาชิก (การ์ด MT-11)
+   * - 'expired'  → เลย mem_exp_dt แล้ว
+   * - 'expiring' → เหลือไม่เกิน warningDays (>= 0 วันก่อนหมดอายุ)
+   * - 'valid'    → ยังห่างจากวันหมดอายุ
+   * ถ้าไม่มี mem_exp_dt → 'valid' (หาครบกำหนดไม่ได้ — fail-safe ตาม isActiveMember)
+   * @param {Object} member
+   * @param {Date} [now] - เวลาอ้างอิง (default: เวลาจริง) — ส่งเพื่อ deterministic ใน test
+   * @param {number} [warningDays] - จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" (default 30)
+   * @returns {{status: string, daysLeft: (number|null)}} daysLeft = จำนวนวันเต็มที่เหลือ (ปัดขึ้น)
+   */
+  function getExpiryStatus(member, now, warningDays) {
+    if (!member) return { status: 'valid', daysLeft: null };
+    const exp = parseDate(member.mem_exp_dt);
+    if (!exp) return { status: 'valid', daysLeft: null };
+    const n = now || new Date();
+    const daysLeft = Math.ceil((exp.getTime() - n.getTime()) / 86400000);
+    if (daysLeft < 0) return { status: 'expired', daysLeft };
+    const warn = (typeof warningDays === 'number' ? warningDays : 30);
+    if (daysLeft <= warn) return { status: 'expiring', daysLeft };
+    return { status: 'valid', daysLeft };
+  }
+
   return {
     parseDate,
     isActiveMember,
-    hasRole
+    hasRole,
+    getExpiryStatus
   };
 })();

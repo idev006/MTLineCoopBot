@@ -100,6 +100,7 @@ const FILE_ORDER = [
   'LineBot/FlexBuilder.js',
   'LineBot/MessageService.js',
   'LineBot/ActivationService.js',
+  'LineBot/ExpiryService.js',
   'LineBot/EventHandler.js',
   'RichMenu/MenuData.js',
   'RichMenu/ApiService.js',
@@ -131,6 +132,8 @@ const runner = `
     ['testColumnReordering', testColumnReordering],
     ['testDateValidator', testDateValidator],
     ['testDateConverter', testDateConverter],
+    ['testExpiryStatus', testExpiryStatus],
+    ['testExpiryService', testExpiryService],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

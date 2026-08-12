@@ -97,6 +97,14 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.logActivation(entry);
   }
 
+  /**
+   * ดึงสมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
+   * @returns {Array<Object>}
+   */
+  function listMembers() {
+    return LineBot.SheetService.findAllMembers();
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -106,6 +114,7 @@ Data.SheetsMemberRepository = (() => {
     findSavingsByMember,
     findLoansByMember,
     findDividendsByMember,
-    logActivation
+    logActivation,
+    listMembers
   };
 })();

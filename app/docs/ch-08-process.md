@@ -34,7 +34,7 @@
 
 ### 8.1.3 Definition of Done (DoD) — ครบทุกข้อถึงจะปิดงานได้
 
-> **อัตโนมัติผ่าน CI:** GitHub Actions (`.github/workflows/ci.yml`) รัน `node --check` + ชุดทดสอบสัญญา (`scripts/ci-test.js` — verifyMenuContract / verifyThaiCaptions / testVerifyLineSignature / testVerifyWebhookSecret / testMemberValidity) + secret scan 2 ชั้น (regex ใน `ci-test.js` + **gitleaks** ตาม `.gitleaks.toml` ตรวจประวัติ git ทั้งหมด) ทุก push ขึ้น `main` — ครอบคลุม**ข้อ 2 และ 3** ของ DoD โดยอัตโนมัติ
+> **อัตโนมัติผ่าน CI:** GitHub Actions (`.github/workflows/ci.yml`) รัน `node --check` + ชุดทดสอบสัญญา 17 ชุด (`scripts/ci-test.js` — verifyMenuContract / verifyThaiCaptions / testVerifyLineSignature / testVerifyWebhookSecret / testMemberValidity / testWelcomeMenu / testMemberRepository / testMemberDataService / testSeedData / testFinanceData / testColumnReordering / testDateValidator / testDateConverter / testExpiryStatus / testExpiryService / testCoreMemberRules / testLoanCalculator) + secret scan 2 ชั้น (regex ใน `ci-test.js` + **gitleaks** ตาม `.gitleaks.toml` ตรวจประวัติ git ทั้งหมด) ทุก push ขึ้น `main` — ครอบคลุม**ข้อ 2 และ 3** ของ DoD โดยอัตโนมัติ
 
 - [ ] โค้ดตรงตามเอกสาร (บท/หัวข้อที่การ์ดอ้างอิง)
 - [ ] Contract test ผ่าน (`verifyMenuContract` / `verifyThaiCaptions`)

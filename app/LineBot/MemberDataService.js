@@ -161,6 +161,38 @@ LineBot.MemberDataService = (() => {
   }
 
   /**
+   * สร้างข้อความเตือนวันหมดอายุ (การ์ด MT-11)
+   * คืน '' ถ้าไม่ควรเตือน (สถานะ valid / ไม่มีข้อมูล)
+   * @param {Object} member
+   * @param {Object} expiry - { status, daysLeft } จาก Core.MemberRules.getExpiryStatus
+   * @returns {string}
+   */
+  function buildExpiryWarning(member, expiry) {
+    if (!expiry || !member) return '';
+    const name = [member.mem_title, member.mem_fname, member.mem_lname].filter(Boolean).join(' ') || 'สมาชิก';
+    if (expiry.status === 'expiring') {
+      return `⚠️ สิทธิ์การใช้งานของ ${name} จะหมดอายุในอีก ${expiry.daysLeft} วัน (วันที่ ${member.mem_exp_dt}) — กรุณาติดต่อสหกรณ์เพื่อต่ออายุ`;
+    }
+    if (expiry.status === 'expired') {
+      return `⚠️ สิทธิ์การใช้งานของ ${name} หมดอายุแล้ว (วันที่ ${member.mem_exp_dt}) — กรุณาติดต่อสหกรณ์เพื่อต่ออายุ`;
+    }
+    return '';
+  }
+
+  /**
+   * แนบคำเตือนวันหมดอายุท้ายข้อความ (ใช้ตอนตอบกลับ — การ์ด MT-11)
+   * @param {string} text - ข้อความเดิม
+   * @param {Object} member
+   * @param {Object} [expiry] - { status, daysLeft }
+   * @returns {string}
+   */
+  function appendExpiryWarning(text, member, expiry) {
+    const warn = buildExpiryWarning(member, expiry);
+    if (!warn) return text;
+    return text + '\n━━━━━━━━━━━━━━━━━\n' + warn;
+  }
+
+  /**
    * ตรวจว่าเป็นเมนูการเงินหรือไม่
    * @param {string} item
    * @returns {boolean}
@@ -172,6 +204,8 @@ LineBot.MemberDataService = (() => {
   return {
     buildProfileText,
     buildFinanceText,
+    buildExpiryWarning,
+    appendExpiryWarning,
     isFinancialItem,
     formatMoney,
     FINANCIAL_ITEMS

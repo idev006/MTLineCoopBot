@@ -44,6 +44,19 @@ LineBot.EventHandler = (() => {
   }
 
   /**
+   * แนบคำเตือนวันหมดอายุท้ายข้อความตอบกลับ (การ์ด MT-11)
+   * สมาชิกที่เหลือเวลาไม่เกิน EXPIRY_WARNING_DAYS วัน จะเห็นคำเตือนในคำตอบ
+   * (สมาชิกที่หมดอายุถูก Gate ปฏิเสธอยู่แล้ว — ที่นี่เตือนเฉพาะกรณี "ใกล้หมด")
+   * @param {string} text
+   * @param {Object} member
+   * @returns {string}
+   */
+  function withExpiryWarning(text, member) {
+    const expiry = Core.MemberRules.getExpiryStatus(member, undefined, Config.get().EXPIRY_WARNING_DAYS);
+    return LineBot.MemberDataService.appendExpiryWarning(text, member, expiry);
+  }
+
+  /**
    * ตอบข้อความปฏิเสธเมื่อผู้ใช้ไม่มีสิทธิ์ใช้งานเมนู/คำสั่งของสมาชิก
    * ถ้าเคยเป็นสมาชิกแต่ไม่ valid (หมดอายุ/ถูกเพิกถอน) → ยกเลิกเมนูสมาชิก
    * ให้กลับไปเห็น Welcome Menu (Per-User Gating — บทที่ 3.3.6)
@@ -133,7 +146,7 @@ LineBot.EventHandler = (() => {
       // MT-10: เมนูที่ดึงข้อมูลจริงจาก t_member_mast (ผ่าน MemberRepository)
       if (params.item === 'profile') {
         const profileText = deps.MemberData.buildProfileText(member);
-        deps.MessageService.reply(replyToken, profileText, token);
+        deps.MessageService.reply(replyToken, withExpiryWarning(profileText, member), token);
         Logger.log(`Profile replied with real data for ${member.mem_code}`);
         return;
       }
@@ -146,7 +159,7 @@ LineBot.EventHandler = (() => {
           dividends: repo.findDividendsByMember(member.mem_code)
         };
         const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
-        deps.MessageService.reply(replyToken, financeText, token);
+        deps.MessageService.reply(replyToken, withExpiryWarning(financeText, member), token);
         Logger.log(`Financial menu replied with data: ${params.item}`);
         return;
       }

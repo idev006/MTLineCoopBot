@@ -594,6 +594,107 @@ function testDateConverter() {
 }
 
 /**
+ * ทดสอบ Core.MemberRules.getExpiryStatus (MT-11 — pure, deterministic now):
+ * valid / expiring (ภายใน warningDays) / expired + daysLeft ถูกต้อง
+ * @returns {boolean}
+ */
+function testExpiryStatus() {
+  const R = Core.MemberRules;
+  const now = new Date('2026-08-06T12:00:00');
+  const base = { mem_code: 'M001' };
+
+  const valid = R.getExpiryStatus({ ...base, mem_exp_dt: '2026-12-31' }, now, 30);
+  if (valid.status !== 'valid') throw new Error('testExpiryStatus: 2026-12-31 ควร valid');
+  if (valid.daysLeft !== 147) throw new Error('testExpiryStatus: daysLeft valid ผิด (' + valid.daysLeft + ')');
+
+  const expiring = R.getExpiryStatus({ ...base, mem_exp_dt: '2026-08-20' }, now, 30);
+  if (expiring.status !== 'expiring') throw new Error('testExpiryStatus: 2026-08-20 ควร expiring');
+  if (expiring.daysLeft !== 14) throw new Error('testExpiryStatus: daysLeft expiring ผิด (' + expiring.daysLeft + ')');
+
+  const boundary = R.getExpiryStatus({ ...base, mem_exp_dt: '2026-09-05' }, now, 30);
+  if (boundary.status !== 'expiring') throw new Error('testExpiryStatus: ขอบเขต 30 วันพอดี ควร expiring');
+
+  const expired = R.getExpiryStatus({ ...base, mem_exp_dt: '2026-08-01' }, now, 30);
+  if (expired.status !== 'expired') throw new Error('testExpiryStatus: 2026-08-01 ควร expired');
+  if (expired.daysLeft !== -5) throw new Error('testExpiryStatus: daysLeft expired ผิด (' + expired.daysLeft + ')');
+
+  if (R.getExpiryStatus({ ...base, mem_exp_dt: '' }, now, 30).status !== 'valid') {
+    throw new Error('testExpiryStatus: ไม่มี mem_exp_dt ควร valid (fail-safe)');
+  }
+  if (R.getExpiryStatus(null, now, 30).status !== 'valid') {
+    throw new Error('testExpiryStatus: null ควร valid');
+  }
+
+  // ข้อความเตือน (MemberDataService)
+  const S = LineBot.MemberDataService;
+  const warn = S.buildExpiryWarning({ ...base, mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี', mem_exp_dt: '2026-08-20' }, expiring);
+  if (!warn.includes('14 วัน')) throw new Error('testExpiryStatus: คำเตือนไม่บอกจำนวนวัน');
+  if (!warn.includes('สมชาย')) throw new Error('testExpiryStatus: คำเตือนไม่มีชื่อ');
+  if (S.buildExpiryWarning(base, { status: 'valid', daysLeft: 147 }) !== '') {
+    throw new Error('testExpiryStatus: valid ไม่ควรมีคำเตือน');
+  }
+  const appended = S.appendExpiryWarning('ข้อความเดิม', base, expiring);
+  if (!appended.startsWith('ข้อความเดิม')) throw new Error('testExpiryStatus: append ต้องไม่ทิ้งข้อความเดิม');
+  if (S.appendExpiryWarning('x', base, { status: 'valid', daysLeft: 147 }) !== 'x') {
+    throw new Error('testExpiryStatus: append valid ต้องไม่เพิ่มอะไร');
+  }
+
+  Logger.log('testExpiryStatus OK — valid/expiring/expired + daysLeft + คำเตือน (deterministic)');
+  return true;
+}
+
+/**
+ * ทดสอบ LineBot.ExpiryService.runExpiryCheck (MT-11) — ผ่าน Fake SpreadsheetApp + fake sender:
+ * scan สมาชิก → push expiring/expired ถูกต้อง · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId
+ * @returns {boolean}
+ */
+function testExpiryService() {
+  // 1) seed t_member_mast ใน fake sheets (header + 4 แถว: expiring / expired / valid / inactive)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-08-20', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-08-01', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
+    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'active', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000],
+    ['M004', 'นาย', 'ยังไม่', 'Activate', 0, '', 0, '', '', 'inactive', 'ACT004', '', 'member', 0, 0, 0]
+  ];
+
+  const sent = [];
+  const unlinked = [];
+  const summary = LineBot.ExpiryService.runExpiryCheck('TOKEN', {
+    now: new Date('2026-08-06T12:00:00'),
+    warningDays: 30,
+    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; },
+    unlinker: (lineUserId) => { unlinked.push(lineUserId); return { ok: true }; }
+  });
+
+  if (summary.checked !== 4) throw new Error('testExpiryService: checked ควร 4 (' + summary.checked + ')');
+  if (summary.expiring !== 1) throw new Error('testExpiryService: expiring ควร 1');
+  if (summary.expired !== 1) throw new Error('testExpiryService: expired ควร 1');
+  if (summary.pushed !== 2) throw new Error('testExpiryService: pushed ควร 2 (' + summary.pushed + ')');
+  if (sent.length !== 2) throw new Error('testExpiryService: sender ควรถูกเรียก 2 ครั้ง');
+
+  if (!sent.some(s => s.to === 'U11111111111111111111111111111111' && s.text.includes('14 วัน'))) {
+    throw new Error('testExpiryService: ไม่มี push เตือน expiring');
+  }
+  if (!sent.some(s => s.to === 'U22222222222222222222222222222222' && s.text.includes('หมดอายุแล้ว'))) {
+    throw new Error('testExpiryService: ไม่มี push แจ้ง expired');
+  }
+  if (!unlinked.includes('U22222222222222222222222222222222')) throw new Error('testExpiryService: expired ควรถูก unlink');
+  if (unlinked.includes('U11111111111111111111111111111111')) throw new Error('testExpiryService: expiring ไม่ควรถูก unlink');
+  if (sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testExpiryService: valid ไม่ควรถูก push');
+  if (sent.some(s => s.to === 'U44444444444444444444444444444444')) throw new Error('testExpiryService: inactive ไม่ควรถูก push');
+
+  // 2) repository มี listMembers ครบสัญญา
+  const repo = Data.MemberRepository.getRepository();
+  if (typeof repo.listMembers !== 'function') throw new Error('testExpiryService: repository ต้องมี listMembers');
+  if (repo.listMembers().length !== 4) throw new Error('testExpiryService: listMembers ควรคืน 4 รายการ');
+
+  Logger.log('testExpiryService OK — scan + push (expiring/expired) + unlink expired + ข้าม inactive');
+  return true;
+}
+
+/**
  * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}
