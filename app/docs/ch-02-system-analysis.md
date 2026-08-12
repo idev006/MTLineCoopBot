@@ -103,12 +103,12 @@ ActivationService.handleActivate(รหัส, lineUserId, replyToken, token)
 SheetService.findByActivateCode(รหัส) → ค้นหาจาก sheet t_member_mast
         ├─ ไม่พบ → ตอบ "ไม่พบรหัส activate นี้ในระบบ..."
         ├─ mem_eff_dt มีค่าแล้ว → ตอบ "รหัสนี้ถูกใช้ไปแล้ว..."
-        └─ พบและยังไม่ถูกใช้ → SheetService.activateMember(rowIndex, lineUserId)
+        └─ พบและยังไม่ถูกใช้ → Data.MemberRepository.getRepository().activateMember(rowIndex, lineUserId)
                 ├─ mem_eff_dt  = now()
                 ├─ mem_exp_dt  = now() + 365 วัน
                 ├─ mem_status  = 'active'
                 ├─ line_user_id = LINE User ID
-                └─ ผูก Member Menu ให้ผู้ใช้ (RichMenu.ApiService.linkUser) 📌 เฟส 2
+                └─ ผูก Member Menu ให้ผู้ใช้ (RichMenu.Gating.linkMemberMenu) ✅
         ↓
 FlexBuilder.welcomeMember(...) → สร้าง Flex Message ต้อนรับ
         ↓
@@ -172,7 +172,7 @@ MessageService.replyFlex → สมาชิกเห็น "🎉 ยินด�
 |--------|-----------|
 | Actor | สมาชิก |
 | Pre-condition | สมาชิกมีรหัส `activate_code` จากสหกรณ์ และแถวข้อมูลใน `t_member_mast` ยังไม่ถูก activate |
-| Main Flow | 1. พิมพ์ `activate:CODE` 2. ระบบค้นหารหัส 3. ตรวจสอบว่ายังไม่ถูกใช้ 4. เขียน `mem_eff_dt`, `mem_exp_dt`, `mem_status='active'`, `line_user_id` 5. ผูก Member Menu ให้ผู้ใช้ 📌 เฟส 2 6. ส่ง Flex Message ต้อนรับ |
+| Main Flow | 1. พิมพ์ `activate:CODE` 2. ระบบค้นหารหัส 3. ตรวจสอบว่ายังไม่ถูกใช้ 4. เขียน `mem_eff_dt`, `mem_exp_dt`, `mem_status='active'`, `line_user_id` 5. ผูก Member Menu ให้ผู้ใช้ (RichMenu.Gating) ✅ 6. ส่ง Flex Message ต้อนรับ |
 | Alternative | รหัสไม่พบ → แจ้งให้ตรวจสอบใหม่ / รหัสถูกใช้แล้ว → แจ้งว่าใช้ซ้ำไม่ได้ |
 | Post-condition | LINE User ID ถูกผูกกับรหัสสมาชิก + **เมนูสมาชิกถูกผูก (Tab 1) ให้เห็น 5 แท็บทันที** ✅ การ activate ซ้ำด้วยรหัสเดิมจะถูกปฏิเสธ |
 
