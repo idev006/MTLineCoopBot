@@ -43,16 +43,7 @@
 
 ## 🔄 In Progress (WIP ≤ 3)
 
-- [ ] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · ที่มา: token ถูก commit ใน initial commit (2026-08-12) → ลบออกจากโค้ด + **purge ประวัติ git แล้ว (filter-repo — token ถูกแทนด้วย `***REMOVED***` ในทุก commit, 2026-08-12)** + CI กันซ้ำ 2 ชั้น (regex + gitleaks ตรวจเต็มรูปแบบแล้ว)
-  - **ขั้นตอนหมุน (Runbook 5.5.1):**
-    - [ ] ① ออก token ใหม่ใน LINE Console
-    - [ ] ② อัปเดต `CHANNEL_ACCESS_TOKEN` ใน Script Properties (ผ่าน UI เท่านั้น — ห้าม commit)
-    - [ ] ③ ทดสอบ reply `200` — รัน `checkTokenHealth()` (Test.js) ต้องได้ `✅ HTTP 200`
-    - [ ] ④ Deactivate token เก่าใน LINE Console
-  - **การยืนยันก่อนปิดการ์ด (ต้องครบทั้ง 3):**
-    - [ ] ✅ Token ใหม่ทำงาน — `checkTokenHealth()` ได้ HTTP 200 / LINE ตอบกลับปกติ
-    - [ ] ✅ Token เก่าถูก Deactivate แล้ว
-    - [ ] ✅ Executions log แสดง `reply success: 200`
+- _(ว่าง)_
 
 ---
 
@@ -67,6 +58,7 @@
 - [x] **[MT-06b] เครื่องคำนวณสินเชื่อ Actual/365** — GitHub Pages (ยังรอรวมเข้ากับ LoanService เฟส 3)
 - [x] **[MT-08] ตรวจสอบความถูกต้องของ Webhook** — บทที่ 3.6, 5.5 · `Util.verifyWebhookSecret` + `Util.verifyLineSignature` + guard ใน `doPost` + test ใน Test.js · หมายเหตุ: Apps Script อ่าน header ไม่ได้ จึงใช้ `webhook_secret` ผูกท้าย URL (Issue #67764685)
 - [x] **[MT-09] Gate ตรวจสิทธิ์ใน EventHandler** — บทที่ 3.7, 6 TC-10 · `SheetService.findByLineUserId` + `getAuthorizedMember` (isActiveMember + บทบาท) ใน `EventHandler` ยกเว้น `activate:` + `testMemberValidity`
+- [x] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · token รั่วจาก initial commit (2026-08-12) → ลบออกจากโค้ด + **purge ประวัติ git (filter-repo)** + CI กันซ้ำ 2 ชั้น (regex + gitleaks ตรวจเต็มรูปแบบ) · **ยืนยันครบ 3 ข้อแล้ว:** ① `checkTokenHealth()` → HTTP 200 ② token เก่า Deactivate แล้ว ③ Executions แสดง `reply success: 200` · เพิ่ม `checkTokenHealth()` ใน Test.js ใช้ตรวจรายเดือน
 
 ---
 
@@ -78,3 +70,4 @@
 | 2026-08-12 | MT-08 | To Do → In Progress → Done | implement `webhook_secret` + ฟังก์ชัน HMAC; DoD ครบ 6 ข้อ (test ผ่าน, syntax ผ่าน, README ✅, เอกสารตรงโค้ด) |
 | 2026-08-12 | MT-09 | To Do → In Progress → Done | Gate ตรวจสิทธิ์ (findByLineUserId + isActiveMember + บทบาท); ALL TESTS PASS; DoD ครบ 6 ข้อ |
 | 2026-08-12 | MT-26 | → In Progress | หมุน token (SEC) — ตรวจพบ token hardcode ใน initial commit → ลบออกจากโค้ด + CI secret scan 2 ชั้นกันซ้ำ (regex + gitleaks) · รอผู้ดูแลหมุน token ใน LINE Console |
+| 2026-08-12 | MT-26 | In Progress → Done | ยืนยันครบ 3 ข้อ (checkTokenHealth HTTP 200 / token เก่า Deactivate / Executions 200) · เพิ่ม purge ประวัติ git (filter-repo) + checkTokenHealth() · DoD ครบ |
