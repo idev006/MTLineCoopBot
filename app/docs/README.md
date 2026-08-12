@@ -85,6 +85,7 @@
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
 | ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (dummy data ผ่าน `SeedData`) | ✅ ทำแล้ว (dummy) | บทที่ 7 ระยะ 2, 5.6.4, data-dictionary.md |
 | ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
+| สลับตำแหน่งฟิลด์ในตารางได้ (Header-driven — อ่าน/เขียน map จาก header จริง, `getHeaderMap`/`rowToObjectByHeaders`) | ✅ ทำแล้ว | บทที่ 3.2.1, 4.2.7, data-dictionary.md |
 | สถาปัตยกรรม API-First + LIFF (`Api/Core/UI-Adapter`, ID Token JWT) | 📌 ออกแบบไว้ — เฟส 3 | บทที่ 3.1.1, 7 ระยะที่ 3 |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
 | Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |

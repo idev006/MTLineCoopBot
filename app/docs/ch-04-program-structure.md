@@ -129,6 +129,7 @@ Entry point ของ LINE webhook
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
 - `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 4 ตาราง (MT-27)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
+- `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -175,10 +176,12 @@ Entry point ของ LINE webhook
 
 **`SheetService.js`** — ติดต่อ Google Sheets + ตรวจสอบสถานะสมาชิก
 - `getSheet(tableKey)` — ดึง sheet หรือสร้างให้อัตโนมัติจาก DataDict
-- `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate
-- `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id`
-- `findSavingsByMember(memCode)` / `findLoansByMember(memCode)` / `findDividendsByMember(memCode)` — อ่านข้อมูลการเงินจากตารางใหม่ (MT-27) ผ่าน `findAllByColumn()`
-- `logActivation(entry)` — บันทึก audit trail ลง `t_activation_log` (MT-27)
+- `getHeaderRow(sheet)` / `getHeaderMap(sheet)` / `readRowsAsObjects(tableKey, sheet)` — อ่าน/แมปคอลัมน์จาก **header row จริง** (การ์ด MT-28: รองรับการสลับตำแหน่งฟิลด์ในตาราง)
+- `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate (map ตาม header)
+- `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
+- `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)
+- `findSavingsByMember(memCode)` / `findLoansByMember(memCode)` / `findDividendsByMember(memCode)` — อ่านข้อมูลการเงินจากตารางใหม่ (MT-27) ผ่าน `findAllByColumn()` (map ตาม header)
+- `logActivation(entry)` — บันทึก audit trail ลง `t_activation_log` (MT-27) — เขียนตามลำดับ header จริง
 - `isActiveMember(member)` — ตรวจว่าสมาชิก valid: ช่วงวัน `[mem_eff_dt, mem_exp_dt]` + `mem_status='active'` (fail-safe เมื่อวันที่ไม่ครบ)
 - `hasRole(member, role)` — ตรวจว่า valid และมีบทบาทตรงตามที่กำหนด (`member`/`staff`/`admin`)
 - `parseDate(value)` — แปลงวันที่จาก string (กันปัญหา timezone ของ `new Date(string)`)

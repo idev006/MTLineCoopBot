@@ -127,6 +127,7 @@ const runner = `
     ['testMemberDataService', testMemberDataService],
     ['testSeedData', testSeedData],
     ['testFinanceData', testFinanceData],
+    ['testColumnReordering', testColumnReordering],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

@@ -93,6 +93,8 @@
 - ใช้ Google Sheets เป็นฐานข้อมูลหลัก (ไม่ต้องมีเซิร์ฟเวอร์)
 - โครงสร้างตาราง/คอลัมน์ถูกนิยามใน `DataDict.js` (SSOT) เพียงที่เดียว
 - เมื่อเปิดระบบครั้งแรก `SheetService.getSheet()` จะสร้าง Sheet และ Header ให้อัตโนมัติหากยังไม่มี
+- **ตำแหน่งคอลัมน์ไม่สำคัญ (Header-driven)** — ระบบอ่าน/เขียนโดย map จาก **header row จริงของชีท** (การ์ด MT-28) จึง**สลับตำแหน่งฟิลด์ในตารางได้** โดยไม่พัง: `DataDict.rowToObjectByHeaders` / `objectToRowByHeaders` + `SheetService.getHeaderMap` — DataDict ใช้เป็น SSOT สำหรับสร้างชีทใหม่และเป็น "ชื่อมาตรฐาน" ของคอลัมน์เท่านั้น
+  - ข้อควรระวัง: ถ้าคอลัมน์ที่จำเป็น (เช่น `activate_code`) **หายไป** จาก header → ระบบ throw error ชัดเจน (ไม่ทำงานผิดเงียบ ๆ)
 
 ### 3.2.2 ตาราง `t_member_mast` (MEMBER_MASTER)
 

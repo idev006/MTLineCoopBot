@@ -52,6 +52,49 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * อ่าน header row ของชีท (แถวแรก) — ใช้ map คอลัมน์ตามชื่อ
+   * (หลักการ Header-driven: รองรับการสลับตำแหน่งฟิลด์ในตารางได้)
+   * @param {Sheet} sheet
+   * @returns {Array<string>}
+   */
+  function getHeaderRow(sheet) {
+    const values = sheet.getDataRange().getValues();
+    if (values.length === 0) return [];
+    return values[0].map(h => String(h).trim());
+  }
+
+  /**
+   * สร้าง map { columnName: 0-basedIndex } จาก header จริงของชีท
+   * @param {Sheet} sheet
+   * @returns {Object}
+   */
+  function getHeaderMap(sheet) {
+    const map = {};
+    getHeaderRow(sheet).forEach((name, i) => {
+      if (name) map[name] = i;
+    });
+    return map;
+  }
+
+  /**
+   * อ่านทุกแถว (หลัง header) เป็น object โดย map ตามชื่อคอลัมน์จริง
+   * (ไม่พึ่งลำดับคอลัมน์ใน DataDict — ใช้ rowToObjectByHeaders)
+   * @param {string} tableKey
+   * @param {Sheet} sheet
+   * @returns {Array<Object>}
+   */
+  function readRowsAsObjects(tableKey, sheet) {
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return [];
+    const headers = data[0].map(h => String(h).trim());
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      rows.push(DataDict.rowToObjectByHeaders(tableKey, headers, data[i]));
+    }
+    return rows;
+  }
+
+  /**
    * ค้นหาสมาชิกโดย activate_code
    * @param {string} activateCode
    * @returns {Object|null} ข้อมูลสมาชิกหรือ null ถ้าไม่พบ
@@ -62,33 +105,24 @@ LineBot.SheetService = (() => {
       Logger.log('Finding member by activate_code: ' + activateCode);
       
       const sheet = getSheet(tableKey);
-      Logger.log('Sheet found: ' + sheet.getName());
-      
       const data = sheet.getDataRange().getValues();
-      Logger.log('Data rows: ' + data.length);
-      
       if (data.length <= 1) {
         Logger.log('Sheet has only header or is empty');
         return null;
       }
       
-      // หา column index ของ activate_code
-      const activateCodeIndex = DataDict.getColumnIndex(tableKey, 'activate_code');
-      Logger.log('activate_code column index: ' + activateCodeIndex);
-      
+      // หา column index จาก header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
+      const headers = data[0].map(h => String(h).trim());
+      const activateCodeIndex = headers.indexOf('activate_code');
       if (activateCodeIndex === -1) {
-        Logger.log('activate_code column not found in DataDict');
-        return null;
+        throw new Error(`ไม่พบคอลัมน์ activate_code ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
       }
       
-      // ค้นหาแบบ manual เพื่อ debug
-      Logger.log('Searching for activate_code: ' + activateCode + ' in column ' + activateCodeIndex);
       for (let i = 1; i < data.length; i++) {
         const rowValue = data[i][activateCodeIndex];
-        Logger.log('Row ' + (i + 1) + ', col ' + activateCodeIndex + ' value: ' + rowValue + ' (type: ' + typeof rowValue + ')');
         if (String(rowValue).trim() === String(activateCode).trim()) {
           Logger.log('Found match at row ' + (i + 1));
-          const member = DataDict.rowToObject(tableKey, data[i]);
+          const member = DataDict.rowToObjectByHeaders(tableKey, headers, data[i]);
           member._rowIndex = i + 1; // 1-based
           return member;
         }
@@ -115,14 +149,18 @@ LineBot.SheetService = (() => {
       const data = sheet.getDataRange().getValues();
       if (data.length <= 1) return null;
 
-      const colIndex = DataDict.getColumnIndex(tableKey, 'line_user_id');
-      if (colIndex === -1) return null;
+      // หา column index จาก header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
+      const headers = data[0].map(h => String(h).trim());
+      const colIndex = headers.indexOf('line_user_id');
+      if (colIndex === -1) {
+        throw new Error(`ไม่พบคอลัมน์ line_user_id ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+      }
 
       for (let i = 1; i < data.length; i++) {
         if (String(data[i][colIndex]).trim() === String(lineUserId).trim()) {
           Logger.log('findByLineUserId: found member at row ' + (i + 1));
           return {
-            ...DataDict.rowToObject(tableKey, data[i]),
+            ...DataDict.rowToObjectByHeaders(tableKey, headers, data[i]),
             _rowIndex: i + 1 // 1-based
           };
         }
@@ -139,7 +177,7 @@ LineBot.SheetService = (() => {
    * @param {string} tableKey - key ใน DataDict เช่น 'SAVINGS_ACCT'
    * @param {string} columnName - ชื่อคอลัมน์ เช่น 'mem_code'
    * @param {*} value
-   * @returns {Array<Object>} รายการ object (rowToObject) — ว่างถ้าไม่พบ
+   * @returns {Array<Object>} รายการ object — ว่างถ้าไม่พบ
    */
   function findAllByColumn(tableKey, columnName, value) {
     if (!value) return [];
@@ -147,15 +185,17 @@ LineBot.SheetService = (() => {
     const data = sheet.getDataRange().getValues();
     if (data.length <= 1) return [];
 
-    const colIndex = DataDict.getColumnIndex(tableKey, columnName);
+    // หา column index จาก header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
+    const headers = data[0].map(h => String(h).trim());
+    const colIndex = headers.indexOf(columnName);
     if (colIndex === -1) {
-      throw new Error(`Column ${columnName} not found in ${DataDict.getTable(tableKey).name}`);
+      throw new Error(`ไม่พบคอลัมน์ ${columnName} ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
     }
 
     const results = [];
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][colIndex]).trim() === String(value).trim()) {
-        results.push(DataDict.rowToObject(tableKey, data[i]));
+        results.push(DataDict.rowToObjectByHeaders(tableKey, headers, data[i]));
       }
     }
     return results;
@@ -197,7 +237,9 @@ LineBot.SheetService = (() => {
     const tableKey = 'ACTIVATION_LOG';
     const sheet = getSheet(tableKey);
     const logId = 'LOG-' + String(Date.now());
-    const row = DataDict.objectToRow(tableKey, {
+    // เขียนตามลำดับ header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
+    const headers = getHeaderRow(sheet);
+    const row = DataDict.objectToRowByHeaders(tableKey, headers, {
       log_id: logId,
       mem_code: entry.memCode || '',
       line_user_id: entry.lineUserId || '',
@@ -223,11 +265,19 @@ LineBot.SheetService = (() => {
     const expDate = new Date(now);
     expDate.setDate(expDate.getDate() + 365);
 
-    // ใช้ DataDict เพื่อหา index ที่ถูกต้อง
-    const effDtIndex = DataDict.getColumnIndex(tableKey, 'mem_eff_dt') + 1; // 1-based
-    const expDtIndex = DataDict.getColumnIndex(tableKey, 'mem_exp_dt') + 1;
-    const statusIndex = DataDict.getColumnIndex(tableKey, 'mem_status') + 1;
-    const lineIdIndex = DataDict.getColumnIndex(tableKey, 'line_user_id') + 1;
+    // ใช้ header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์ — ไม่พึ่ง DataDict order)
+    const headerMap = getHeaderMap(sheet);
+    const col = (name) => {
+      const idx = headerMap[name];
+      if (idx === undefined) {
+        throw new Error(`ไม่พบคอลัมน์ ${name} ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+      }
+      return idx + 1; // 1-based
+    };
+    const effDtIndex = col('mem_eff_dt');
+    const expDtIndex = col('mem_exp_dt');
+    const statusIndex = col('mem_status');
+    const lineIdIndex = col('line_user_id');
 
     // แปลง Date เป็น string รูปแบบ yyyy-mm-dd HH:mm:ss ตามที่ต้องการ
     const effDtStr = DataDict.formatDateTime(now);
@@ -304,6 +354,9 @@ LineBot.SheetService = (() => {
     hasRole,
     isActivated,
     getSheet,
-    getSpreadsheet
+    getSpreadsheet,
+    getHeaderRow,
+    getHeaderMap,
+    readRowsAsObjects
   };
 })();

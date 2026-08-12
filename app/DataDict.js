@@ -231,6 +231,60 @@ const DataDict = (() => {
   }
 
   /**
+   * แปลงแถวข้อมูลเป็น object โดย map จาก header row จริงของชีท
+   * (รองรับการสลับตำแหน่งฟิลด์ในตาราง — ไม่พึ่งลำดับคอลัมน์ใน DataDict)
+   * คอลัมน์ที่ไม่มีใน DataDict จะถูกเก็บตามชื่อนั้น ๆ (forward-compatible)
+   * @param {string} tableKey
+   * @param {Array<string>} headers - header row จากชีท (แถวแรก)
+   * @param {Array} row - แถวข้อมูล
+   * @returns {Object}
+   */
+  function rowToObjectByHeaders(tableKey, headers, row) {
+    const obj = {};
+    for (let i = 0; i < headers.length; i++) {
+      const name = String(headers[i]).trim();
+      if (!name) continue;
+      let value = row[i];
+      const col = getColumnMeta(tableKey, name);
+      if (col && col.type === 'number' && typeof value === 'string') {
+        value = parseFloat(value) || 0;
+      } else if (col && col.type === 'boolean') {
+        value = value === true || value === 'true' || value === 1 || value === '1';
+      }
+      obj[name] = value;
+    }
+    return obj;
+  }
+
+  /**
+   * สร้างแถว (array) จาก object ตามลำดับ header จริงของชีท
+   * (รองรับการสลับตำแหน่ง — เขียนตรงคอลัมน์ตามชื่อ ไม่ใช่ตำแหน่งคงที่)
+   * @param {string} tableKey
+   * @param {Array<string>} headers - header row จากชีท
+   * @param {Object} obj
+   * @returns {Array}
+   */
+  function objectToRowByHeaders(tableKey, headers, obj) {
+    return headers.map(header => {
+      const name = String(header).trim();
+      if (!name) return undefined;
+      const meta = getColumnMeta(tableKey, name);
+      let value = obj[name];
+      if (value === undefined || value === null) {
+        value = meta && meta.default !== undefined ? meta.default : undefined;
+      }
+      if (value instanceof Date) {
+        if (meta && meta.type === 'date') {
+          value = formatDate(value);
+        } else if (meta && meta.type === 'datetime') {
+          value = formatDateTime(value);
+        }
+      }
+      return value;
+    });
+  }
+
+  /**
    * แปลง object เป็นแถวข้อมูล (array) ตามลำดับคอลัมน์
    * @param {string} tableKey
    * @param {Object} obj
@@ -426,7 +480,9 @@ const DataDict = (() => {
     getColumnIndex,
     getColumnMeta,
     rowToObject,
+    rowToObjectByHeaders,
     objectToRow,
+    objectToRowByHeaders,
     getHeaders,
     listTables,
     validate,

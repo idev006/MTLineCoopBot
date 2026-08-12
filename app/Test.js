@@ -406,6 +406,63 @@ function testFinanceData() {
 }
 
 /**
+ * ทดสอบการสลับตำแหน่งฟิลด์ในตาราง (Header-driven — ข้อกำหนดของระบบ):
+ * สลับคอลัมน์ t_member_mast / t_savings_acct ให้ต่างจาก DataDict order
+ * แล้วยืนยันว่าอ่าน (findByLineUserId / findAllByColumn) และเขียน (activateMember) ยังถูกต้อง
+ * @returns {boolean}
+ */
+function testColumnReordering() {
+  // 1) สร้างชีท t_member_mast ที่สลับตำแหน่งคอลัมน์ (line_user_id อยู่วิปแรก, mem_code อยู่ที่ 3)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    ['line_user_id', 'mem_status', 'mem_code', 'mem_fname', 'mem_lname', 'activate_code',
+     'mem_title', 'mem_rank_score', 'mem_position', 'mem_position_score',
+     'mem_eff_dt', 'mem_exp_dt', 'mem_role', 'mem_kk', 'mem_bk', 'mem_bh'],
+    ['U11111111111111111111111111111111', 'active', 'M001', 'สมชาย', 'ใจดี', 'ACT001',
+     'นาย', 25, 'กรรมการ', 10, '2026-08-06', '2027-08-06', 'member', 85, 50000, 10000]
+  ];
+
+  const repo = Data.MemberRepository.getRepository();
+
+  // 2) findByLineUserId ยังคืนข้อมูลถูกต้องแม้สลับตำแหน่ง
+  const m = repo.findByLineUserId('U11111111111111111111111111111111');
+  if (!m) throw new Error('testColumnReordering: findByLineUserId ไม่พบสมาชิก');
+  if (m.mem_code !== 'M001') throw new Error('testColumnReordering: mem_code ผิด (' + m.mem_code + ')');
+  if (m.mem_fname !== 'สมชาย') throw new Error('testColumnReordering: mem_fname ผิด');
+  if (m.mem_status !== 'active') throw new Error('testColumnReordering: mem_status ผิด');
+  if (m.mem_kk !== 85) throw new Error('testColumnReordering: mem_kk ผิด (' + m.mem_kk + ')');
+  if (m._rowIndex !== 2) throw new Error('testColumnReordering: _rowIndex ผิด');
+
+  // 3) findByActivateCode ยังทำงาน
+  const a = repo.findByActivateCode('ACT001');
+  if (!a || a.mem_code !== 'M001') throw new Error('testColumnReordering: findByActivateCode ผิด');
+
+  // 4) activateMember เขียนถูกคอลัมน์ (line_user_id = คอลัมน์ 1, mem_status = คอลัมน์ 2 ใน layout ใหม่)
+  repo.activateMember(2, 'U99999999999999999999999999999999');
+  const row = __fakeSheets['t_member_mast'][1];
+  if (row[0] !== 'U99999999999999999999999999999999') throw new Error('testColumnReordering: line_user_id เขียนผิดคอลัมน์');
+  if (row[1] !== 'active') throw new Error('testColumnReordering: mem_status เขียนผิดคอลัมน์');
+  if (typeof row[10] !== 'string' || row[10].length < 10) throw new Error('testColumnReordering: mem_eff_dt ไม่ถูกเขียน');
+  if (row[4] !== 'ใจดี') throw new Error('testColumnReordering: ข้อมูลอื่นเสียหายจากการเขียน');
+
+  // 5) ตารางการเงินสลับคอลัมน์ — findAllByColumn ยังอ่านถูกต้อง
+  delete __fakeSheets['t_savings_acct'];
+  __fakeSheets['t_savings_acct'] = [
+    ['balance', 'acct_no', 'mem_code', 'acct_type', 'updated_dt'],
+    [25000, 'SAV-0001', 'MEM001', 'ออมทรัพย์', '2026-08-01'],
+    [100000, 'SAV-0011', 'MEM001', 'ออมทรัพย์พิเศษ', '2026-08-01']
+  ];
+  const savings = repo.findSavingsByMember('MEM001');
+  if (savings.length !== 2) throw new Error('testColumnReordering: findSavings ผิด');
+  if (savings[0].acct_no !== 'SAV-0001' || savings[0].balance !== 25000) {
+    throw new Error('testColumnReordering: สลับคอลัมน์แล้วอ่านยอดผิด');
+  }
+
+  Logger.log('testColumnReordering OK — สลับตำแหน่งคอลัมน์แล้วอ่าน/เขียนยังถูกต้อง (Header-driven)');
+  return true;
+}
+
+/**
  * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}
