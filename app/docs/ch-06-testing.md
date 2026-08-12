@@ -175,6 +175,18 @@
 | ผลที่คาดหวัง | 1–3. ได้ข้อความเนื้อหาจริง (🎁/🚨/❓ — ไม่ใช่ "ยังไม่มีข้อมูล"/"คุณเลือกเมนู...") 4. ยังได้ข้อความจริง (จาก ReplyStore) — ระบบไม่พังเมื่อไม่มีแถวใน `t_content` |
 | ผ่าน/ไม่ผ่าน | ☐ |
 
+### 6.2.18 TC-18: คำสั่ง activate/renew เรียกผ่าน API เดียวกัน (การ์ด MT-17 — ครบสโคป)
+
+> **รันได้กับโค้ดปัจจุบัน** — เป็นการทดสอบใน CI (`testActivateViaApi` + `testRenewal`); สำหรับมือตรวจพฤติกรรมผู้ใช้:
+
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| วัตถุประสงค์ | ยืนยันว่า Bot (`ActivationService`/`RenewalService`) เรียก `POST /api/member/activate` / `POST /api/member/renew` — ตรรกะ (find/check/เขียนชีท) อยู่ที่ API handler เพียงที่เดียว · UI work (welcome flex/ข้อความ/ผูกเมนู) อยู่ที่ Bot layer · ข้อความที่ผู้ใช้เห็น**ไม่เปลี่ยน** |
+| ข้อมูลตั้งต้น | สมาชิกยังไม่ activate (มี activate code) · สมาชิก activate แล้วสำหรับทดสอบ renew |
+| ขั้นตอน | 1. ส่ง `activate:ACT001` ในแชท → welcome flex + ผูกเมนู 2. ส่ง `activate:ACT001` ซ้ำ → "รหัสนี้ถูกใช้ไปแล้ว" 3. ส่ง `activate:WRONG` → "ไม่พบรหัส activate" 4. ส่ง `renew` → ยืนยันต่ออายุ +1 ปี 5. (CI) รัน `testActivateViaApi`/`testRenewal` — spy `Api.ApiService.handleRequest` |
+| ผลที่คาดหวัง | 1. Flex ต้อนรับมีชื่อจริง + `line_user_id`/`mem_status='active'` ถูกเขียนผ่าน API 2–3. ข้อความ error เหมือนเดิม (มาจาก API error code) 4. `mem_exp_dt` ขยาย +1 ปี (deterministic — seam `ctx.internal.now`) 5. CI: เรียก `POST /api/member/activate`/`renew` — ไม่ทำ find+write เอง |
+| ผ่าน/ไม่ผ่าน | ☐ |
+
 ## 6.3 การตรวจสอบ Log (Log Inspection)
 
 Log ทั้งหมดอยู่ใน **Apps Script Editor → Executions** (หรือ Stackdriver Logging)
@@ -249,4 +261,4 @@ reply success: 200 {}
 
 ## สรุปท้ายบท
 
-บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 13 กรณี (TC-01–13) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต
+บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 18 กรณี (TC-01–18) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต

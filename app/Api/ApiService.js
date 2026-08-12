@@ -24,6 +24,8 @@ Api.ApiService = (() => {
    * @param {Object} [options.body] - request body (POST)
    * @param {Object} [options.headers]
    * @param {Object} [options.auth] - ข้อมูลผู้ยืนยันตัวตน (เฟส 3: ID Token JWT / API Key)
+   * @param {Object} [options.internal] - seam ภายใน (การ์ด MT-17): ใช้สำหรับ DI เช่น `now`
+   *   ให้ handler คำนวณด้วยเวลาที่กำหนด (deterministic ในเทสต์) — WebApp/HTTP mount ไม่ส่งค่านี้
    * @returns {Object} envelope { ok, data } | { ok, error }
    */
   function handleRequest(method, path, options) {
@@ -32,7 +34,8 @@ Api.ApiService = (() => {
       query: o.query || {},
       body: o.body || {},
       headers: o.headers || {},
-      auth: o.auth || {}
+      auth: o.auth || {},
+      internal: o.internal || {}
     };
     return Api.ApiRegistry.dispatch(method, path, ctx);
   }

@@ -5,7 +5,10 @@
  * คำสั่งในแชท: `renew` (ต่ออายุตัวเองผ่าน line_user_id) หรือ `renew:CODE`
  * กฎ: วันหมดอายุใหม่ = max(now, mem_exp_dt เดิม) + 1 ปี (Core.MemberRules.computeRenewal)
  *
- * - performRenew(activateCode, lineUserId, opts?) — ตรรกะล้วน (DI: repo/gater/logger/now)
+ * การ์ด MT-17: ตรรกะการต่ออายุ (find/check/คำนวณ/เขียนชีท) อยู่ที่ POST /api/member/renew
+ * — service นี้ (Bot layer) เรียก API เดียวกันกับ UI อื่น แล้วทำ UI work (audit log + ผูกเมนู)
+ *
+ * - performRenew(activateCode, lineUserId, opts?) — เรียก API (DI: api/gater/logger/now)
  *   → ทดสอบใน node ได้โดยไม่ต้องแตะ LINE API
  * - handleRenew(activateCode, lineUserId, replyToken, token) — เรียก performRenew + ตอบกลับ
  */
@@ -17,34 +20,45 @@ LineBot.RenewalService = (() => {
 
   /**
    * ต่ออายุสมาชิก (ตรรกะ — ไม่ส่งข้อความเอง)
+   *
+   * การ์ด MT-17 (Bot = UI Adapter): find/check/คำนวณ/เขียนชีท อยู่ที่
+   * POST /api/member/renew (Api.ApiHandlers) — Bot เรียก endpoint เดียวกันกับ UI อื่น
+   * บทบาทของ service นี้เหลือ: เรียก API + audit log + ผูกเมนูกลับ (UI work)
+   *
    * @param {string} activateCode - รหัสต่ออายุ (ว่าง = ต่ออายุตัวเองด้วย lineUserId)
    * @param {string} lineUserId - LINE User ID ของผู้ขอ
-   * @param {Object} [opts] - { now, repo, gater, logger }
-   * @returns {Object} { success, reason, newExpDt?, memCode?, member? }
+   * @param {Object} [opts] - { now, gater, logger, api }
+   *   now → ส่งต่อผ่าน ctx.internal ให้ API handler คำนวณ deterministic (test)
+   * @returns {Object} { success, reason, newExpDt?, memCode?, memStatus? }
    */
   function performRenew(activateCode, lineUserId, opts) {
     const o = opts || {};
-    const repo = o.repo || Data.MemberRepository.getRepository();
+    const api = o.api || function (m, p, opt) { return Api.ApiService.handleRequest(m, p, opt); };
     const now = o.now || new Date();
     const gater = o.gater || function (userId, tk) {
       try { return RichMenu.Gating.linkMemberMenu(userId, tk); } catch (e) { return { ok: false }; }
     };
-    const logger = o.logger || function (entry) { return repo.logActivation(entry); };
+    const logger = o.logger || function (entry) {
+      return Data.MemberRepository.getRepository().logActivation(entry);
+    };
 
-    // หาสมาชิก: มีรหัส → ค้นตาม activate_code · ไม่มี → ค้นตัวเองตาม line_user_id
-    const member = activateCode
-      ? repo.findByActivateCode(activateCode)
-      : repo.findByLineUserId(lineUserId);
-    if (!member) {
-      return { success: false, reason: activateCode ? 'code_not_found' : 'member_not_found' };
+    // ตรรกะการต่ออายุทั้งหมดอยู่ใน API handler (find → computeRenewal → renewMember)
+    const env = api('POST', '/api/member/renew', {
+      body: { activateCode: activateCode || '', lineUserId },
+      internal: { now }
+    });
+    if (!env.ok) {
+      const detail = env.error && env.error.detail;
+      return {
+        success: false,
+        reason: detail === 'code_not_found' ? 'code_not_found' : 'member_not_found',
+        error: env.error
+      };
     }
-
-    const renewal = Core.MemberRules.computeRenewal(member, now);
-    const result = repo.renewMember(member._rowIndex, renewal.newExpDt, lineUserId);
 
     // audit trail: บันทึกลง t_activation_log (status='renewed')
     logger({
-      memCode: member.mem_code,
+      memCode: env.data.mem_code,
       lineUserId: lineUserId,
       activateCode: activateCode || '',
       status: 'renewed'
@@ -56,10 +70,10 @@ LineBot.RenewalService = (() => {
     return {
       success: true,
       reason: 'renewed',
-      memCode: member.mem_code,
-      newExpDt: renewal.newExpDt,
-      fromDt: renewal.fromDt,
-      memStatus: result.memStatus
+      memCode: env.data.mem_code,
+      newExpDt: env.data.mem_exp_dt,
+      fromDt: env.data.renewed_from,
+      memStatus: env.data.mem_status
     };
   }
 

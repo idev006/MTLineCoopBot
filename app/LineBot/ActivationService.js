@@ -1,6 +1,14 @@
 /**
  * @fileoverview LineBot.ActivationService
- * จัดการ logic การ activate สมาชิกผ่าน LINE Bot
+ * จัดการการ activate สมาชิกผ่าน LINE Bot
+ *
+ * การ์ด MT-17 (Bot = UI Adapter): ตรรกะการ activate (find/check/เขียนชีท) อยู่ที่
+ * POST /api/member/activate (Api.ApiHandlers) — service นี้เรียก API เดียวกันกับ UI อื่น
+ * แล้วทำ UI work: welcome flex + ผูกเมนูสมาชิก (Per-User Gating)
+ *
+ * - performActivate(activateCode, lineUserId, opts?) — เรียก API (DI: api)
+ *   → ทดสอบใน node ได้โดยไม่ต้องแตะ LINE API/SpreadsheetApp ตรง ๆ
+ * - handleActivate(...) — เรียก performActivate + ตอบกลับ (flex/text) + ผูกเมนู
  */
 
 var LineBot = LineBot || {};
@@ -10,18 +18,40 @@ LineBot.ActivationService = (() => {
 
   /**
    * ดึง dependencies แบบ runtime
-+   * @returns {{SheetService: Object, FlexBuilder: Object, MessageService: Object}}
+   * @returns {{FlexBuilder: Object, MessageService: Object}}
    */
   function getDependencies() {
     return {
-      SheetService: LineBot.SheetService,
       FlexBuilder: LineBot.FlexBuilder,
       MessageService: LineBot.MessageService
     };
   }
 
   /**
-   * จัดการคำสั่ง activate
+   * activate สมาชิก (ตรรกะ — ไม่ส่งข้อความเอง)
+   * เรียก POST /api/member/activate — find/check/เขียนชีท อยู่ใน API handler
+   * @param {string} activateCode
+   * @param {string} lineUserId
+   * @param {Object} [opts] - { api } (DI สำหรับทดสอบ)
+   * @returns {Object} { success, reason, memberCode?, data? }
+   *   reason: 'activated' | 'code_not_found' | 'already_activated' | 'validation'
+   */
+  function performActivate(activateCode, lineUserId, opts) {
+    const o = opts || {};
+    const api = o.api || function (m, p, opt) { return Api.ApiService.handleRequest(m, p, opt); };
+
+    const env = api('POST', '/api/member/activate', { body: { activateCode, lineUserId } });
+    if (!env.ok) {
+      const code = env.error && env.error.code;
+      const reason = code === 'ALREADY_ACTIVATED' ? 'already_activated'
+        : (code === 'VALIDATION' ? 'validation' : 'code_not_found');
+      return { success: false, reason, error: env.error };
+    }
+    return { success: true, reason: 'activated', memberCode: env.data.mem_code, data: env.data };
+  }
+
+  /**
+   * จัดการคำสั่ง activate (ส่งข้อความตอบกลับ + ผูกเมนู)
    * @param {string} activateCode
    * @param {string} lineUserId
    * @param {string} replyToken
@@ -29,100 +59,75 @@ LineBot.ActivationService = (() => {
    * @returns {Object} ผลลัพธ์การ activate
    */
   function handleActivate(activateCode, lineUserId, replyToken, token) {
-    try {
-      const deps = getDependencies();
+    const deps = getDependencies();
+    Logger.log('[Activation] Processing activation for code: ' + activateCode + ', LINE user: ' + lineUserId);
 
-      Logger.log('[Activation] Processing activation for code: ' + activateCode + ', LINE user: ' + lineUserId);
-
-      // ค้นหาสมาชิกโดย activate_code — ผ่าน MemberRepository (Data layer, บทที่ 3.2.4)
-      Logger.log('[Activation] Calling repo.findByActivateCode...');
-      const repo = Data.MemberRepository.getRepository();
-      const member = repo.findByActivateCode(activateCode);
-      Logger.log('[Activation] findByActivateCode returned: ' + (member ? 'found' : 'not found'));
-
-      if (!member) {
-        Logger.log('[Activation] Activate code not found: ' + activateCode);
-        deps.MessageService.reply(replyToken, 'ไม่พบรหัส activate นี้ในระบบ กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง', token);
-        return { success: false, reason: 'code_not_found' };
-      }
-
-      Logger.log('[Activation] Member found: ' + JSON.stringify(member));
-
-      // ตรวจสอบว่าถูก activate ไปแล้วหรือไม่
-      Logger.log('[Activation] Checking if already activated. mem_eff_dt: ' + member.mem_eff_dt);
-      if (member.mem_eff_dt && member.mem_eff_dt !== '') {
+    // ตรรกะผ่าน API (endpoint เดียวกันกับ UI อื่น — การ์ด MT-17)
+    const result = performActivate(activateCode, lineUserId, {});
+    if (!result.success) {
+      let msg;
+      if (result.reason === 'already_activated') {
         Logger.log('[Activation] Activate code already used: ' + activateCode);
-        deps.MessageService.reply(replyToken, 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้', token);
-        return { success: false, reason: 'already_activated' };
-      }
-
-      // Activate สมาชิก — ผ่าน MemberRepository
-      Logger.log('[Activation] Activating member at row ' + member._rowIndex);
-      const activationResult = repo.activateMember(member._rowIndex, lineUserId);
-      Logger.log('[Activation] Activation result: ' + JSON.stringify(activationResult));
-
-      // สร้าง Flex Message ต้อนรับ
-      Logger.log('[Activation] Creating welcome flex message...');
-      const flexMessage = deps.FlexBuilder.welcomeMember({
-        memTitle: member.mem_title,
-        memFname: member.mem_fname,
-        memLname: member.mem_lname,
-        memCode: member.mem_code,
-        memEffDt: activationResult.memEffDt,
-        memExpDt: activationResult.memExpDt
-      });
-
-      // ส่ง Flex Message
-      Logger.log('[Activation] Sending flex message...');
-      const result = deps.MessageService.replyFlex(replyToken, flexMessage, token);
-      Logger.log('[Activation] replyFlex result: ' + JSON.stringify(result));
-
-      if (!result.ok) {
-        Logger.log('[Activation] Failed to send welcome flex message: ' + result.statusCode + ' ' + result.body);
-        // Fallback ถ้า Flex ไม่สำเร็จ
-        deps.MessageService.reply(replyToken, 'ยินดีต้อนรับ ' + member.mem_title + member.mem_fname + ' ' + member.mem_lname + ' คุณได้ activate เรียบร้อยแล้ว', token);
+        msg = 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้';
+      } else if (result.reason === 'validation') {
+        msg = 'กรุณาระบุรหัส activate เช่น activate:ABC123';
       } else {
-        Logger.log('[Activation] Welcome flex message sent successfully for member: ' + member.mem_code);
+        Logger.log('[Activation] Activate code not found: ' + activateCode);
+        msg = 'ไม่พบรหัส activate นี้ในระบบ กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง';
       }
-
-      // ผูก Member Menu (Tab 1) ให้สมาชิกรายนี้ (Per-User Gating — บทที่ 3.3.6)
-      // ถ้าล้มเหลวไม่ทำให้ activate ล้มเหลว — สมาชิกยังเห็น Welcome อยู่จนกว่าจะผูกสำเร็จ
-      try {
-        if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
-          RichMenu.Gating.linkMemberMenu(lineUserId, token);
-          Logger.log('[Activation] Member menu linked for user: ' + lineUserId);
-        } else {
-          Logger.log('[Activation] RichMenu.Gating ไม่พร้อม — ข้ามการผูกเมนู');
-        }
-      } catch (linkError) {
-        Logger.log('[Activation] linkMemberMenu failed (ไม่บล็อก activate): ' + linkError);
-      }
-
-      return {
-        success: true,
-        memberCode: member.mem_code,
-        activationResult
-      };
-    } catch (error) {
-      Logger.log('[Activation] ERROR: ' + error);
-      Logger.log('[Activation] ERROR type: ' + typeof error);
-      Logger.log('[Activation] ERROR message: ' + (error.message || 'no message'));
-      Logger.log('[Activation] ERROR stack: ' + (error.stack || 'no stack'));
-      Logger.log('[Activation] ERROR toString: ' + String(error));
-      
-      // ตอบกลับ error ให้ผู้ใช้ทราบ พร้อมรายละเอียดเพื่อ debug
-      try {
-        const deps = getDependencies();
-        const errorDetail = String(error).substring(0, 100); // จำกัดความยาว
-        deps.MessageService.reply(replyToken, 'เกิดข้อผิดพลาด: ' + errorDetail, token);
-      } catch (replyError) {
-        Logger.log('[Activation] Failed to send error reply: ' + replyError);
-      }
-      return { success: false, reason: 'error', error: String(error) };
+      deps.MessageService.reply(replyToken, msg, token);
+      return result;
     }
+
+    const d = result.data;
+    Logger.log('[Activation] Activated member: ' + d.mem_code + ' (via API ' + d.mem_status + ')');
+
+    // สร้าง Flex Message ต้อนรับ (UI work — ข้อมูลชื่อจาก API response)
+    Logger.log('[Activation] Creating welcome flex message...');
+    const flexMessage = deps.FlexBuilder.welcomeMember({
+      memTitle: d.mem_title,
+      memFname: d.mem_fname,
+      memLname: d.mem_lname,
+      memCode: d.mem_code,
+      memEffDt: d.mem_eff_dt,
+      memExpDt: d.mem_exp_dt
+    });
+
+    Logger.log('[Activation] Sending flex message...');
+    const reply = deps.MessageService.replyFlex(replyToken, flexMessage, token);
+    Logger.log('[Activation] replyFlex result: ' + JSON.stringify(reply));
+
+    if (!reply.ok) {
+      Logger.log('[Activation] Failed to send welcome flex message: ' + reply.statusCode + ' ' + reply.body);
+      // Fallback ถ้า Flex ไม่สำเร็จ
+      deps.MessageService.reply(replyToken,
+        'ยินดีต้อนรับ ' + d.mem_title + d.mem_fname + ' ' + d.mem_lname + ' คุณได้ activate เรียบร้อยแล้ว', token);
+    } else {
+      Logger.log('[Activation] Welcome flex message sent successfully for member: ' + d.mem_code);
+    }
+
+    // ผูก Member Menu (Tab 1) ให้สมาชิกรายนี้ (Per-User Gating — บทที่ 3.3.6)
+    // ถ้าล้มเหลวไม่ทำให้ activate ล้มเหลว — สมาชิกยังเห็น Welcome อยู่จนกว่าจะผูกสำเร็จ
+    try {
+      if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
+        RichMenu.Gating.linkMemberMenu(lineUserId, token);
+        Logger.log('[Activation] Member menu linked for user: ' + lineUserId);
+      } else {
+        Logger.log('[Activation] RichMenu.Gating ไม่พร้อม — ข้ามการผูกเมนู');
+      }
+    } catch (linkError) {
+      Logger.log('[Activation] linkMemberMenu failed (ไม่บล็อก activate): ' + linkError);
+    }
+
+    return {
+      success: true,
+      memberCode: d.mem_code,
+      activationResult: d
+    };
   }
 
   return {
+    performActivate,
     handleActivate
   };
 })();

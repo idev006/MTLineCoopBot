@@ -73,8 +73,8 @@ Api.ApiRegistry = (() => {
       return Api.ApiResponse.ok(result);
     } catch (e) {
       if (e && e.code) {
-        // Api.ApiError ที่ handler throw — ส่ง code/message ไปที่ client
-        return Api.ApiResponse.error(e.code, e.message);
+        // Api.ApiError ที่ handler throw — ส่ง code/message (และ detail ถ้ามี) ไปที่ client
+        return Api.ApiResponse.error(e.code, e.message, e.detail ? { detail: e.detail } : undefined);
       }
       Logger.log(`[API] handler error ${m} ${path}: ${e}`);
       return Api.ApiResponse.internal();

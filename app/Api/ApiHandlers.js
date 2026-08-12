@@ -109,9 +109,14 @@ Api.ApiHandlers = (() => {
       ? repo.findByActivateCode(activateCode)
       : repo.findByLineUserId(lineUserId);
     if (!member) {
-      throw Api.ApiError.create('MEMBER_NOT_FOUND', activateCode ? 'ไม่พบรหัสต่ออายุนี้ในระบบ' : 'ไม่พบสมาชิกสำหรับ lineUserId นี้', 404);
+      // detail ช่วย UI adapter แยก "ไม่พบรหัส" vs "ไม่พบสมาชิก" (การ์ด MT-17)
+      throw Api.ApiError.create('MEMBER_NOT_FOUND',
+        activateCode ? 'ไม่พบรหัสต่ออายุนี้ในระบบ' : 'ไม่พบสมาชิกสำหรับ lineUserId นี้',
+        404, { detail: activateCode ? 'code_not_found' : 'member_not_found' });
     }
-    const renewal = Core.MemberRules.computeRenewal(member);
+    // internal.now = seam สำหรับทดสอบ deterministic (WebApp/HTTP ไม่ส่งค่านี้)
+    const now = (ctx.internal && ctx.internal.now) || new Date();
+    const renewal = Core.MemberRules.computeRenewal(member, now);
     const result = repo.renewMember(member._rowIndex, renewal.newExpDt, lineUserId);
     return {
       mem_code: member.mem_code,
@@ -135,11 +140,16 @@ Api.ApiHandlers = (() => {
       throw Api.ApiError.create('ALREADY_ACTIVATED', 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้', 409);
     }
     const result = repo.activateMember(found._rowIndex, lineUserId);
+    // คืนชื่อสมาชิกด้วย — UI adapter (Bot) ใช้สร้าง welcome flex โดยไม่ต้องโหลด profile แยก
     return {
       mem_code: found.mem_code,
+      mem_title: found.mem_title,
+      mem_fname: found.mem_fname,
+      mem_lname: found.mem_lname,
       mem_status: result.memStatus,
       mem_eff_dt: result.memEffDt,
-      mem_exp_dt: result.memExpDt
+      mem_exp_dt: result.memExpDt,
+      line_user_id: lineUserId
     };
   }
 

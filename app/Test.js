@@ -1228,6 +1228,83 @@ function testBotUsesApi() {
 }
 
 /**
+ * ทดสอบ activate ผ่าน API (การ์ด MT-17 ครบสโคป): Bot (ActivationService) เรียก
+ * POST /api/member/activate แทนการ find+check+write เอง — spy Api.ApiService +
+ * fake MessageService/FlexBuilder/Gating: ตรรกะอยู่ที่ API handler · UI work
+ * (welcome flex + ผูกเมนู) อยู่ที่ Bot layer · ข้อความ error เหมือนเดิม
+ * @returns {boolean}
+ */
+function testActivateViaApi() {
+  // 1) seed fake sheets: M001/M002 ยังไม่ activate (มี activate code)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '', '', 'inactive', 'ACT001', '', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '', '', 'inactive', 'ACT002', '', 'member', 80, 8000, 5000]
+  ];
+
+  const S = LineBot.ActivationService;
+
+  // 2) spy Api.ApiService.handleRequest (ตรวจว่า Bot เรียกผ่าน API)
+  const origHandle = Api.ApiService.handleRequest;
+  const apiCalls = [];
+  Api.ApiService.handleRequest = function (m, p, o) {
+    apiCalls.push({ m, p });
+    return origHandle(m, p, o);
+  };
+  // fake MessageService/FlexBuilder/Gating
+  const replies = [];
+  const origReply = LineBot.MessageService.reply;
+  LineBot.MessageService.reply = function (rt, text) { replies.push({ type: 'text', text }); return { ok: true }; };
+  const flexSent = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  LineBot.MessageService.replyFlex = function (rt, flex) { flexSent.push(flex); return { ok: true }; };
+  const gated = [];
+  const origLink = RichMenu.Gating.linkMemberMenu;
+  RichMenu.Gating.linkMemberMenu = function (uid) { gated.push(uid); return { ok: true }; };
+
+  try {
+    // 3) performActivate (pure) → ผ่าน POST /api/member/activate + เขียนชีท
+    const res = S.performActivate('ACT001', 'U11111111111111111111111111111111', {});
+    if (!res.success) throw new Error('testActivateViaApi: performActivate ควรสำเร็จ — ' + JSON.stringify(res));
+    if (res.memberCode !== 'M001') throw new Error('testActivateViaApi: memberCode ผิด');
+    if (apiCalls.length !== 1 || apiCalls[0].m !== 'POST' || apiCalls[0].p !== '/api/member/activate') {
+      throw new Error('testActivateViaApi: ควรเรียก POST /api/member/activate ผ่าน Api.ApiService');
+    }
+    const mRow = __fakeSheets['t_member_mast'][1];
+    if (mRow[11] !== 'U11111111111111111111111111111111') throw new Error('testActivateViaApi: line_user_id ต้องถูกเขียนผ่าน API');
+    if (mRow[9] !== 'active') throw new Error('testActivateViaApi: mem_status ควรเป็น active');
+
+    // 4) handleActivate → welcome flex + ผูกเมนู (UI work อยู่ที่ Bot layer) — ใช้ ACT002 (ยังไม่ activate)
+    const h = S.handleActivate('ACT002', 'U22222222222222222222222222222222', 'RT1', 'TOKEN');
+    if (!h.success) throw new Error('testActivateViaApi: handleActivate ควรสำเร็จ');
+    if (apiCalls.length !== 2) throw new Error('testActivateViaApi: handleActivate ควรเรียก API (POST activate)');
+    if (flexSent.length !== 1) throw new Error('testActivateViaApi: ควรส่ง welcome flex');
+    if (!JSON.stringify(flexSent[0]).includes('สมหญิง')) throw new Error('testActivateViaApi: welcome flex ต้องมีชื่อสมาชิก');
+    if (!gated.includes('U22222222222222222222222222222222')) throw new Error('testActivateViaApi: ควรผูกเมนูสมาชิก (gating)');
+
+    // 5) error paths ผ่าน API: รหัสผิด → code_not_found · activate ซ้ำ → already_activated
+    const bad = S.handleActivate('WRONG', 'U11111111111111111111111111111111', 'RT2', 'TOKEN');
+    if (bad.success || bad.reason !== 'code_not_found') throw new Error('testActivateViaApi: รหัสผิดควร code_not_found');
+    const dup = S.handleActivate('ACT001', 'U11111111111111111111111111111111', 'RT3', 'TOKEN');
+    if (dup.success || dup.reason !== 'already_activated') throw new Error('testActivateViaApi: activate ซ้ำควร already_activated');
+  } finally {
+    Api.ApiService.handleRequest = origHandle;
+    LineBot.MessageService.reply = origReply;
+    LineBot.MessageService.replyFlex = origReplyFlex;
+    RichMenu.Gating.linkMemberMenu = origLink;
+  }
+
+  // 6) ข้อความตอบผู้ใช้เหมือนเดิม
+  const texts = replies.map(r => r.text);
+  if (!texts.some(t => t.indexOf('ไม่พบรหัส activate') !== -1)) throw new Error('testActivateViaApi: ควรรายงาน "ไม่พบรหัส activate" เมื่อรหัสผิด');
+  if (!texts.some(t => t.indexOf('ถูกใช้ไปแล้ว') !== -1)) throw new Error('testActivateViaApi: ควรรายงาน "รหัสนี้ถูกใช้ไปแล้ว" เมื่อ activate ซ้ำ');
+
+  Logger.log('testActivateViaApi OK — activate ผ่าน POST /api/member/activate (Bot = UI adapter, ข้อความเดิม)');
+  return true;
+}
+
+/**
  * ทดสอบ API Mount ใน WebApp (doGet/doPost แยก /api/* → Api.ApiService + API key):
  * health เปิดสาธารณะ · path อื่นต้องมี api_key ถูกต้อง (401 ถ้าไม่) ·
  * profile/activate ผ่าน mount · LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม

@@ -167,6 +167,7 @@ Entry point ของ LINE webhook
 - `testExpiryService()` — ทดสอบ `runExpiryCheck` เต็ม path (Fake Sheets + fake sender): push expiring/expired · unlink เฉพาะ expired · ข้าม inactive/ไม่มี userId · **ตรวจ t_expiry_log** (3 แถว: expiring/expired/valid + days_left ถูกต้อง — MT-32)
 - `testApiLayer()` — ทดสอบ Api Layer: registry routing (health/profile/savings/validity/activate/**renew**) · envelope `{ok,error,data}` · error codes (VALIDATION/MEMBER_NOT_FOUND/ALREADY_ACTIVATED/NOT_FOUND/METHOD_NOT_ALLOWED) · ผ่าน Fake Sheets (MT-16/MT-12)
 - `testBotUsesApi()` — ทดสอบ Bot เป็น UI Adapter (MT-17): **spy `Api.ApiService.handleRequest`** + fake `MessageService.reply` — postback profile/saving_acct → เรียกผ่าน `/api/member/profile` + `/api/member/savings` (GET) → ข้อความตอบกลับเหมือนเดิมทุกประการ (ชื่อ/คะแนนตำแหน่ง/formatMoney)
+- `testActivateViaApi()` — ทดสอบ activate ผ่าน API (MT-17 ครบสโคป): spy `Api.ApiService.handleRequest` — `performActivate`/`handleActivate` เรียก `POST /api/member/activate` (ตรรกะอยู่ที่ API handler · เขียนชีทผ่าน API) · UI work (welcome flex + ผูกเมนู) อยู่ที่ Bot layer · ข้อความ error เหมือนเดิม (ไม่พบรหัส/ถูกใช้ไปแล้ว) · `testRenewal` ผ่าน API เหมือนกัน (seam `ctx.internal.now` — deterministic)
 - `testApiMount()` — ทดสอบ API Mount ใน WebApp (บทที่ 5.10): `/api/health` เปิดสาธารณะ · path อื่นไม่มี/ผิด api_key → `UNAUTHORIZED` · profile/activate ผ่าน mount (key จาก query/body) · **LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม** (webhook_secret ตรวจเหมือนเดิม)
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
@@ -204,7 +205,7 @@ Entry point ของ LINE webhook
 
 **Error codes:** `VALIDATION` · `MEMBER_NOT_FOUND` · `ALREADY_ACTIVATED` · `NOT_FOUND` · `METHOD_NOT_ALLOWED` · `INTERNAL`
 
-**สถานะ (การ์ด MT-17):** ✅ **Bot เรียกผ่าน API แล้ว** — `EventHandler` ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ **API key** (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **ยังไม่ได้ทำ (เฟส 3):** Auth per-channel — X-Line-Signature / ID Token JWT (`ctx.auth` เตรียมไว้แล้ว) · LIFF/Admin เรียกผ่าน API เดียวกัน (การ์ด MT-18–19, MT-21)
+**สถานะ (การ์ด MT-17):** ✅ **Bot เรียกผ่าน API แล้ว — ครบ reads + commands** — `EventHandler` ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะ find/check/เขียนชีท อยู่ที่ API handler — UI work อยู่ที่ Bot layer) · seam `ctx.internal` (เช่น `now`) + error `detail` เพื่อ deterministic test/แยกสาเหตุ error · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ **API key** (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **ยังไม่ได้ทำ (เฟส 3):** Auth per-channel — X-Line-Signature / ID Token JWT (`ctx.auth` เตรียมไว้แล้ว) · LIFF/Admin เรียกผ่าน API เดียวกัน (การ์ด MT-18–19, MT-21)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
 
@@ -217,13 +218,13 @@ Entry point ของ LINE webhook
 - `handlePostback(event, token)` — แยก `params` ด้วย `Util.parseQueryString` แล้วตัดสินใจตามตารางในบทที่ 3.5.3
 - ใช้ `getDependencies()` resolve บริการตอน runtime (กันปัญหา Apps Script load order)
 
-**`ActivationService.js`** — ตรรกะ Activate สมาชิก
-- `handleActivate(activateCode, lineUserId, replyToken, token)`
-- ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
+**`ActivationService.js`** — Activate สมาชิก (การ์ด MT-17: ตรรกะอยู่ที่ API)
+- `performActivate(activateCode, lineUserId, opts?)` — เรียก **`POST /api/member/activate`** (find/check/เขียนชีท อยู่ใน API handler) → `{ success, reason, memberCode?, data? }` (DI: api — ทดสอบใน node ได้)
+- `handleActivate(activateCode, lineUserId, replyToken, token)` — เรียก performActivate → สร้าง/ส่ง Flex ต้อนรับ (ข้อมูลชื่อจาก API response) + fallback text + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
 
-**`RenewalService.js`** — ต่ออายุสมาชิก (การ์ด MT-12)
-- `performRenew(activateCode, lineUserId, opts?)` — ตรรกะล้วน (DI: repo/gater/logger/now): ค้นสมาชิก (รหัสหรือตัวเอง) → `computeRenewal` → `renewMember` (เขียน exp + active) → log `renewed` ใน t_activation_log → `Gating.linkMemberMenu` (ผูกเมนูกลับ)
+**`RenewalService.js`** — ต่ออายุสมาชิก (การ์ด MT-12 + MT-17: ตรรกะอยู่ที่ API)
+- `performRenew(activateCode, lineUserId, opts?)` — เรียก **`POST /api/member/renew`** (find → `computeRenewal` → เขียนชีท อยู่ใน API handler · `ctx.internal.now` = seam สำหรับ deterministic test) → log `renewed` ใน t_activation_log → `Gating.linkMemberMenu` (ผูกเมนูกลับ) · error `detail` แยก code_not_found/member_not_found (DI: api/gater/logger/now)
 - `handleRenew(activateCode, lineUserId, replyToken, token)` — เรียก performRenew + ตอบกลับสำเร็จ/ไม่พบรหัส
 
 **`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11/MT-32)

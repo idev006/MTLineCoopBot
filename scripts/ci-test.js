@@ -149,6 +149,7 @@ const runner = `
     ['testExpiryService', testExpiryService],
     ['testApiLayer', testApiLayer],
     ['testBotUsesApi', testBotUsesApi],
+    ['testActivateViaApi', testActivateViaApi],
     ['testApiMount', testApiMount],
     ['testRenewal', testRenewal],
     ['testNoticeRules', testNoticeRules],
