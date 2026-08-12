@@ -285,6 +285,17 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ดึงเนื้อหาเมนูจาก t_content ตาม content_key (การ์ด MT-14)
+   * @param {string} key - content_key (ตรงกับ item id ใน MenuData)
+   * @returns {string|null} เนื้อหาข้อความ หรือ null ถ้าไม่มี
+   */
+  function findContent(key) {
+    if (!key) return null;
+    const rows = findAllByColumn('CONTENT', 'content_key', key);
+    return rows.length > 0 ? rows[0].content_text : null;
+  }
+
+  /**
    * ดึงสัญญากู้ทั้งหมดจาก t_loan_acct (สำหรับเตือนชำระ — การ์ด MT-13b)
    * @returns {Array<Object>} รายการสัญญา (ไม่มี _rowIndex)
    */
@@ -489,6 +500,7 @@ LineBot.SheetService = (() => {
     findDividendsByMember,
     logActivation,
     appendExpiryLog,
+    findContent,
     findAllLoans,
     appendReminderLog,
     listNotices,

@@ -139,6 +139,8 @@ const runner = `
     ['testMemberDataService', testMemberDataService],
     ['testSeedData', testSeedData],
     ['testDummyMemberMaster', testDummyMemberMaster],
+    ['testNoPlaceholders', testNoPlaceholders],
+    ['testContentReply', testContentReply],
     ['testFinanceData', testFinanceData],
     ['testColumnReordering', testColumnReordering],
     ['testDateValidator', testDateValidator],

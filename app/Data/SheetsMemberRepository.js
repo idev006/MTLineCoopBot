@@ -160,6 +160,15 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.appendReminderLog(entry);
   }
 
+  /**
+   * ดึงเนื้อหาเมนูจาก t_content (MT-14)
+   * @param {string} key
+   * @returns {string|null}
+   */
+  function getContent(key) {
+    return LineBot.SheetService.findContent(key);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -176,6 +185,7 @@ Data.SheetsMemberRepository = (() => {
     listNotices,
     markNoticeSent,
     listLoans,
-    logReminder
+    logReminder,
+    getContent
   };
 })();

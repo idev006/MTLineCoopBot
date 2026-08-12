@@ -9,7 +9,7 @@
 
 ### ระยะที่ 2 — การควบคุมสิทธิ์และข้อมูลจริง
 
-- [ ] **[MT-14] ปรับปรุงข้อความตอบกลับ** — แทนที่ Placeholder ใน ReplyStore ด้วยข้อมูลจริง
+*(งานระยะที่ 2 เสร็จครบ — MT-03/07–14/20/26–32 → ดูรายการ Done ด้านล่าง)*
 
 ### ระยะที่ 3 — สถาปัตยกรรม API-First และ LIFF
 
@@ -90,6 +90,7 @@
 | 2026-08-12 | MT-16b | → In Progress → Done | Mount API ใน WebApp: doGet/doPost แยก /api/* → Api.ApiService + API key (Config.API_KEY · query/body · health เปิดสาธารณะ) · webhook เดิมไม่แตะ · testApiMount (401/activate/profile/webhook) · ALL TESTS PASS 23/23 · DoD ครบ |
 | 2026-08-12 | MT-27b | → In Progress → Done | เตรียมข้อมูลทดสอบ use case สมาชิก: `SeedData.createDummyMemberMaster()` (dev/test — t_member_mast MEM001–005: MEM001–003 activate ได้ด้วย ACT001–003 · MEM004 หมดอายุ · MEM005 staff · non-destructive) + top-level wrappers (createDummyTables/createDummyMemberMaster/seedAllForTesting/resetDummyTables ใน Editor) + testDummyMemberMaster (16 คอลัมน์/activate codes ไม่ซ้ำ/FK ตรงการเงิน) · ALL TESTS PASS 24/24 · DoD ครบ |
 | 2026-08-12 | MT-13b | → In Progress → Done | เตือนชำระรายบุคคล: Config.PAYMENT_REMINDER_DAYS + DataDict t_reminder_log + SeedData 7 ตาราง (+ dummy loan ใกล้ครบกำหนด) + Core.LoanRules (due filter/text รายบุคคล/target) + LoanReminderService.runLoanReminders (push รายบุคคล + log reminded/skipped) + setupReminderTrigger + repo.listLoans/logReminder + testLoanRules/testLoanReminders · ALL TESTS PASS 26/26 · DoD ครบ |
+| 2026-08-12 | MT-14 | → In Progress → Done | ปรับปรุงข้อความตอบกลับ: DataDict t_content (content_key/content_text/updated_dt) + SeedData 8 ตาราง (เนื้อหาจริงทุกเมนู) + repo.getContent + EventHandler.replyContentItem (t_content → fallback ReplyStore → flex สุดท้าย) + ReplyStore แทนที่ placeholder ทั้งหมด (TAB_1–5/WELCOME — ยังไม่มีข้อมูล/XXX-/กำลังดึง/เริ่มขั้นตอน) + testNoPlaceholders + testContentReply · ALL TESTS PASS 28/28 · DoD ครบ |
 | 2026-08-12 | MT-08 | To Do → In Progress → Done | implement `webhook_secret` + ฟังก์ชัน HMAC; DoD ครบ 6 ข้อ (test ผ่าน, syntax ผ่าน, README ✅, เอกสารตรงโค้ด) |
 | 2026-08-12 | MT-09 | To Do → In Progress → Done | Gate ตรวจสิทธิ์ (findByLineUserId + isActiveMember + บทบาท); ALL TESTS PASS; DoD ครบ 6 ข้อ |
 | 2026-08-12 | MT-26 | → In Progress | หมุน token (SEC) — ตรวจพบ token hardcode ใน initial commit → ลบออกจากโค้ด + CI secret scan 2 ชั้นกันซ้ำ (regex + gitleaks) · รอผู้ดูแลหมุน token ใน LINE Console |

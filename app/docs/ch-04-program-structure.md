@@ -10,7 +10,7 @@ MTLineCoopBot/
 └── app/                         # rootDir ของ Apps Script project
     ├── appsscript.json          # manifest: timezone, runtime, webapp settings
     ├── Config.js                # ค่าคอนฟิก + Script Properties
-    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (7 ตาราง: t_member_mast + 6 ตาราง MT-27/32/13/13b)
+    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (8 ตาราง: t_member_mast + 7 ตาราง MT-27/32/13/13b/14)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
     ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
     │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
@@ -22,7 +22,7 @@ MTLineCoopBot/
     ├── WebApp.js                # Entry point doPost(e)
     ├── Test.js                  # ฟังก์ชันทดสอบระบบ (verifyMenuContract ฯลฯ)
     ├── Dashboard.js             # สร้าง KPI Dashboard ของทีม (createDashboard)
-    ├── SeedData.js              # สร้างตาราง 7 ตาราง + dummy data (MT-27/32/13/13b)
+    ├── SeedData.js              # สร้างตาราง 8 ตาราง + dummy data (MT-27/32/13/13b/14)
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── ExpiryService.js     # ตรวจวันหมดอายุอัตโนมัติ (MT-11) — scan + push + unlink
@@ -156,7 +156,9 @@ Entry point ของ LINE webhook
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
 - `testMemberRepository()` — ทดสอบ interface + factory ตาม `DB_TYPE` (บทที่ 3.2.4)
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
-- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 7 ตาราง (MT-27/32/13/13b)
+- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 8 ตาราง (MT-27/32/13/13b/14)
+- `testNoPlaceholders()` — ทดสอบว่าไม่มี placeholder คงเหลือใน `ReplyStore`/`WELCOME`/`t_content` (ยังไม่มีข้อมูล/XXX-/กำลังดึง/placeholder/เริ่มขั้นตอน) + ครบทุกรายการ (MT-14)
+- `testContentReply()` — ทดสอบเมนูข้อมูลผ่าน EventHandler: มี `t_content` → ตอบจากตาราง · ไม่มี → fallback ข้อความจริงใน ReplyStore (ไม่ใช่ flex "คุณเลือกเมนู...") (MT-14)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
@@ -177,7 +179,7 @@ Entry point ของ LINE webhook
 
 สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
 
-- `createDummyTables()` — สร้างชีท 7 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice` · `t_reminder_log`
+- `createDummyTables()` — สร้างชีท 8 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice` · `t_reminder_log` · `t_content`
 - `resetDummyTables()` — ล้างข้อมูลแล้วใส่ dummy ใหม่ (ใช้ใน dev/test เท่านั้น)
 - `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
@@ -209,6 +211,7 @@ Entry point ของ LINE webhook
 **`EventHandler.js`** — Router กลาง (การ์ด MT-17: Bot เป็น UI Adapter)
 - `getAuthorizedMember(lineUserId)` — **Gate ตรวจสิทธิ์ (auth)** ผ่าน repository (`findByLineUserId` + `isActiveMember` + บทบาท) — ยกเว้น `activate:`/Welcome items
 - `apiGet(path, lineUserId)` — เรียกข้อมูลสมาชิกผ่าน **`Api.ApiService.handleRequest`** (endpoint เดียวกับ UI อื่น ๆ): profile → `/api/member/profile` · เมนูการเงิน → `/api/member/savings` | `/loans` | `/dividends` (ตาม `FINANCIAL_API` map — ดึงเฉพาะตารางที่เมนูนั้นใช้) · ถ้า API คืน error → `replyApiDataError` (ข้อความแจ้งเตือน ไม่พัง)
+- `replyContentItem(item, replyToken, token)` — ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14): ① อ่านจาก `t_content` (data-driven — แก้ไขในชีทได้) ② fallback ข้อความจริงใน ReplyStore ③ flex card ทางเลือกสุดท้าย
 - จัดรูปแบบข้อความ (MemberDataService) ยังอยู่ใน UI layer — พฤติกรรมผู้ใช้ไม่เปลี่ยน
 - `handlePostback(event, token)` — postback: switch_tab/stay_tab/menu_item (Welcome ผ่านก่อน Gate → profile/finance ผ่าน API → flex อื่น ๆ) + fallback Rich Menu เดิม
 - `handlePostback(event, token)` — แยก `params` ด้วย `Util.parseQueryString` แล้วตัดสินใจตามตารางในบทที่ 3.5.3
@@ -259,11 +262,13 @@ Entry point ของ LINE webhook
 - `push(to, text, token)` — **Push API** ใช้ใน scheduled trigger (MT-11) — ส่งด้วย userId ได้ทุกเวลา (ต่างจาก reply ที่จำกัด 60 วินาที)
 - ทุกฟังก์ชันคืนค่า `{ ok, statusCode, body }` เพื่อการ debug
 
-**`ReplyStore.js`** — คลังข้อความและชื่อเมนู
-- `TAB_1`…`TAB_5` — ข้อความตอบกลับแยกตามแท็บ (key ต้องตรงกับ item id ใน MenuData)
+**`ReplyStore.js`** — คลังข้อความและชื่อเมนู (การ์ด MT-14: ไม่มี placeholder คงเหลือ)
+- `TAB_1`…`TAB_5` — ข้อความตอบกลับแยกตามแท็บ (key ต้องตรงกับ item id ใน MenuData) — **เป็นข้อความภาษาไทยจริงทุกเมนู** (ทำหน้าที่เป็น static fallback ถ้าไม่มีเนื้อหาใน `t_content`)
+- `WELCOME` — ข้อความเมนูสาธารณะ (เปิดใช้งาน/วิธีใช้/ติดต่อ/ข่าวสาร)
 - `CAPTIONS` — ชื่อเมนูภาษาไทยที่ใช้แสดงใน Flex (key ต้องตรงกับ item id ใน MenuData)
 - `get(item)` / `getCaption(item)` / `set(item, text)`
 - ⚠️ **Contract:** หากเพิ่มเมนูใน `MenuData.js` ต้องเพิ่ม key ให้ครบทั้ง `CAPTIONS` และข้อความตอบกลับด้วย ไม่เช่นนั้น Flex จะแสดง id ภาษาอังกฤษแทนชื่อไทย
+- 🚫 **ห้ามใส่ placeholder** (`(ยังไม่มีข้อมูล)` / `XXX-` / `กำลังดึง...`) — ป้องกันด้วย `testNoPlaceholders`
 
 **`SheetService.js`** — ติดต่อ Google Sheets + ตรวจสอบสถานะสมาชิก
 - `getSheet(tableKey)` — ดึง sheet หรือสร้างให้อัตโนมัติจาก DataDict

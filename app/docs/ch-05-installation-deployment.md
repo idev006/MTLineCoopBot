@@ -222,7 +222,7 @@ function checkRichMenuStatus() {
 
 ```javascript
 // ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run (ฟังก์ชันระดับบนสุดมีให้เลือกแล้ว)
-createDummyTables();       // สร้าง 7 ตาราง: t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log / t_notice / t_reminder_log + dummy data
+createDummyTables();       // สร้าง 8 ตาราง: t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log / t_notice / t_reminder_log / t_content + dummy data
 createDummyMemberMaster(); // (dev/test เท่านั้น) สร้าง t_member_mast ข้อมูลทดสอบ — activate ด้วย ACT001–003
 seedAllForTesting();       // รันทั้ง 2 อย่างพร้อมกัน (เตรียมข้อมูลทดสอบ use case สมาชิก)
 // resetDummyTables();     // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
@@ -232,6 +232,7 @@ seedAllForTesting();       // รันทั้ง 2 อย่างพร้�
 - `createDummyTables()` **ไม่แตะ `t_member_mast`** (เป็นข้อมูลจริงของสมาชิก) · ถ้าต้องการข้อมูลทดสอบสมาชิกให้รัน `createDummyMemberMaster()` แยก — **ใช้กับชีททดสอบ/ใหม่เท่านั้น** (ชีทที่มีข้อมูลจริงจะถูกข้าม)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีรหัสเหล่านี้ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (`createDummyMemberMaster()` เตรียมให้แล้ว)
 - **ข้อมูลทดสอบ t_member_mast (5 คน):** MEM001–003 ยังไม่ activate (`ACT001`–`ACT003`) — **activate เองได้ใน LINE** แล้วทดสอบเมนูทันที (MEM001 มีข้อมูลครบทุกเมนูการเงิน · MEM003 ไม่มีหนี้/ปันผล → ทดสอบ "ไม่พบข้อมูล") · MEM004 หมดอายุแล้ว (ทดสอบ ExpiryService push/unlink) · MEM005 staff (เตรียมบทบาทในอนาคต)
+- `t_content` = เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (สวัสดิการ/กองทุนฉุกเฉิน/FAQs/ที่ตั้ง ฯลฯ) — **แก้ไขเนื้อหาในชีทได้โดยไม่ต้องแก้โค้ด** (การ์ด MT-14) · คอลัมน์ `content_key` ต้องตรงกับ item id ใน MenuData
 - หลังสร้างตารางแล้ว คลิกเมนูการเงินใน LINE → เห็นข้อมูลตัวอย่าง (ดู Smoke Test 5.8)
 - `t_expiry_log` ถูกเขียนโดยอัตโนมัติทุกครั้งที่ `runExpiryCheck` รัน (การ์ด MT-32) — SeedData มี dummy ตัวอย่างให้ดูรูปแบบ
 

@@ -23,6 +23,7 @@
  * - markNoticeSent(noticeId, sentDt) → boolean (กัน broadcast ซ้ำ — MT-13)
  * - listLoans()                 → Array<Object> สัญญากู้ทั้งหมด (t_loan_acct — MT-13b)
  * - logReminder(entry)         → { log_id, status } (t_reminder_log — MT-13b)
+ * - getContent(key)            → string|null เนื้อหาเมนูจาก t_content (MT-14)
  */
 
 var Data = Data || {};
@@ -34,7 +35,7 @@ Data.MemberRepository = (() => {
     'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
     'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation',
     'listMembers', 'logExpiry', 'renewMember', 'listNotices', 'markNoticeSent',
-    'listLoans', 'logReminder'
+    'listLoans', 'logReminder', 'getContent'
   ];
 
   /**

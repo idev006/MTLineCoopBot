@@ -321,7 +321,7 @@ function testMemberDataService() {
 function testSeedData() {
   const rows = SeedData.getDummyRows();
   const keys = SeedData.SEED_TABLE_KEYS;
-  if (keys.length !== 7) throw new Error('testSeedData: ต้องมี 7 ตาราง (ได้ ' + keys.length + ')');
+  if (keys.length !== 8) throw new Error('testSeedData: ต้องมี 8 ตาราง (ได้ ' + keys.length + ')');
 
   for (const key of keys) {
     const headers = DataDict.getHeaders(key);
@@ -347,7 +347,8 @@ function testSeedData() {
     ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt'],
     EXPIRY_LOG: ['log_id', 'mem_code', 'line_user_id', 'status', 'days_left', 'mem_exp_dt', 'checked_dt'],
     NOTICE: ['notice_id', 'title', 'message', 'published_dt', 'sent_dt', 'status'],
-    REMINDER_LOG: ['log_id', 'mem_code', 'loan_no', 'due_dt', 'days_left', 'status', 'reminded_dt']
+    REMINDER_LOG: ['log_id', 'mem_code', 'loan_no', 'due_dt', 'days_left', 'status', 'reminded_dt'],
+    CONTENT: ['content_key', 'content_text', 'updated_dt']
   };
   for (const key of Object.keys(expect)) {
     const actual = DataDict.getHeaders(key).join(',');
@@ -356,7 +357,97 @@ function testSeedData() {
     }
   }
 
-  Logger.log('testSeedData OK — 7 ตาราง + dummy rows ตรง DataDict');
+  Logger.log('testSeedData OK — 8 ตาราง + dummy rows ตรง DataDict');
+  return true;
+}
+
+/**
+ * ทดสอบว่าไม่มี placeholder คงเหลือ (การ์ด MT-14):
+ * ข้อความใน ReplyStore (TAB_1–5 + WELCOME) + t_content dummy ต้องเป็นภาษาไทยจริง
+ * (ไม่พบ 'ยังไม่มีข้อมูล' / 'XXX-' / 'กำลังดึง' / 'กำลังตรวจสอบ' / 'placeholder' / 'เริ่มขั้นตอน')
+ * และ t_content ต้องครอบคลุมเมนูข้อมูล/เอกสาร/ติดต่อทุกเมนู
+ * @returns {boolean}
+ */
+function testNoPlaceholders() {
+  const patterns = ['ยังไม่มีข้อมูล', 'XXX-', 'กำลังดึง', 'กำลังตรวจสอบ', 'placeholder', 'เริ่มขั้นตอน'];
+  const check = (text, where) => {
+    for (const p of patterns) {
+      if (text.includes(p)) throw new Error('testNoPlaceholders: ยังพบ placeholder "' + p + '" ใน ' + where);
+    }
+  };
+
+  const stores = [
+    ['TAB_1', LineBot.ReplyStore.TAB_1],
+    ['TAB_2', LineBot.ReplyStore.TAB_2],
+    ['TAB_3', LineBot.ReplyStore.TAB_3],
+    ['TAB_4', LineBot.ReplyStore.TAB_4],
+    ['TAB_5', LineBot.ReplyStore.TAB_5],
+    ['WELCOME', LineBot.ReplyStore.WELCOME]
+  ];
+  for (const [name, store] of stores) {
+    for (const key in store) check(store[key], name + '.' + key);
+  }
+
+  const content = SeedData.getDummyRows().CONTENT || [];
+  if (content.length === 0) throw new Error('testNoPlaceholders: t_content ต้องมี dummy rows');
+  for (const row of content) check(row[1] || '', 't_content.' + (row[0] || ''));
+
+  // t_content ต้องครอบคลุมเมนูข้อมูล/เอกสาร/ติดต่อที่เคยเป็น placeholder
+  const keys = content.map(r => r[0]);
+  const required = ['welfare', 'emergency', 'about_coop', 'faq', 'contact_coop', 'contact_staff',
+    'office_loc', 'manual', 'rules', 'annual_report', 'perf_report', 'news_pr', 'activities',
+    'announce', 'loan_apply', 'chg_password', 'feedback', 'dl_forms', 'calc_install'];
+  for (const k of required) {
+    if (!keys.includes(k)) throw new Error('testNoPlaceholders: t_content ต้องมี key ' + k);
+  }
+
+  Logger.log('testNoPlaceholders OK — ไม่มี placeholder ใน ReplyStore/WELCOME/t_content (MT-14)');
+  return true;
+}
+
+/**
+ * ทดสอบเมนูข้อมูลตอบเนื้อหาจริง (การ์ด MT-14) ผ่าน EventHandler:
+ * มี t_content → ตอบจากตาราง · ไม่มี t_content → fallback ข้อความจริงใน ReplyStore
+ * (ไม่ใช่ flex "คุณเลือกเมนู..." placeholder)
+ * @returns {boolean}
+ */
+function testContentReply() {
+  // 1) seed fake sheets: สมาชิก active + t_content (มีแค่ welfare)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
+  ];
+  delete __fakeSheets['t_content'];
+  __fakeSheets['t_content'] = [
+    DataDict.getHeaders('CONTENT'),
+    ['welfare', '🎁 สวัสดิการ: ค่ารักษาพยาบาล 80% สูงสุด 30,000 บาท/ปี — แก้ไขได้ที่ชีท t_content', '2026-08-12 09:00:00']
+  ];
+
+  const replies = [];
+  const origReply = LineBot.MessageService.reply;
+  LineBot.MessageService.reply = function (replyToken, text) { replies.push(text); return { ok: true }; };
+  const user = { source: { userId: 'U11111111111111111111111111111111' } };
+  try {
+    // welfare: มีใน t_content → ตอบเนื้อหาจากตาราง
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT1', postback: { data: 'action=menu_item&item=welfare' } }, 'TOKEN');
+    // emergency: ไม่มีใน t_content → fallback ข้อความจริงใน ReplyStore (ไม่ใช่ flex placeholder)
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT2', postback: { data: 'action=menu_item&item=emergency' } }, 'TOKEN');
+  } finally {
+    LineBot.MessageService.reply = origReply;
+  }
+
+  if (!replies[0] || !replies[0].includes('ค่ารักษาพยาบาล 80%')) {
+    throw new Error('testContentReply: welfare ต้องตอบเนื้อหาจาก t_content');
+  }
+  if (!replies[1]) throw new Error('testContentReply: emergency ต้องมีคำตอบ');
+  if (replies[1].includes('คุณเลือกเมนู')) throw new Error('testContentReply: emergency ต้องไม่ตอบ flex placeholder');
+  if (replies[1].includes('ยังไม่มีข้อมูล')) throw new Error('testContentReply: emergency ต้องเป็นข้อความจริง');
+  if (!replies[1].includes('กองทุนฉุกเฉิน')) throw new Error('testContentReply: emergency ต้องมีเนื้อหาจริง');
+
+  Logger.log('testContentReply OK — t_content ก่อน · fallback ReplyStore จริง · ไม่มี flex placeholder (MT-14)');
   return true;
 }
 

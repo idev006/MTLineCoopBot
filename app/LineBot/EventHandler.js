@@ -64,6 +64,41 @@ LineBot.EventHandler = (() => {
   }
 
   /**
+   * ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14) — data-driven:
+   * 1) อ่านจากตาราง t_content (แก้ไขได้ในชีท ไม่ต้องแก้โค้ด)
+   * 2) ถ้าไม่มี → ข้อความ static จริงใน ReplyStore
+   * 3) ถ้าเป็น sentinel ('ไม่พบข้อมูลสำหรับรายการนี้') → คืน false (ให้ flex ตอบแทน)
+   * @param {string} item
+   * @param {string} replyToken
+   * @param {string} token
+   * @returns {boolean} true ถ้าตอบแล้ว
+   */
+  function replyContentItem(item, replyToken, token) {
+    if (!item) return false;
+    // 1) t_content (data-driven)
+    try {
+      const repo = Data.MemberRepository.getRepository();
+      const content = repo.getContent(item);
+      if (content) {
+        getDependencies().MessageService.reply(replyToken, content, token);
+        Logger.log(`Content menu replied from t_content: ${item}`);
+        return true;
+      }
+    } catch (contentErr) {
+      Logger.log(`[Content] getContent failed (fallback ไป ReplyStore): ${contentErr}`);
+    }
+    // 2) ReplyStore static (ข้อความจริง — ไม่ใช่ flex placeholder)
+    const text = getDependencies().ReplyStore.get(item);
+    if (text && text !== 'ไม่พบข้อมูลสำหรับรายการนี้') {
+      getDependencies().MessageService.reply(replyToken, text, token);
+      Logger.log(`Content menu replied from ReplyStore: ${item}`);
+      return true;
+    }
+    // 3) ไม่มีเนื้อหา → flex (ทางเลือกสุดท้าย)
+    return false;
+  }
+
+  /**
    * Gate ตรวจสิทธิ์ (บทที่ 3.7):
    * ตรวจว่าผู้ใช้ LINE เป็นสมาชิกที่ valid — ถูกผูกกับ t_member_mast ผ่าน line_user_id,
    * สถานะ active, อยู่ในช่วง [mem_eff_dt, mem_exp_dt], และมีบทบาทที่รู้จัก (member/staff/admin)
@@ -203,6 +238,10 @@ LineBot.EventHandler = (() => {
         Logger.log(`Financial menu replied via API: ${params.item}`);
         return;
       }
+      // MT-14: เมนูข้อมูล/เอกสาร/ติดต่อ — ตอบเนื้อหาจริง (t_content → ReplyStore) ก่อน flex
+      if (replyContentItem(params.item, replyToken, token)) {
+        return;
+      }
       const caption = deps.ReplyStore.getCaption(params.item);
       const flexMessage = deps.FlexBuilder.menuClicked(caption);
       Logger.log(`Replying flex message for menu: ${caption}`);
@@ -224,6 +263,10 @@ LineBot.EventHandler = (() => {
       // Gate เช่นเดียวกับ menu_item — fallback ก็ต้องเป็นสมาชิกที่ valid
       if (!getAuthorizedMember(event.source.userId)) {
         replyUnauthorized(replyToken, token, event.source.userId);
+        return;
+      }
+      // MT-14: fallback path ก็ตอบเนื้อหาจริงเหมือนกัน (t_content → ReplyStore)
+      if (replyContentItem(fallbackItem, replyToken, token)) {
         return;
       }
       const caption = deps.ReplyStore.getCaption(fallbackItem);

@@ -158,6 +158,23 @@ const DataDict = (() => {
     },
 
     /**
+     * เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14)
+     * Sheet: t_content
+     * key = item id ของเมนู (content_key ตรงกับ MenuData) — แก้ไขเนื้อหาในชีทได้โดยไม่ต้องแก้โค้ด
+     * EventHandler ตอบเนื้อหาจากตารางนี้ก่อน แล้ว fallback ไปข้อความใน ReplyStore (ข้อความจริง)
+     */
+    CONTENT: {
+      name: 't_content',
+      description: 'เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (data-driven — แก้ไขได้ในชีท)',
+      primaryKey: 'content_key',
+      columns: [
+        { name: 'content_key', type: 'string', required: true, label: 'คีย์เนื้อหา (ตรงกับ item id ใน MenuData)', unique: true },
+        { name: 'content_text', type: 'string', required: true, label: 'เนื้อหา (ข้อความภาษาไทย)' },
+        { name: 'updated_dt', type: 'datetime', required: false, label: 'วันที่แก้ไขล่าสุด' }
+      ]
+    },
+
+    /**
      * ประกาศ/ข่าวสารสำหรับ broadcast (การ์ด MT-13)
      * Sheet: t_notice
      * แถวที่พร้อมส่ง: status='published' + ยังไม่มี sent_dt + published_dt <= ตอน broadcast
