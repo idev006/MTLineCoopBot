@@ -72,6 +72,7 @@ const FILE_ORDER = [
   'Data/SheetsMemberRepository.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
+  'LineBot/MemberDataService.js',
   'LineBot/FlexBuilder.js',
   'LineBot/MessageService.js',
   'LineBot/ActivationService.js',
@@ -98,7 +99,8 @@ const runner = `
     ['testVerifyWebhookSecret', testVerifyWebhookSecret],
     ['testMemberValidity', testMemberValidity],
     ['testWelcomeMenu', testWelcomeMenu],
-    ['testMemberRepository', testMemberRepository]
+    ['testMemberRepository', testMemberRepository],
+    ['testMemberDataService', testMemberDataService]
   ];
   const failed = [];
   for (const [name, fn] of tests) {

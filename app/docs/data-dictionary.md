@@ -29,6 +29,16 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | line_user_id | string | No | - | LINE User ID |
 | mem_role | string | No | member | บทบาท (member / staff / admin) |
 
+> ⚠️ **หมายเหตุ (2026-08-12, การ์ด MT-10):** `t_member_mast` มีเฉพาะข้อมูลสมาชิก + คะแนน — **ไม่มีข้อมูลการเงิน** (เงินฝาก/หนี้/ปันผล) เมนูการเงินในระบบจึงตอบ "ยังไม่เชื่อมต่อ" จนกว่าจะมีตารางใหม่:
+>
+> | ตาราง (ออกแบบไว้ 📌) | ข้อมูล | คอลัมน์หลักที่คาดว่า
+> |----------------------|--------|-------------------|
+> | `t_savings_acct` | บัญชีเงินฝาก/เช็คยอด | mem_code, acct_no, balance, updated_dt |
+> | `t_loan_acct` | ยอดหนี้เงินกู้ | mem_code, loan_no, principal, outstanding, due_dt |
+> | `t_dividend` | เงินปันผล/หุ้น | mem_code, year, dividend_amt, share_capital |
+>
+> เมื่อมีตารางเหล่านี้ ต้องเพิ่มใน `DataDict.js` (SSOT) + repository แล้วเชื่อมใน `MemberDataService.buildFinanceText()`
+
 ## รูปแบบข้อมูลวันที่
 
 - **date**: เก็บเป็น string รูปแบบ `yyyy-mm-dd` เช่น `2026-08-06`

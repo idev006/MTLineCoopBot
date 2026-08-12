@@ -21,6 +21,7 @@ MTLineCoopBot/
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── EventHandler.js      # Router จัดการ event
+    │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
     │   ├── FlexBuilder.js       # สร้าง Flex Message
     │   ├── MessageService.js    # เรียก LINE Reply API
     │   ├── ReplyStore.js        # ข้อความ/ชื่อเมนูของแต่ละ item
@@ -105,6 +106,8 @@ Entry point ของ LINE webhook
 - `testVerifyLineSignature()` — ทดสอบ `Util.verifyLineSignature` (HMAC-SHA256) ด้วย test vector
 - `testVerifyWebhookSecret()` — ทดสอบ `Util.verifyWebhookSecret` (token ใน URL)
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
+- `testMemberRepository()` — ทดสอบ interface + factory ตาม `DB_TYPE` (บทที่ 3.2.4)
+- `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.7 `LineBot/` — โมดูลการทำงานของ Bot
@@ -117,8 +120,13 @@ Entry point ของ LINE webhook
 
 **`ActivationService.js`** — ตรรกะ Activate สมาชิก
 - `handleActivate(activateCode, lineUserId, replyToken, token)`
-- ขั้นตอน: ค้นหา → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ
+- ขั้นตอน: ค้นหา (ผ่าน repository) → ตรวจซ้ำ → activate → สร้าง/ส่ง Flex ต้อนรับ + ผูกเมนูสมาชิก
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
+
+**`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10)
+- `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
+- `buildFinanceText(item, member)` — เมนูการเงินตอบสถานะจริง "ยังไม่เชื่อมต่อ" (ตารางการเงินยังไม่มี — ดูบทที่ 7)
+- `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูที่ต้องใช้ตารางการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
 
 **`FlexBuilder.js`** — ตัวสร้าง Flex Message
 - `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)`

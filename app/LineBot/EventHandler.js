@@ -19,7 +19,8 @@ LineBot.EventHandler = (() => {
       MessageService: LineBot.MessageService,
       ReplyStore: LineBot.ReplyStore,
       FlexBuilder: LineBot.FlexBuilder,
-      SheetService: LineBot.SheetService
+      SheetService: LineBot.SheetService,
+      MemberData: LineBot.MemberDataService
     };
   }
 
@@ -123,8 +124,22 @@ LineBot.EventHandler = (() => {
         return;
       }
       // Gate: ต้องเป็นสมาชิกที่ valid ก่อนจึงจะใช้เมนูสมาชิกได้
-      if (!getAuthorizedMember(event.source.userId)) {
+      const member = getAuthorizedMember(event.source.userId);
+      if (!member) {
         replyUnauthorized(replyToken, token, event.source.userId);
+        return;
+      }
+      // MT-10: เมนูที่ดึงข้อมูลจริงจาก t_member_mast (ผ่าน MemberRepository)
+      if (params.item === 'profile') {
+        const profileText = deps.MemberData.buildProfileText(member);
+        deps.MessageService.reply(replyToken, profileText, token);
+        Logger.log(`Profile replied with real data for ${member.mem_code}`);
+        return;
+      }
+      if (deps.MemberData.isFinancialItem(params.item)) {
+        const financeText = deps.MemberData.buildFinanceText(params.item, member);
+        deps.MessageService.reply(replyToken, financeText, token);
+        Logger.log(`Financial menu replied (unavailable): ${params.item}`);
         return;
       }
       const caption = deps.ReplyStore.getCaption(params.item);

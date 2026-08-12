@@ -262,6 +262,46 @@ function testMemberRepository() {
 }
 
 /**
+ * ทดสอบ MemberDataService (MT-10 — ดึงข้อมูลจริงตามเมนู):
+ * profile แสดงข้อมูลจริงจาก t_member_mast · เมนูการเงินตอบสถานะชัดเจน (ไม่ปลอมตัวเลข)
+ * @returns {boolean}
+ */
+function testMemberDataService() {
+  const S = LineBot.MemberDataService;
+  const member = {
+    mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี',
+    mem_code: 'M001', mem_role: 'member', mem_position: 'กรรมการ',
+    mem_position_score: 10, mem_rank_score: 25, mem_status: 'active',
+    mem_eff_dt: '2026-08-06', mem_exp_dt: '2027-08-06'
+  };
+
+  // 1) profile มีข้อมูลจริง
+  const p = S.buildProfileText(member);
+  if (!p.includes('นาย สมชาย ใจดี')) throw new Error('testMemberDataService: profile ไม่มีชื่อจริง');
+  if (!p.includes('M001')) throw new Error('testMemberDataService: profile ไม่มีรหัสสมาชิก');
+  if (!p.includes('2026-08-06')) throw new Error('testMemberDataService: profile ไม่มีช่วงวันสิทธิ์');
+
+  // 2) profile null → ข้อความไม่พบข้อมูล
+  if (S.buildProfileText(null) !== 'ไม่พบข้อมูลสมาชิก') {
+    throw new Error('testMemberDataService: buildProfileText(null) ผิด');
+  }
+
+  // 3) การจัดกลุ่มเมนูการเงิน
+  if (!S.isFinancialItem('saving_acct')) throw new Error('testMemberDataService: saving_acct ควรเป็นเมนูการเงิน');
+  if (!S.isFinancialItem('loan_balance')) throw new Error('testMemberDataService: loan_balance ควรเป็นเมนูการเงิน');
+  if (S.isFinancialItem('profile')) throw new Error('testMemberDataService: profile ไม่ควรเป็นเมนูการเงิน');
+
+  // 4) เมนูการเงินตอบสถานะชัดเจน (ไม่ปลอมตัวเลข) + มี caption
+  const f = S.buildFinanceText('saving_acct', member);
+  if (!f.includes('บัญชีเงินฝาก')) throw new Error('testMemberDataService: finance text ไม่มี caption');
+  if (!f.includes('ยังไม่เชื่อมต่อข้อมูลการเงิน')) throw new Error('testMemberDataService: finance text ควรแจ้งสถานะชัดเจน');
+  if (/\d{3,}[.,]\d{2}\s*บาท/.test(f)) throw new Error('testMemberDataService: ห้ามมีตัวเลขยอดเงินปลอม');
+
+  Logger.log('testMemberDataService OK — profile จริง + เมนูการเงินตอบสถานะจริง');
+  return true;
+}
+
+/**
  * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
  * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
  */

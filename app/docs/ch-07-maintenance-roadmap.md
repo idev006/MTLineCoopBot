@@ -47,7 +47,7 @@
 | ~~ควบคุมเมนูตามสิทธิ์ (Per-User Rich Menu)~~ | ✅ ทำแล้ว — Welcome Menu default + `linkMemberMenu` หลัง Activate + `unlinkMemberMenu` เมื่อหมดอายุ (บทที่ 3.3.6, การ์ด MT-07) |
 | ~~ตรวจสอบ X-Line-Signature~~ | ✅ ทำแล้ว — `verifyWebhookSecret` (URL token) + ฟังก์ชัน HMAC พร้อมใช้ (บทที่ 3.6, การ์ด MT-08) |
 | ~~Gate ตรวจสิทธิ์ใน EventHandler~~ | ✅ ทำแล้ว — `findByLineUserId` + `isActiveMember`/`hasRole` (บทที่ 3.7, การ์ด MT-09) |
-| ดึงข้อมูลสมาชิกจริงตามเมนู | คิวรี `t_member_mast` ด้วย `line_user_id` แล้วตอบยอดเงินฝาก/หนี้/ปันผลจริง |
+| ดึงข้อมูลสมาชิกจริงตามเมนู | ✅ profile แสดงข้อมูลจริงจาก `t_member_mast` (ชื่อ/รหัส/บทบาท/ช่วงวัน/ตำแหน่ง+คะแนน) · ⚠️ **เมนูการเงิน (เงินฝาก/หนี้/ปันผล) ยังตอบ "ไม่เชื่อมต่อ"** เพราะตารางการเงินยังไม่มี — ต้องสร้าง `t_savings_acct` / `t_loan_acct` / `t_dividend` (ออกแบบไว้ 📌) แล้วเชื่อมใน `MemberDataService` (การ์ด MT-10) |
 | ตรวจสอบวันหมดอายุสมาชิก | ตอบกลับเมื่อสมาชิกหมดอายุ / แจ้งเตือนก่อนหมดอายุ |
 | Renew / ต่ออายุสมาชิก | เพิ่มคำสั่งหรือ trigger ต่ออายุ `mem_exp_dt` |
 | แจ้งเตือนตามเวลา | ใช้ Time-driven Trigger ส่งข่าวสาร/ประกาศ/เตือนชำระเป็นกลุ่ม |

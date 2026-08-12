@@ -83,7 +83,7 @@
 | หมุน Channel Access Token (SEC) — หมุนแล้ว + purge ประวัติ git + CI กันซ้ำ (regex + gitleaks) | ✅ ทำแล้ว | บทที่ 5.5.1, KANBAN MT-26 |
 | `checkTokenHealth()` — ตรวจสุขภาพ token ผ่าน LINE Get Bot Info API (รันมือใน Apps Script Editor) | ✅ ทำแล้ว | บทที่ 5.5.1, 7.1.3 |
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
-| ดึงข้อมูลจริงตามเมนู (ยอดเงินฝาก / หนี้ / ปันผล) | 📌 ออกแบบไว้ — เฟส 2 | บทที่ 7 ระยะที่ 2 |
+| ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · เมนูการเงินตอบ "ไม่เชื่อมต่อ" (ต้องมีตารางการเงิน 📌) | ✅ บางส่วน | บทที่ 7 ระยะ 2, data-dictionary.md |
 | สถาปัตยกรรม API-First + LIFF (`Api/Core/UI-Adapter`, ID Token JWT) | 📌 ออกแบบไว้ — เฟส 3 | บทที่ 3.1.1, 7 ระยะที่ 3 |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0 |
 | KPI Dashboard ทีม (`Dashboard.js` + เทมเพลต) | ✅ ทำแล้ว | บทที่ 8.3, metrics-dashboard-template.md |
