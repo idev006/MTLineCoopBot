@@ -43,15 +43,14 @@
 
 ## 🔄 In Progress (WIP ≤ 3)
 
-- [ ] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · ที่มา: token ถูก commit ใน initial commit (`add945b`, 2026-08-12) → ลบออกจากโค้ดแล้ว (b3c3366) + CI กันซ้ำ 2 ชั้น (regex + gitleaks)
+- [ ] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · ที่มา: token ถูก commit ใน initial commit (2026-08-12) → ลบออกจากโค้ด + **purge ประวัติ git แล้ว (filter-repo — token ถูกแทนด้วย `***REMOVED***` ในทุก commit, 2026-08-12)** + CI กันซ้ำ 2 ชั้น (regex + gitleaks ตรวจเต็มรูปแบบแล้ว)
   - **ขั้นตอนหมุน (Runbook 5.5.1):**
     - [ ] ① ออก token ใหม่ใน LINE Console
     - [ ] ② อัปเดต `CHANNEL_ACCESS_TOKEN` ใน Script Properties (ผ่าน UI เท่านั้น — ห้าม commit)
-    - [ ] ③ ทดสอบ reply `200` (ดู Apps Script Editor → Executions)
+    - [ ] ③ ทดสอบ reply `200` — รัน `checkTokenHealth()` (Test.js) ต้องได้ `✅ HTTP 200`
     - [ ] ④ Deactivate token เก่าใน LINE Console
-    - [ ] ⑤ _(หลังยืนยัน)_ purge ประวัติ git + ลบ allowlist ใน `.gitleaks.toml`
   - **การยืนยันก่อนปิดการ์ด (ต้องครบทั้ง 3):**
-    - [ ] ✅ Token ใหม่ทำงาน — LINE ตอบกลับปกติ
+    - [ ] ✅ Token ใหม่ทำงาน — `checkTokenHealth()` ได้ HTTP 200 / LINE ตอบกลับปกติ
     - [ ] ✅ Token เก่าถูก Deactivate แล้ว
     - [ ] ✅ Executions log แสดง `reply success: 200`
 

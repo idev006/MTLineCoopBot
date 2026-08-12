@@ -6,16 +6,11 @@ title = "MTLineCoopBot — gitleaks config (extends default rules)"
 [extend]
 # ใช้ default rules ทั้งหมดของ gitleaks + เพิ่ม rule ด้านล่าง
 
-# ── Allowlist: การรั่วไหลที่รู้แล้ว (ดู Runbook หมุน token บทที่ 5.5.1) ──
-# CHANNEL_ACCESS_TOKEN ถูก commit ใน initial commit (add945b, 2026-08-12)
-# แล้วลบออกจากโค้ดในภายหลัง (b3c3366) — token ถูกหมุนแล้ว/กำลังหมุน
-# ⚠️ หลัง rewrite git history (ลบ token ออกจากทุก commit) ให้ลบรายการนี้ทิ้ง
-#    แล้ว gitleaks จะตรวจประวัติทั้งหมดแบบเต็มรูปแบบ
-[allowlist]
-description = "Known leaked CHANNEL_ACCESS_TOKEN in initial commit (2026-08-12) — rotation + purge pending"
-commits = [
-  "add945b037eb7a0bf8441b2814e507f430c50447",
-]
+# ── หมายเหตุ (2026-08-12) ──
+# เคยมี CHANNEL_ACCESS_TOKEN รั่วใน initial commit → ลบออกจากโค้ดแล้ว +
+# หมุน token (การ์ด MT-26) + purge ประวัติ git ด้วย filter-repo (token
+# ถูกแทนด้วย ***REMOVED*** ในทุก commit) — ตอนนี้ไม่มี allowlist แล้ว
+# gitleaks ตรวจประวัติทั้งหมดแบบเต็มรูปแบบ
 
 # ── Rule เพิ่มเติม: LINE Messaging API Channel Access Token ──
 # จับ pattern เฉพาะของ LINE ที่ default rules อาจไม่ครอบคลุม
