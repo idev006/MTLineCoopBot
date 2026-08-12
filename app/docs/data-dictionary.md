@@ -117,6 +117,20 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 - ❌ ห้ามเก็บเวลาแบบมี `T` หรือ timezone offset (`2026-08-06T14:30:00Z`) — validator ปฏิเสธอัตโนมัติ
 - ❌ ห้ามผสม `yyyy-mm-dd` และ `yyyy-mm-dd HH:mm:ss` ในคอลัมน์เดียวกัน (คอลัมน์ `mem_eff_dt` ควรใช้แบบเดียวตลอด) — validator ปฏิเสธอัตโนมัติ
 
+### การแปลงไป Firestore TIMESTAMP (เฟส 3 — การ์ด MT-31)
+
+เมื่อย้ายฐานข้อมูล (Repository Pattern — บทที่ 3.2.4) วันที่/เวลาจากชีทจะแปลงเป็น Firestore TIMESTAMP ผ่าน `Core.DateConverter` (pure — เทสต์ใน node ได้):
+
+| จากชีท (string) | ไป Firestore | กลับมา |
+|------------------|--------------|--------|
+| `2026-08-06` (date) | `{ seconds: 1786060800, nanos: 0 }` | `2026-08-06` |
+| `2026-08-06 14:30:00` (datetime) | `{ seconds: ..., nanos: 0 }` | `2026-08-06 14:30:00` |
+
+- `toFirestoreTimestamp(value, type)` — string/Date → `{ seconds, nanos }` (REST Timestamp) · ปฏิเสธรูปแบบผิดด้วย error ชัดเจน
+- `fromFirestoreTimestamp(ts, type)` — รับได้ 3 รูปแบบ: **Date object** (Firestore SDK) · **`{ seconds, nanos }`** (REST API) · **RFC3339 string** → คืน string มาตรฐานชีท
+- ⚠️ **ข้อตกลง timezone:** แปลงโดยตีความ wall-clock เป็น UTC (`Date.UTC`) → **round-trip ตรงกันเป๊ะเสมอ** โดยไม่ขึ้นกับ timezone เครื่อง · จุดตัดสินใจเฟส 3: ถ้าต้องการให้ timestamp สะท้อนเวลาจริงไทย (+07:00) ให้บวก offset ที่จุดเดียวใน `toEpochMillis` หรือเลือกเก็บเป็น string ใน Firestore แทน
+- ใช้ `Core.DateConverter` ใน `FirestoreMemberRepository` (เฟส 3) — โค้ด Core/Handler อื่นไม่ต้องแก้
+
 ## การใช้งาน DataDict
 
 ### ดึงข้อมูลตาราง

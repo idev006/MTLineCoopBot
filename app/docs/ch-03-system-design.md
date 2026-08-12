@@ -85,6 +85,8 @@
 
 **ตัวอย่างการใช้งาน:** เครื่องคำนวณสินเชื่อ — ย้ายสูตรขึ้น `Core/LoanService` แล้วให้ทั้งหน้าเว็บ, LIFF, และ Bot (คำสั่ง `คำนวณ 100000`) เรียกใช้สูตรเดียวกัน ควบคุมสูตรเดียวที่จุดเดียว
 > ✅ สูตร Actual/365 ถูกย้ายขึ้น `Core/LoanCalculator.js` แล้ว (การ์ด MT-15) — เหลือการเชื่อม UI ทั้งหมด (หน้าเว็บ/Bot) ให้ใช้ Core เดียวกันในเฟส 3
+>
+> ✅ **แปลงวันที่ชีท ↔ Firestore TIMESTAMP:** `Core/DateConverter.js` (การ์ด MT-31) — pure functions + เทสต์ใน node (15/15) พร้อมใช้ใน `FirestoreMemberRepository` เมื่อถึงเฟส 3 (ดู data-dictionary.md)
 
 ## 3.2 การออกแบบข้อมูล (Data Design)
 

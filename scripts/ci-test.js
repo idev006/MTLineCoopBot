@@ -91,6 +91,7 @@ const FILE_ORDER = [
   'Util.js',
   'Core/MemberRules.js',
   'Core/LoanCalculator.js',
+  'Core/DateConverter.js',
   'Data/MemberRepository.js',
   'Data/SheetsMemberRepository.js',
   'LineBot/SheetService.js',
@@ -129,6 +130,7 @@ const runner = `
     ['testFinanceData', testFinanceData],
     ['testColumnReordering', testColumnReordering],
     ['testDateValidator', testDateValidator],
+    ['testDateConverter', testDateConverter],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

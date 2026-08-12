@@ -14,7 +14,8 @@ MTLineCoopBot/
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
     ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
     │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
-    │   └── LoanCalculator.js    # สูตรคำนวณสินเชื่อ Actual/365 (ลดต้นลดดอก)
+    │   ├── LoanCalculator.js    # สูตรคำนวณสินเชื่อ Actual/365 (ลดต้นลดดอก)
+    │   └── DateConverter.js     # แปลงวันที่ชีท <-> Firestore TIMESTAMP (เฟส 3, MT-31)
     ├── Data/                    # Data Access Layer (Repository Pattern — บทที่ 3.2.4)
     │   ├── MemberRepository.js  # สัญญา (interface) + factory เลือก DB ตาม DB_TYPE
     │   └── SheetsMemberRepository.js  # repository สมาชิกบน Google Sheets (ห่อ SheetService)
@@ -50,6 +51,12 @@ MTLineCoopBot/
 - `SheetService` delegate มาที่นี่ (API เดิมไม่เปลี่ยน — Gate/Repository ทำงานเหมือนเดิม)
 
 **`LoanCalculator.js`** — เครื่องคำนวณสินเชื่อ (ย้ายสูตรจาก `loan_calculator.html`)
+
+**`DateConverter.js`** — แปลงวันที่ระหว่างรูปแบบชีท (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss`) กับ Firestore TIMESTAMP (เฟส 3 — บทที่ 3.1.1, การ์ด MT-31)
+- `toFirestoreTimestamp(value, type)` → `{ seconds, nanos }` (REST Timestamp) — ตีความ wall-clock เป็น UTC เพื่อให้ round-trip ตรงเป๊ะ
+- `fromFirestoreTimestamp(ts, type)` → string มาตรฐานชีท — รองรับ Date / `{seconds,nanos}` / RFC3339 string
+- `toEpochMillis` / `epochMillisToSheetString` / `timestampToMillis` — helper
+- หมายเหตุ: offset timezone ไทย (+07:00) เป็นจุดตัดสินใจเฟส 3 — ดู data-dictionary.md
 - `getDaysDiff(d1, d2)` / `getNextMonthEnd(startStr, period)` / `round2(n)`
 - `calculateLoanSchedule({loanAmount, interestRatePercent, calcMode, calcValue, paymentType, startDate})`
   → `{ schedule, totalInterest, totalPrincipal, totalPayment }` หรือ `{ error }`
@@ -131,6 +138,7 @@ Entry point ของ LINE webhook
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
+- `testDateConverter()` — ทดสอบ Core.DateConverter: round-trip ตรงเป๊ะ · รองรับ Date/`{seconds,nanos}`/RFC3339 · ปฏิเสธรูปแบบผิด (MT-31)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)

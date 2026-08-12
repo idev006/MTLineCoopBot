@@ -531,6 +531,69 @@ function testDateValidator() {
 }
 
 /**
+ * ทดสอบ Core.DateConverter (เฟส 3 — แปลงวันที่ชีท <-> Firestore TIMESTAMP):
+ * round-trip ตรงกันเป๊ะ · รองรับ Date / {seconds,nanos} / RFC3339 · ปฏิเสธรูปแบบผิด
+ * @returns {boolean}
+ */
+function testDateConverter() {
+  const C = Core.DateConverter;
+
+  // 1) string → Firestore REST Timestamp { seconds, nanos }
+  const tsDate = C.toFirestoreTimestamp('2026-08-06', 'date');
+  if (tsDate.seconds !== Math.floor(Date.UTC(2026, 7, 6) / 1000)) {
+    throw new Error('testDateConverter: toFirestoreTimestamp(date) seconds ผิด');
+  }
+  if (tsDate.nanos !== 0) throw new Error('testDateConverter: nanos ควรเป็น 0 (วินาทีเต็ม)');
+
+  const tsDt = C.toFirestoreTimestamp('2026-08-06 14:30:00', 'datetime');
+  if (tsDt.seconds !== Math.floor(Date.UTC(2026, 7, 6, 14, 30, 0) / 1000)) {
+    throw new Error('testDateConverter: toFirestoreTimestamp(datetime) seconds ผิด');
+  }
+
+  // 2) round-trip: string → timestamp → string ตรงกันเป๊ะ
+  if (C.fromFirestoreTimestamp(tsDate, 'date') !== '2026-08-06') {
+    throw new Error('testDateConverter: round-trip date ผิด');
+  }
+  if (C.fromFirestoreTimestamp(tsDt, 'datetime') !== '2026-08-06 14:30:00') {
+    throw new Error('testDateConverter: round-trip datetime ผิด');
+  }
+
+  // 3) รับ Date object เข้า → ได้ seconds ถูกต้อง
+  const tsFromDate = C.toFirestoreTimestamp(new Date(Date.UTC(2026, 7, 6, 14, 30, 0)), 'datetime');
+  if (tsFromDate.seconds !== tsDt.seconds) throw new Error('testDateConverter: Date object input ผิด');
+
+  // 4) รับ { seconds, nanos } เข้า (REST Timestamp)
+  if (C.fromFirestoreTimestamp({ seconds: tsDt.seconds, nanos: 0 }, 'datetime') !== '2026-08-06 14:30:00') {
+    throw new Error('testDateConverter: {seconds,nanos} input ผิด');
+  }
+
+  // 5) รับ RFC3339 string เข้า (Firestore export/query)
+  if (C.fromFirestoreTimestamp('2026-08-06T14:30:00Z', 'datetime') !== '2026-08-06 14:30:00') {
+    throw new Error('testDateConverter: RFC3339 input ผิด');
+  }
+
+  // 6) ปฏิเสธรูปแบบผิด
+  let threw = false;
+  try { C.toFirestoreTimestamp('06-08-2026', 'date'); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testDateConverter: dd-mm-yyyy ต้อง throw');
+  threw = false;
+  try { C.toFirestoreTimestamp('2026-08-06T14:30:00Z', 'datetime'); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testDateConverter: T/Z format ต้อง throw');
+  threw = false;
+  try { C.fromFirestoreTimestamp('not-a-date', 'date'); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testDateConverter: timestamp ผิดต้อง throw');
+
+  // 7) วันที่ข้ามปี (round-trip ขอบเขต)
+  const tsEdge = C.toFirestoreTimestamp('2026-12-31 23:59:59', 'datetime');
+  if (C.fromFirestoreTimestamp(tsEdge, 'datetime') !== '2026-12-31 23:59:59') {
+    throw new Error('testDateConverter: round-trip ขอบเขตปีผิด');
+  }
+
+  Logger.log('testDateConverter OK — แปลงชีท <-> Firestore TIMESTAMP (round-trip ตรงเป๊ะ)');
+  return true;
+}
+
+/**
  * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}
