@@ -280,12 +280,54 @@ const DataDict = (() => {
           value = formatDateTime(value);
         }
       }
+      // ตรวจรูปแบบก่อนเขียน (มาตรฐานการเก็บวันที่ — data-dictionary.md)
+      if (meta && (meta.type === 'date' || meta.type === 'datetime') && typeof value === 'string' && value !== '') {
+        const tableDef = getTable(tableKey);
+        assertValidDateString(value, meta.type, tableDef ? tableDef.name : name, name);
+      }
       return value;
     });
   }
 
   /**
+   * ตรวจว่ารูปแบบวันที่/เวลาถูกต้องตามมาตรฐานหรือไม่
+   * - date     → yyyy-mm-dd
+   * - datetime → yyyy-mm-dd HH:mm:ss
+   * ค่าว่าง (''), null, undefined, และ Date object ผ่านเสมอ (แปลง/ข้ามที่อื่น)
+   * @param {*} value
+   * @param {string} type - 'date' | 'datetime'
+   * @returns {boolean}
+   */
+  function isValidDateString(value, type) {
+    if (value === null || value === undefined || value === '') return true;
+    if (value instanceof Date) return true;
+    if (typeof value !== 'string') return false;
+    if (type === 'date') {
+      return /^\d{4}-\d{2}-\d{2}$/.test(value);
+    }
+    if (type === 'datetime') {
+      return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value);
+    }
+    return true;
+  }
+
+  /**
+   * ตรวจรูปแบบวันที่และ throw error ชัดเจนถ้าไม่ถูกต้อง (ใช้ก่อนเขียนลงชีท)
+   * @param {*} value
+   * @param {string} type
+   * @param {string} tableName - ชื่อตาราง (สำหรับ error message)
+   * @param {string} columnName - ชื่อคอลัมน์ (สำหรับ error message)
+   */
+  function assertValidDateString(value, type, tableName, columnName) {
+    if (!isValidDateString(value, type)) {
+      const expected = type === 'date' ? 'yyyy-mm-dd' : 'yyyy-mm-dd HH:mm:ss';
+      throw new Error(`รูปแบบวันที่ไม่ถูกต้อง: ${tableName}.${columnName} = "${value}" (ต้องเป็น ${expected} — ดู data-dictionary.md)`);
+    }
+  }
+
+  /**
    * แปลง object เป็นแถวข้อมูล (array) ตามลำดับคอลัมน์
+   * (ตรวจรูปแบบวันที่/เวลาก่อนคืนค่า — ปฏิเสธ dd-mm-yyyy / T / Z / mixed)
    * @param {string} tableKey
    * @param {Object} obj
    * @returns {Array}
@@ -309,6 +351,11 @@ const DataDict = (() => {
         } else if (col.type === 'datetime') {
           value = formatDateTime(value);
         }
+      }
+      
+      // ตรวจรูปแบบก่อนเขียน (มาตรฐานการเก็บวันที่ — data-dictionary.md)
+      if ((col.type === 'date' || col.type === 'datetime') && typeof value === 'string' && value !== '') {
+        assertValidDateString(value, col.type, table.name, col.name);
       }
       
       return value;
@@ -483,6 +530,8 @@ const DataDict = (() => {
     rowToObjectByHeaders,
     objectToRow,
     objectToRowByHeaders,
+    isValidDateString,
+    assertValidDateString,
     getHeaders,
     listTables,
     validate,

@@ -463,6 +463,63 @@ function testColumnReordering() {
 }
 
 /**
+ * ทดสอบตัวตรวจรูปแบบวันที่ (มาตรฐาน: yyyy-mm-dd / yyyy-mm-dd HH:mm:ss):
+ * ปฏิเสธ dd-mm-yyyy · T/Z · mixed · ยอมรับค่าว่าง/Date object · objectToRow throw พร้อมชื่อคอลัมน์
+ * @returns {boolean}
+ */
+function testDateValidator() {
+  const D = DataDict;
+  const ok = D.isValidDateString;
+
+  // valid ตามมาตรฐาน
+  if (!ok('2026-08-06', 'date')) throw new Error('testDateValidator: yyyy-mm-dd ควรผ่าน');
+  if (!ok('2026-08-06 14:30:00', 'datetime')) throw new Error('testDateValidator: yyyy-mm-dd HH:mm:ss ควรผ่าน');
+
+  // ปฏิเสธ dd-mm-yyyy
+  if (ok('06-08-2026', 'date')) throw new Error('testDateValidator: dd-mm-yyyy ต้องถูกปฏิเสธ');
+  if (ok('06/08/2026', 'date')) throw new Error('testDateValidator: mm/dd/yyyy ต้องถูกปฏิเสธ');
+
+  // ปฏิเสธ T / Z formats
+  if (ok('2026-08-06T14:30:00', 'datetime')) throw new Error('testDateValidator: T format ต้องถูกปฏิเสธ');
+  if (ok('2026-08-06T14:30:00Z', 'datetime')) throw new Error('testDateValidator: Z format ต้องถูกปฏิเสธ');
+
+  // ปฏิเสธ mixed (มีเวลาในคอลัมน์ date / ไม่มีเวลาในคอลัมน์ datetime)
+  if (ok('2026-08-06 14:30:00', 'date')) throw new Error('testDateValidator: datetime ในคอลัมน์ date ต้องถูกปฏิเสธ');
+  if (ok('2026-08-06', 'datetime')) throw new Error('testDateValidator: date ในคอลัมน์ datetime ต้องถูกปฏิเสธ');
+
+  // ค่าว่าง / null / Date object ผ่าน
+  if (!ok('', 'date')) throw new Error('testDateValidator: ค่าว่างควรผ่าน');
+  if (!ok(null, 'date')) throw new Error('testDateValidator: null ควรผ่าน');
+  if (!ok(new Date(2026, 7, 6), 'datetime')) throw new Error('testDateValidator: Date object ควรผ่าน');
+
+  // objectToRow: วันที่ผิด → throw พร้อมชื่อคอลัมน์
+  let threw = false;
+  try {
+    D.objectToRow('MEMBER_MASTER', { mem_code: 'M001', mem_eff_dt: '06-08-2026' });
+  } catch (e) {
+    threw = true;
+    if (!String(e.message).includes('mem_eff_dt')) throw new Error('testDateValidator: error ต้องระบุชื่อคอลัมน์');
+  }
+  if (!threw) throw new Error('testDateValidator: objectToRow ควร throw เมื่อวันที่ผิดรูปแบบ');
+
+  // objectToRowByHeaders: ตรวจเหมือนกัน
+  threw = false;
+  try {
+    D.objectToRowByHeaders('MEMBER_MASTER', ['mem_code', 'mem_exp_dt'], { mem_code: 'M001', mem_exp_dt: '2026-08-06T00:00:00Z' });
+  } catch (e) {
+    threw = true;
+  }
+  if (!threw) throw new Error('testDateValidator: objectToRowByHeaders ควร throw เมื่อวันที่ผิดรูปแบบ');
+
+  // Date object ถูกแปลงเป็น yyyy-mm-dd ผ่าน
+  const row = D.objectToRow('MEMBER_MASTER', { mem_code: 'M001', mem_eff_dt: new Date(2026, 7, 6) });
+  if (row[7] !== '2026-08-06') throw new Error('testDateValidator: Date object ควรแปลงเป็น yyyy-mm-dd');
+
+  Logger.log('testDateValidator OK — ปฏิเสธ dd-mm-yyyy / T / Z / mixed · ยอมรับ yyyy-mm-dd');
+  return true;
+}
+
+/**
  * ทดสอบ Core.MemberRules (pure — ไม่แตะ service):
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}

@@ -130,6 +130,7 @@ Entry point ของ LINE webhook
 - `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 4 ตาราง (MT-27)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
+- `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)

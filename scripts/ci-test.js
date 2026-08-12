@@ -128,6 +128,7 @@ const runner = `
     ['testSeedData', testSeedData],
     ['testFinanceData', testFinanceData],
     ['testColumnReordering', testColumnReordering],
+    ['testDateValidator', testDateValidator],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

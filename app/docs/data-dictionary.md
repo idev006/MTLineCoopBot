@@ -111,10 +111,11 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 
 - ✅ **เขียนผ่าน `DataDict.formatDate()` / `formatDateTime()` เสมอ** — ห้ามเอาค่า `Date` object หรือ `new Date().toISOString()` (มี `T` + timezone `Z`) เขียนลงชีทตรง ๆ
 - ✅ **parse/เปรียบเทียบผ่าน `Core.MemberRules.parseDate()`** เสมอ (ไม่ใช้ `new Date(string)` ตรง ๆ)
+- ✅ **ตรวจรูปแบบก่อนเขียนอัตโนมัติ** — `DataDict.objectToRow`/`objectToRowByHeaders` เรียก `assertValidDateString()` และ **throw error** ทันทีถ้าผิดรูปแบบ (การ์ด MT-29) · ตรวจเองได้ด้วย `DataDict.isValidDateString(value, 'date'|'datetime')`
 - ✅ ใช้ **ปี ค.ศ. (2026)** ในข้อมูล — แปลงเป็น พ.ศ. เฉพาะตอนแสดงผล (ถ้าต้องการ)
 - ❌ **ห้ามใช้ `dd-mm-yyyy` / `mm/dd/yyyy`** — เรียงตามตัวอักษรจะไม่ตรงกับเวลา และ parse สับสน
-- ❌ ห้ามเก็บเวลาแบบมี `T` หรือ timezone offset (`2026-08-06T14:30:00Z`)
-- ❌ ห้ามผสม `yyyy-mm-dd` และ `yyyy-mm-dd HH:mm:ss` ในคอลัมน์เดียวกัน (คอลัมน์ `mem_eff_dt` ควรใช้แบบเดียวตลอด)
+- ❌ ห้ามเก็บเวลาแบบมี `T` หรือ timezone offset (`2026-08-06T14:30:00Z`) — validator ปฏิเสธอัตโนมัติ
+- ❌ ห้ามผสม `yyyy-mm-dd` และ `yyyy-mm-dd HH:mm:ss` ในคอลัมน์เดียวกัน (คอลัมน์ `mem_eff_dt` ควรใช้แบบเดียวตลอด) — validator ปฏิเสธอัตโนมัติ
 
 ## การใช้งาน DataDict
 
