@@ -59,6 +59,7 @@
 - [x] **[MT-08] ตรวจสอบความถูกต้องของ Webhook** — บทที่ 3.6, 5.5 · `Util.verifyWebhookSecret` + `Util.verifyLineSignature` + guard ใน `doPost` + test ใน Test.js · หมายเหตุ: Apps Script อ่าน header ไม่ได้ จึงใช้ `webhook_secret` ผูกท้าย URL (Issue #67764685)
 - [x] **[MT-09] Gate ตรวจสิทธิ์ใน EventHandler** — บทที่ 3.7, 6 TC-10 · `SheetService.findByLineUserId` + `getAuthorizedMember` (isActiveMember + บทบาท) ใน `EventHandler` ยกเว้น `activate:` + `testMemberValidity`
 - [x] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · token รั่วจาก initial commit (2026-08-12) → ลบออกจากโค้ด + **purge ประวัติ git (filter-repo)** + CI กันซ้ำ 2 ชั้น (regex + gitleaks ตรวจเต็มรูปแบบ) · **ยืนยันครบ 3 ข้อแล้ว:** ① `checkTokenHealth()` → HTTP 200 ② token เก่า Deactivate แล้ว ③ Executions แสดง `reply success: 200` · เพิ่ม `checkTokenHealth()` ใน Test.js ใช้ตรวจรายเดือน
+  > ⚠️ **หมายเหตุ:** purge ประวัติลบ token ได้แค่จาก repo กลางเท่านั้น — **ผู้ที่ clone repo ไปก่อน purge (12 ส.ค. 2026) ยังมี token อยู่ในประวัติเก่าของตัวเอง** การหมุน token (ทำแล้วในการ์ดนี้) คือทางแก้อันเดียวที่แก้การเปิดเผยได้จริง
 
 ---
 
