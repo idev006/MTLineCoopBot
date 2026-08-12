@@ -10,7 +10,7 @@ MTLineCoopBot/
 └── app/                         # rootDir ของ Apps Script project
     ├── appsscript.json          # manifest: timezone, runtime, webapp settings
     ├── Config.js                # ค่าคอนฟิก + Script Properties
-    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (6 ตาราง: t_member_mast + 5 ตาราง MT-27/32/13)
+    ├── DataDict.js              # SSOT โครงสร้างข้อมูล (7 ตาราง: t_member_mast + 6 ตาราง MT-27/32/13/13b)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
     ├── Core/                    # Business Logic ล้วน (pure — เทสต์ได้ไม่ต้อง mock, การ์ด MT-15)
     │   ├── MemberRules.js       # กฎความ valid สมาชิก (parseDate/isActiveMember/hasRole)
@@ -22,12 +22,13 @@ MTLineCoopBot/
     ├── WebApp.js                # Entry point doPost(e)
     ├── Test.js                  # ฟังก์ชันทดสอบระบบ (verifyMenuContract ฯลฯ)
     ├── Dashboard.js             # สร้าง KPI Dashboard ของทีม (createDashboard)
-    ├── SeedData.js              # สร้างตาราง 6 ตาราง + dummy data (MT-27/32/13)
+    ├── SeedData.js              # สร้างตาราง 7 ตาราง + dummy data (MT-27/32/13/13b)
     ├── LineBot/                 # ตรรกะการทำงานของ Bot
     │   ├── ActivationService.js # Activate สมาชิก
     │   ├── ExpiryService.js     # ตรวจวันหมดอายุอัตโนมัติ (MT-11) — scan + push + unlink
     │   ├── RenewalService.js    # ต่ออายุสมาชิก (MT-12) — renew:CODE / renew ตัวเอง
     │   ├── NoticeService.js     # Broadcast ประกาศ (MT-13) — t_notice → push สมาชิก active
+    │   ├── LoanReminderService.js # เตือนชำระหนี้ (MT-13b) — t_loan_acct → push รายบุคคล
     │   ├── EventHandler.js      # Router จัดการ event
     │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
     │   ├── FlexBuilder.js       # สร้าง Flex Message
@@ -76,6 +77,11 @@ MTLineCoopBot/
 - `getPendingNotices(notices, now?)` — กรองประกาศที่พร้อมส่ง: `status='published'` + ยังไม่มี `sent_dt` + `published_dt <= now` (เปรียบเทียบ string ตามมาตรฐาน yyyy-mm-dd HH:mm:ss)
 - `buildNoticeText(notice)` — ข้อความ push ประกาศ (📢 ประกาศสหกรณ์ + title + message + published_dt)
 - `getBroadcastTargets(members)` — สมาชิกที่ควรได้รับ: active + มี `line_user_id`
+
+**`LoanRules.js`** — กฎเตือนชำระหนี้ (การ์ด MT-13b) — pure
+- `getDueLoans(loans, now?, reminderDays?)` — สัญญาที่ถึงรอบเตือน: `due_dt ∈ [now, now + reminderDays]` (ไม่รวมเลยกำหนด/ไม่มี due) → `[{ loan, daysLeft }]`
+- `buildLoanReminderText(loan, member, daysLeft)` — ข้อความเตือน**รายบุคคล** (💳 + ชื่อสมาชิกจริง + สัญญา + ยอดคงค้าง + ครบกำหนด)
+- `isReminderTarget(member)` — ส่งได้หรือไม่: active + มี `line_user_id`
 - `toEpochMillis` / `epochMillisToSheetString` / `timestampToMillis` — helper
 - หมายเหตุ: offset timezone ไทย (+07:00) เป็นจุดตัดสินใจเฟส 3 — ดู data-dictionary.md
 
@@ -150,7 +156,7 @@ Entry point ของ LINE webhook
 - `testMemberValidity()` — ทดสอบ `isActiveMember`/`hasRole`: ช่วงวัน, สถานะ, บทบาท, fail-safe (บทที่ 3.7.2)
 - `testMemberRepository()` — ทดสอบ interface + factory ตาม `DB_TYPE` (บทที่ 3.2.4)
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
-- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 6 ตาราง (MT-27/32/13)
+- `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 7 ตาราง (MT-27/32/13/13b)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
@@ -163,13 +169,15 @@ Entry point ของ LINE webhook
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
 - `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13)
+- `testLoanRules()` — ทดสอบ `Core.LoanRules` (pure): due filter (`due_dt ∈ [now, now+days]` · ข้ามเลยกำหนด/ไกลเกิน/ไม่มี due) · daysLeft · buildLoanReminderText รายบุคคล · isReminderTarget (MT-13b)
+- `testLoanReminders()` — ทดสอบ `runLoanReminders` เต็ม path (Fake Sheets + fake sender): เตือนเฉพาะสัญญาที่ถึงรอบ · ข้อความรายบุคคล · skipped (ไม่มี userId) · **ตรวจ t_reminder_log** (reminded/skipped) (MT-13b)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
 
 สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
 
-- `createDummyTables()` — สร้างชีท 6 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice`
+- `createDummyTables()` — สร้างชีท 7 ตาราง + dummy data (**non-destructive** — ถ้ามีข้อมูลอยู่แล้วจะข้าม ไม่ทับ): `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice` · `t_reminder_log`
 - `resetDummyTables()` — ล้างข้อมูลแล้วใส่ dummy ใหม่ (ใช้ใน dev/test เท่านั้น)
 - `getDummyRows()` — ข้อมูลตัวอย่าง (pure — ทดสอบโครงสร้างใน CI ได้)
 - ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (บทที่ 5.6.4)
@@ -230,6 +238,12 @@ Entry point ของ LINE webhook
 - `setupNoticeTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
 - ฟังก์ชันระดับบนสุด `runNoticeBroadcast()` = entry point ของ trigger (ส่งต่อให้ NoticeService)
 
+**`LoanReminderService.js`** — เตือนชำระหนี้ (การ์ด MT-13b) — pattern เดียวกับ ExpiryService/NoticeService
+- `runLoanReminders(token, opts?)` — อ่านสัญญา (`repo.listLoans`) + สมาชิก (`listMembers`) → `Core.LoanRules.getDueLoans` (due_dt ในหน้าต่าง `PAYMENT_REMINDER_DAYS`) → **push ข้อความรายบุคคล** (ชื่อสมาชิกจริง — ต่างจาก broadcast) → บันทึก `t_reminder_log` (status `reminded`/`skipped` — skipped = สมาชิกไม่มี userId/ไม่ active)
+  - รับ `opts.repo/sender/now/reminderDays/builder/logger` เพื่อทดสอบใน node · คืน summary `{ loans, due, reminded, skipped, pushed }`
+- `setupReminderTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (ดูบทที่ 5.9.3)
+- ฟังก์ชันระดับบนสุด `runLoanReminders()` = entry point ของ trigger
+
 **`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27)
 - `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
 - `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข)
@@ -258,6 +272,8 @@ Entry point ของ LINE webhook
 - `renewMember(rowIndex, newExpDt, lineUserId?)` — เขียน `mem_exp_dt` ใหม่ + ตั้ง `mem_status='active'` (+ อัปเดต line_user_id ถ้าให้) — การ์ด MT-12
 - `listNotices()` — ดึงประกาศทั้งหมดจาก `t_notice` (สำหรับ `NoticeService` broadcast — MT-13)
 - `markNoticeSent(noticeId, sentDt)` — เขียน `sent_dt` + `status='sent'` ตาม header จริง (กัน broadcast ซ้ำ — MT-13)
+- `findAllLoans()` — ดึงสัญญากู้ทั้งหมดจาก `t_loan_acct` (สำหรับ `LoanReminderService` เตือนชำระ — MT-13b)
+- `appendReminderLog(entry)` — บันทึกการเตือนชำระลง `t_reminder_log` (audit trail — MT-13b)
 - `findByActivateCode(activateCode)` — ค้นหาสมาชิกจากรหัส activate (map ตาม header)
 - `findByLineUserId(lineUserId)` — ค้นหาสมาชิกจาก LINE User ID (map ตาม header)
 - `activateMember(rowIndex, lineUserId)` — เขียน `mem_eff_dt`/`mem_exp_dt`/`mem_status`/`line_user_id` ตรงคอลัมน์ตาม header (สลับตำแหน่งได้)

@@ -143,6 +143,23 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.markNoticeSent(noticeId, sentDt);
   }
 
+  /**
+   * ดึงสัญญากู้ทั้งหมดจาก t_loan_acct (MT-13b — เตือนชำระ)
+   * @returns {Array<Object>}
+   */
+  function listLoans() {
+    return LineBot.SheetService.findAllLoans();
+  }
+
+  /**
+   * บันทึกการเตือนชำระลง t_reminder_log (MT-13b)
+   * @param {Object} entry - { memCode, loanNo, dueDt, daysLeft, status }
+   * @returns {Object} { log_id, status }
+   */
+  function logReminder(entry) {
+    return LineBot.SheetService.appendReminderLog(entry);
+  }
+
   return {
     findByLineUserId,
     findByActivateCode,
@@ -157,6 +174,8 @@ Data.SheetsMemberRepository = (() => {
     logExpiry,
     renewMember,
     listNotices,
-    markNoticeSent
+    markNoticeSent,
+    listLoans,
+    logReminder
   };
 })();

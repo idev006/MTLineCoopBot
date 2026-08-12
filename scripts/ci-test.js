@@ -93,6 +93,7 @@ const FILE_ORDER = [
   'Core/LoanCalculator.js',
   'Core/DateConverter.js',
   'Core/NoticeRules.js',
+  'Core/LoanRules.js',
   'Data/MemberRepository.js',
   'Data/SheetsMemberRepository.js',
   'LineBot/SheetService.js',
@@ -104,6 +105,7 @@ const FILE_ORDER = [
   'LineBot/ExpiryService.js',
   'LineBot/RenewalService.js',
   'LineBot/NoticeService.js',
+  'LineBot/LoanReminderService.js',
   'LineBot/EventHandler.js',
   'RichMenu/MenuData.js',
   'RichMenu/ApiService.js',
@@ -149,6 +151,8 @@ const runner = `
     ['testRenewal', testRenewal],
     ['testNoticeRules', testNoticeRules],
     ['testNoticeBroadcast', testNoticeBroadcast],
+    ['testLoanRules', testLoanRules],
+    ['testLoanReminders', testLoanReminders],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator]
   ];

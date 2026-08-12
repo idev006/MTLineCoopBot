@@ -61,7 +61,9 @@ const Config = (() => {
       // ฐานข้อมูลของระบบ — 'sheets' (ค่า default) / 'firestore' (อนาคต, บทที่ 3.2.4)
       DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets',
       // จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" — แจ้งเตือน + แนบคำเตือนในคำตอบ (การ์ด MT-11)
-      EXPIRY_WARNING_DAYS: Number(_props.getProperty('EXPIRY_WARNING_DAYS') || 30)
+      EXPIRY_WARNING_DAYS: Number(_props.getProperty('EXPIRY_WARNING_DAYS') || 30),
+      // จำนวนวันก่อนครบกำหนดชำระที่ถือว่า "ใกล้ถึงกำหนด" — เตือนชำระ (การ์ด MT-13b)
+      PAYMENT_REMINDER_DAYS: Number(_props.getProperty('PAYMENT_REMINDER_DAYS') || 14)
       // IMAGE_FILE_IDS ถูกกำหนดไว้ใน Config.IMAGE_FILE_IDS โดยตรง
     };
   }

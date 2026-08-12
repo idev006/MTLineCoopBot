@@ -137,6 +137,27 @@ const DataDict = (() => {
     },
 
     /**
+     * บันทึกการเตือนชำระแต่ละรอบ (audit trail — การ์ด MT-13b)
+     * Sheet: t_reminder_log
+     * 1 แถวต่อสัญญากู้ที่ถึงรอบเตือน (due_dt ในหน้าต่าง PAYMENT_REMINDER_DAYS)
+     * status: 'reminded' (push แล้ว) / 'skipped' (สมาชิกไม่มี line_user_id หรือไม่ active)
+     */
+    REMINDER_LOG: {
+      name: 't_reminder_log',
+      description: 'บันทึกการเตือนชำระหนี้ (audit trail)',
+      primaryKey: 'log_id',
+      columns: [
+        { name: 'log_id', type: 'string', required: true, label: 'รหัสบันทึก', unique: true },
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิก' },
+        { name: 'loan_no', type: 'string', required: true, label: 'เลขสัญญากู้' },
+        { name: 'due_dt', type: 'date', required: false, label: 'วันครบกำหนดชำระ' },
+        { name: 'days_left', type: 'number', required: false, label: 'วันเหลือถึงกำหนด (ปัดขึ้น)' },
+        { name: 'status', type: 'string', required: false, label: 'ผลลัพธ์', default: 'reminded' },
+        { name: 'reminded_dt', type: 'datetime', required: false, label: 'เวลาที่เตือน' }
+      ]
+    },
+
+    /**
      * ประกาศ/ข่าวสารสำหรับ broadcast (การ์ด MT-13)
      * Sheet: t_notice
      * แถวที่พร้อมส่ง: status='published' + ยังไม่มี sent_dt + published_dt <= ตอน broadcast

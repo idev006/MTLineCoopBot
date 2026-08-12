@@ -222,7 +222,7 @@ function checkRichMenuStatus() {
 
 ```javascript
 // ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run (ฟังก์ชันระดับบนสุดมีให้เลือกแล้ว)
-createDummyTables();       // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log / t_notice + dummy data
+createDummyTables();       // สร้าง 7 ตาราง: t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log / t_notice / t_reminder_log + dummy data
 createDummyMemberMaster(); // (dev/test เท่านั้น) สร้าง t_member_mast ข้อมูลทดสอบ — activate ด้วย ACT001–003
 seedAllForTesting();       // รันทั้ง 2 อย่างพร้อมกัน (เตรียมข้อมูลทดสอบ use case สมาชิก)
 // resetDummyTables();     // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
@@ -257,9 +257,9 @@ seedAllForTesting();       // รันทั้ง 2 อย่างพร้�
 | 9 | (หลังตั้ง trigger — ข้อ 5.9) สมาชิกที่หมดอายุแล้ว | ได้ Push "สิทธิ์หมดอายุแล้ว" + เมนูสมาชิกถูกยกเลิก (กลับไป Welcome) |
 | 10 | (หลังตั้ง trigger — ข้อ 5.9) เพิ่มประกาศใหม่ใน `t_notice` (status=published, sent_dt ว่าง) | ได้ Push ประกาศถึงสมาชิก active ทุกคน · `t_notice` แถวนั้นมี `sent_dt` + `status='sent'` · รันรอบถัดไปไม่ส่งซ้ำ |
 
-## 5.9 ตั้ง Time-driven Trigger — ตรวจวันหมดอายุ + broadcast ประกาศ (การ์ด MT-11/MT-13)
+## 5.9 ตั้ง Time-driven Trigger — ตรวจวันหมดอายุ + broadcast ประกาศ + เตือนชำระ (การ์ด MT-11/MT-13/MT-13b)
 
-ระบบมีงานอัตโนมัติ 2 อย่างที่ต้อง **Time-driven Trigger**: ① ตรวจวันหมดอายุ (push เตือน + unlink) ② broadcast ประกาศจาก `t_notice` ถึงสมาชิก
+ระบบมีงานอัตโนมัติ 3 อย่างที่ต้อง **Time-driven Trigger**: ① ตรวจวันหมดอายุ (push เตือน + unlink) ② broadcast ประกาศจาก `t_notice` ③ เตือนชำระหนี้จาก `t_loan_acct`
 
 ### 5.9.1 Trigger ตรวจวันหมดอายุ (`runExpiryCheck`)
 
@@ -281,6 +281,15 @@ seedAllForTesting();       // รันทั้ง 2 อย่างพร้�
 4. ทดสอบ: รัน `runNoticeBroadcast` ด้วยมือ → ตรวจ Log `[NoticeBroadcast] notices=... pending=... sent=... targets=... pushed=...` + แถวประกาศถูก mark `sent`
 
 > ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง) · สมาชิกที่ยังไม่ activate (ไม่มี `line_user_id`) จะถูกข้าม
+
+### 5.9.3 Trigger เตือนชำระหนี้ (`runLoanReminders` — การ์ด MT-13b)
+
+1. ตรวจว่ามีชีท `t_loan_acct` ที่มี `due_dt` (รัน `createDummyTables()` — มีสัญญา `LN-2026-003` (MEM003) ครบกำหนด 2026-08-20 ให้ทดสอบได้ทันที)
+2. สร้าง trigger เช่นเดียวกับ 5.9.1 แต่ **Function:** `runLoanReminders` (หรือรัน `setupReminderTrigger(9)` ครั้งเดียว — ดู `app/LineBot/LoanReminderService.js`)
+3. ตั้งค่า (ไม่บังคับ): Script Properties → `PAYMENT_REMINDER_DAYS` = จำนวนวันก่อนครบกำหนดที่ถือว่า "ถึงรอบเตือน" (ค่า default 14)
+4. ทดสอบ: รัน `runLoanReminders` ด้วยมือ → ตรวจ Log `[LoanReminder] loans=... due=... reminded=... skipped=... pushed=...` + แถวใน `t_reminder_log` (status `reminded`/`skipped`)
+
+> ต่างจาก broadcast ประกาศ (ข้อความเดียวถึงทุกคน): เตือนชำระเป็น**ข้อความรายบุคคล** (ชื่อสมาชิก + เลขสัญญา + ยอดคงค้าง + วันครบกำหนด) · สมาชิกไม่มี `line_user_id`/ไม่ active → บันทึก `skipped` (ไม่พัง)
 
 ## 5.10 Mount API ใน WebApp (`/api/*`) — doGet/doPost dispatch ผ่าน Api.ApiService
 

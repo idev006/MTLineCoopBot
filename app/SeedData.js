@@ -6,7 +6,7 @@
  * โครงสร้างตาราง (SSOT) อยู่ใน DataDict.js — ไฟล์นี้มีแค่ข้อมูลตัวอย่าง
  *
  * วิธีใช้ (รันใน Apps Script Editor หรือ clasp):
- *   createDummyTables()       — สร้างชีท 6 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
+ *   createDummyTables()       — สร้างชีท 7 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
  *   createDummyMemberMaster() — สร้าง t_member_mast ข้อมูลทดสอบ (dev/test เท่านั้น —
  *                               ชีทมีข้อมูลอยู่แล้วจะข้าม ไม่ทับของจริง)
  *   seedAllForTesting()       — รันทั้ง 2 อย่าง (เตรียมข้อมูลสำหรับทดสอบ use case สมาชิก)
@@ -18,14 +18,14 @@
  * - dummy การเงินใช้รหัส MEM001–MEM003 — ต้องมีใน t_member_mast ถึงจะเห็นข้อมูล
  *   (createDummyMemberMaster() เตรียมให้แล้ว: MEM001–003 activate ได้เองด้วย ACT001–003)
  * - ตารางที่สร้าง: t_savings_acct · t_loan_acct · t_dividend · t_activation_log
- *   · t_expiry_log · t_notice (MT-13)
+ *   · t_expiry_log · t_notice (MT-13) · t_reminder_log (MT-13b)
  */
 
 const SeedData = (() => {
   'use strict';
 
   /** ตารางที่ SeedData จัดการ (key ใน DataDict) — ไม่รวม MEMBER_MASTER (ข้อมูลจริง) */
-  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG', 'NOTICE'];
+  const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG', 'NOTICE', 'REMINDER_LOG'];
 
   /**
    * ข้อมูลทดสอบ t_member_mast (dev/test เท่านั้น — 16 คอลัมน์ตรง DataDict)
@@ -66,7 +66,9 @@ const SeedData = (() => {
       ],
       LOAN_ACCT: [
         ['MEM001', 'LN-2024-001', 100000, 45000, '2026-12-31'],
-        ['MEM002', 'LN-2023-002', 50000, 8000, '2026-09-30']
+        ['MEM002', 'LN-2023-002', 50000, 8000, '2026-09-30'],
+        // ใกล้ครบกำหนด (due 2026-08-20) — เตือนชำระได้ทันทีหลัง seed (MT-13b)
+        ['MEM003', 'LN-2026-003', 20000, 5000, '2026-08-20']
       ],
       DIVIDEND: [
         ['MEM001', 2566, 1250, 10000],
@@ -90,6 +92,10 @@ const SeedData = (() => {
         ['NTC-0002', 'ประชุมใหญ่สามัญประจำปี', 'กำหนดประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น. ณ ห้องประชุมสหกรณ์ ขอเชิญสมาชิกทุกท่านเข้าร่วมโดยพร้อมเพรียงกัน', '2026-08-06 09:00:00', '', 'published'],
         // ร่าง (draft) — ไม่ถูก broadcast
         ['NTC-0003', 'แบบร่างประกาศ', 'ยังไม่เผยแพร่', '2026-08-10 09:00:00', '', 'draft']
+      ],
+      REMINDER_LOG: [
+        ['RLOG-0001', 'MEM003', 'LN-2026-003', '2026-08-20', 8, 'reminded', '2026-08-12 09:00:00'],
+        ['RLOG-0002', 'MEM002', 'LN-2023-002', '2026-09-30', 49, 'skipped', '2026-08-12 09:00:00']
       ]
     };
   }

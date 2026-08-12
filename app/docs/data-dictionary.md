@@ -103,6 +103,19 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | mem_exp_dt | date | No | - | วันหมดอายุของสมาชิก |
 | checked_dt | datetime | No | - | เวลาที่ตรวจ |
 
+### REMINDER_LOG (t_reminder_log) ✅ ทำแล้ว (การ์ด MT-13b)
+บันทึกการเตือนชำระหนี้แต่ละรอบ (audit trail — เขียนโดย `LoanReminderService.runLoanReminders`: 1 แถวต่อสัญญาที่ถึงรอบเตือน)
+
+| คอลัมน์ | ประเภท | บังคับ | ค่าเริ่มต้น | คำอธิบาย |
+|---------|--------|--------|-------------|----------|
+| log_id | string | Yes | - | รหัสบันทึก (unique) |
+| mem_code | string | Yes | - | รหัสสมาชิก |
+| loan_no | string | Yes | - | เลขสัญญากู้ |
+| due_dt | date | No | - | วันครบกำหนดชำระ |
+| days_left | number | No | - | วันเหลือถึงกำหนด (ปัดขึ้น, 0 = วันนี้) |
+| status | string | No | reminded | ผลลัพธ์: `reminded` (push แล้ว) / `skipped` (ไม่มี userId หรือไม่ active) |
+| reminded_dt | datetime | No | - | เวลาที่เตือน |
+
 ### NOTICE (t_notice) ✅ ทำแล้ว (การ์ด MT-13)
 ประกาศ/ข่าวสารสำหรับ broadcast ถึงสมาชิก — เขียน/อ่านโดย `NoticeService.runNoticeBroadcast` (Time-driven Trigger)
 
@@ -117,7 +130,7 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 
 > **เกณฑ์ "พร้อมส่ง":** `status='published'` + ยังไม่มี `sent_dt` + `published_dt <= ตอน broadcast` — หลังส่งครบทุกสมาชิก ระบบเขียน `sent_dt` + `status='sent'` อัตโนมัติ (รอบถัดไปไม่ส่งซ้ำ)
 
-> 📌 **หมายเหตุ (การ์ด MT-27/MT-32/MT-13):** ตารางทั้ง 6 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (รัน `createDummyMemberMaster()` เพื่อเตรียมสมาชิกทดสอบ — ดู `app/SeedData.js` และบทที่ 5.6.4)
+> 📌 **หมายเหตุ (การ์ด MT-27/MT-32/MT-13/MT-13b):** ตารางทั้ง 7 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (รัน `createDummyMemberMaster()` เพื่อเตรียมสมาชิกทดสอบ — ดู `app/SeedData.js` และบทที่ 5.6.4)
 > เมื่อแทนที่ด้วยข้อมูลจริง: แก้ค่าในชีทได้เลย โดยไม่ต้องแก้โค้ด — โครงสร้างคอลัมน์ห้ามแกะเอง ต้องแก้ที่ `DataDict.js` (SSOT) ก่อน
 
 ## รูปแบบข้อมูลวันที่ (มาตรฐานการจัดเก็บ)

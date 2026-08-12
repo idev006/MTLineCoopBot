@@ -285,6 +285,38 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ดึงสัญญากู้ทั้งหมดจาก t_loan_acct (สำหรับเตือนชำระ — การ์ด MT-13b)
+   * @returns {Array<Object>} รายการสัญญา (ไม่มี _rowIndex)
+   */
+  function findAllLoans() {
+    return readRowsAsObjects('LOAN_ACCT', getSheet('LOAN_ACCT'));
+  }
+
+  /**
+   * บันทึกการเตือนชำระลง t_reminder_log (audit trail — การ์ด MT-13b)
+   * @param {Object} entry - { memCode, loanNo, dueDt, daysLeft, status }
+   * @returns {Object} ข้อมูลที่บันทึก
+   */
+  function appendReminderLog(entry) {
+    const tableKey = 'REMINDER_LOG';
+    const sheet = getSheet(tableKey);
+    const logId = 'RLOG-' + String(Date.now());
+    const headers = getHeaderRow(sheet);
+    const row = DataDict.objectToRowByHeaders(tableKey, headers, {
+      log_id: logId,
+      mem_code: entry.memCode || '',
+      loan_no: entry.loanNo || '',
+      due_dt: entry.dueDt || '',
+      days_left: entry.daysLeft,
+      status: entry.status || 'reminded',
+      reminded_dt: DataDict.formatDateTime(entry.remindedDt || new Date())
+    });
+    sheet.appendRow(row);
+    Logger.log(`[ReminderLog] ${logId} — ${entry.memCode} ${entry.loanNo} (${entry.status}, ${entry.daysLeft} วัน)`);
+    return { log_id: logId, status: entry.status || 'reminded' };
+  }
+
+  /**
    * ดึงประกาศทั้งหมดจาก t_notice (การ์ด MT-13)
    * @returns {Array<Object>} รายการประกาศ (ไม่มี _rowIndex)
    */
@@ -457,6 +489,8 @@ LineBot.SheetService = (() => {
     findDividendsByMember,
     logActivation,
     appendExpiryLog,
+    findAllLoans,
+    appendReminderLog,
     listNotices,
     markNoticeSent,
     renewMember,

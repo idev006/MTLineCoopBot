@@ -321,7 +321,7 @@ function testMemberDataService() {
 function testSeedData() {
   const rows = SeedData.getDummyRows();
   const keys = SeedData.SEED_TABLE_KEYS;
-  if (keys.length !== 6) throw new Error('testSeedData: ต้องมี 6 ตาราง (ได้ ' + keys.length + ')');
+  if (keys.length !== 7) throw new Error('testSeedData: ต้องมี 7 ตาราง (ได้ ' + keys.length + ')');
 
   for (const key of keys) {
     const headers = DataDict.getHeaders(key);
@@ -346,7 +346,8 @@ function testSeedData() {
     DIVIDEND: ['mem_code', 'year', 'dividend_amt', 'share_capital'],
     ACTIVATION_LOG: ['log_id', 'mem_code', 'line_user_id', 'activate_code', 'status', 'activated_dt'],
     EXPIRY_LOG: ['log_id', 'mem_code', 'line_user_id', 'status', 'days_left', 'mem_exp_dt', 'checked_dt'],
-    NOTICE: ['notice_id', 'title', 'message', 'published_dt', 'sent_dt', 'status']
+    NOTICE: ['notice_id', 'title', 'message', 'published_dt', 'sent_dt', 'status'],
+    REMINDER_LOG: ['log_id', 'mem_code', 'loan_no', 'due_dt', 'days_left', 'status', 'reminded_dt']
   };
   for (const key of Object.keys(expect)) {
     const actual = DataDict.getHeaders(key).join(',');
@@ -355,7 +356,116 @@ function testSeedData() {
     }
   }
 
-  Logger.log('testSeedData OK — 6 ตาราง + dummy rows ตรง DataDict');
+  Logger.log('testSeedData OK — 7 ตาราง + dummy rows ตรง DataDict');
+  return true;
+}
+
+/**
+ * ทดสอบ Core.LoanRules (MT-13b) — pure:
+ * getDueLoans (due_dt ∈ [now, now+days] · ไม่รวมเลยกำหนด/ไกลเกิน) · daysLeft ·
+ * buildLoanReminderText (รายบุคคล) · isReminderTarget (active + มี userId)
+ * @returns {boolean}
+ */
+function testLoanRules() {
+  const now = new Date('2026-08-12T12:00:00');
+  const loans = [
+    { loan_no: 'L1', mem_code: 'M1', due_dt: '2026-08-10' },  // เลยกำหนดแล้ว → ไม่เตือน
+    { loan_no: 'L2', mem_code: 'M1', due_dt: '2026-08-20' },  // อีก 8 วัน → เตือน
+    { loan_no: 'L3', mem_code: 'M2', due_dt: '2026-08-12' },  // วันนี้ → เตือน
+    { loan_no: 'L4', mem_code: 'M2', due_dt: '2026-09-30' },  // ไกลเกิน 14 วัน → ไม่เตือน
+    { loan_no: 'L5', mem_code: 'M3', due_dt: '' }             // ไม่มี due → ไม่เตือน
+  ];
+  const due = Core.LoanRules.getDueLoans(loans, now, 14);
+  if (due.length !== 2) throw new Error('testLoanRules: due ควร 2 (ได้ ' + due.length + ')');
+  const byLoan = {};
+  for (const d of due) byLoan[d.loan.loan_no] = d.daysLeft;
+  if (byLoan['L2'] !== 8) throw new Error('testLoanRules: L2 daysLeft ควร 8');
+  if (byLoan['L3'] !== 0) throw new Error('testLoanRules: L3 daysLeft ควร 0');
+  if (due.some(d => d.loan.loan_no === 'L1' || d.loan.loan_no === 'L4' || d.loan.loan_no === 'L5')) {
+    throw new Error('testLoanRules: L1/L4/L5 ไม่ควรถูกเตือน (เลยกำหนด/ไกลเกิน/ไม่มี due)');
+  }
+
+  const text = Core.LoanRules.buildLoanReminderText(
+    { loan_no: 'LN-001', outstanding: 45000, due_dt: '2026-08-20' },
+    { mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี' }, 8);
+  if (!text.includes('คุณนาย สมชาย ใจดี')) throw new Error('testLoanRules: ข้อความต้องมีชื่อสมาชิก');
+  if (!text.includes('LN-001') || !text.includes('45,000.00') || !text.includes('2026-08-20')) {
+    throw new Error('testLoanRules: ข้อความต้องมีเลขสัญญา/ยอดคงค้าง/วันครบกำหนด');
+  }
+  if (!text.includes('อีก 8 วัน')) throw new Error('testLoanRules: ข้อความต้องบอกวันเหลือ');
+
+  if (!Core.LoanRules.isReminderTarget({ mem_status: 'active', line_user_id: 'U1' })) {
+    throw new Error('testLoanRules: active + userId ต้องเป็น target');
+  }
+  if (Core.LoanRules.isReminderTarget({ mem_status: 'active', line_user_id: '' })) {
+    throw new Error('testLoanRules: ไม่มี userId ไม่ควรเป็น target');
+  }
+  if (Core.LoanRules.isReminderTarget({ mem_status: 'inactive', line_user_id: 'U1' })) {
+    throw new Error('testLoanRules: inactive ไม่ควรเป็น target');
+  }
+
+  Logger.log('testLoanRules OK — due filter + daysLeft + ข้อความรายบุคคล + target (pure)');
+  return true;
+}
+
+/**
+ * ทดสอบ LineBot.LoanReminderService.runLoanReminders (MT-13b) — Fake Sheets + fake sender:
+ * เตือนเฉพาะสัญญาที่ถึงรอบ · ข้อความรายบุคคล · ข้าม/บันทึก skipped เมื่อไม่มี userId ·
+ * audit trail t_reminder_log (reminded/skipped)
+ * @returns {boolean}
+ */
+function testLoanReminders() {
+  // 1) seed fake sheets: t_member_mast + t_loan_acct
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
+    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', '', 'member', 80, 8000, 5000],
+    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'inactive', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000]
+  ];
+  delete __fakeSheets['t_loan_acct'];
+  __fakeSheets['t_loan_acct'] = [
+    DataDict.getHeaders('LOAN_ACCT'),
+    ['M001', 'LN-001', 100000, 45000, '2026-08-20'],   // ถึงรอบ (8 วัน) — active + userId → reminded
+    ['M001', 'LN-002', 50000, 10000, '2026-12-31'],    // ไกลเกิน → ไม่เตือน
+    ['M002', 'LN-003', 30000, 12000, '2026-08-25'],    // ถึงรอบ (13 วัน) — ไม่มี userId → skipped
+    ['M003', 'LN-004', 20000, 5000, '2026-08-01']      // เลยกำหนด → ไม่เตือน
+  ];
+
+  const sent = [];
+  const summary = LineBot.LoanReminderService.runLoanReminders('TOKEN', {
+    now: new Date('2026-08-12T12:00:00'),
+    reminderDays: 14,
+    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; }
+  });
+
+  if (summary.loans !== 4) throw new Error('testLoanReminders: loans ควร 4 (' + summary.loans + ')');
+  if (summary.due !== 2) throw new Error('testLoanReminders: due ควร 2 (' + summary.due + ')');
+  if (summary.reminded !== 1) throw new Error('testLoanReminders: reminded ควร 1');
+  if (summary.skipped !== 1) throw new Error('testLoanReminders: skipped ควร 1');
+  if (summary.pushed !== 1) throw new Error('testLoanReminders: pushed ควร 1 (' + summary.pushed + ')');
+
+  // เตือนเฉพาะ LN-001 (M001) — ข้อความรายบุคคล
+  if (sent.length !== 1) throw new Error('testLoanReminders: ควร push 1 ครั้ง');
+  if (sent[0].to !== 'U11111111111111111111111111111111') throw new Error('testLoanReminders: ต้อง push ถึง M001');
+  if (!sent[0].text.includes('LN-001') || !sent[0].text.includes('คุณนาย สมชาย ใจดี') || !sent[0].text.includes('อีก 8 วัน')) {
+    throw new Error('testLoanReminders: ข้อความต้องเป็นรายบุคคล (ชื่อ + สัญญา + วันเหลือ)');
+  }
+
+  // audit trail: reminded (M001/LN-001) + skipped (M002/LN-003)
+  const logs = __fakeSheets['t_reminder_log'] || [];
+  const logRows = logs.length > 0 ? logs.slice(1) : [];
+  if (logRows.length !== 2) throw new Error('testLoanReminders: t_reminder_log ควรมี 2 แถว (ได้ ' + logRows.length + ')');
+  const byLoan = {};
+  for (const r of logRows) byLoan[r[2]] = r;
+  if (!byLoan['LN-001'] || byLoan['LN-001'][5] !== 'reminded' || byLoan['LN-001'][4] !== 8) {
+    throw new Error('testLoanReminders: log LN-001 ควรเป็น reminded 8 วัน');
+  }
+  if (!byLoan['LN-003'] || byLoan['LN-003'][5] !== 'skipped') {
+    throw new Error('testLoanReminders: log LN-003 ควรเป็น skipped (M002 ไม่มี userId)');
+  }
+
+  Logger.log('testLoanReminders OK — เตือนรายบุคคล + skipped + audit log (Fake Sheets + fake sender)');
   return true;
 }
 

@@ -85,7 +85,7 @@
 | `checkTokenHealth()` — ตรวจสุขภาพ token ผ่าน LINE Get Bot Info API (รันมือใน Apps Script Editor) | ✅ ทำแล้ว | บทที่ 5.5.1, 7.1.3 |
 | Gate ตรวจสิทธิ์ Server (`findByLineUserId` + `isActiveMember` + บทบาท) | ✅ ทำแล้ว | บทที่ 3.7, 6 TC-10 |
 | ดึงข้อมูลจริงตามเมนู — `profile` แสดงข้อมูลจริงจาก `t_member_mast` · **เมนูการเงินแสดงข้อมูลจริง** จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (dummy data ผ่าน `SeedData`) | ✅ ทำแล้ว (dummy) | บทที่ 7 ระยะ 2, 5.6.4, data-dictionary.md |
-| ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice` + **ข้อมูลทดสอบ `t_member_mast`** (`createDummyMemberMaster()` — MEM001–005, activate ด้วย ACT001–003) (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
+| ตารางข้อมูลตาม use case + dummy data — `t_savings_acct` · `t_loan_acct` · `t_dividend` · `t_activation_log` · `t_expiry_log` · `t_notice` · `t_reminder_log` + **ข้อมูลทดสอบ `t_member_mast`** (`createDummyMemberMaster()` — MEM001–005, activate ด้วย ACT001–003) (naming: lower case + `t_`) | ✅ ทำแล้ว | บทที่ 5.6.4, 4.2.6b, data-dictionary.md |
 | Audit trail ตรวจวันหมดอายุ — ทุกการตรวจบันทึกลง `t_expiry_log` (1 แถว/สมาชิก: valid/expiring/expired + days_left) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, KANBAN MT-32 |
 | สลับตำแหน่งฟิลด์ในตารางได้ (Header-driven — อ่าน/เขียน map จาก header จริง, `getHeaderMap`/`rowToObjectByHeaders`) | ✅ ทำแล้ว | บทที่ 3.2.1, 4.2.7, data-dictionary.md |
 | ตรวจรูปแบบวันที่ก่อนเขียน (`yyyy-mm-dd` / `yyyy-mm-dd HH:mm:ss` — ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed) | ✅ ทำแล้ว | data-dictionary.md (มาตรฐาน), 4.2.6 |
@@ -93,6 +93,7 @@
 | ตรวจวันหมดอายุสมาชิกอัตโนมัติ (Time-driven Trigger: push เตือนก่อนหมดอายุ + แจ้ง expired + unlink เมนู + คำเตือนในคำตอบ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9, 4.2.7 |
 | ต่ออายุสมาชิก (`renew:CODE` / `renew` ต่ออายุตัวเอง — ขยาย `mem_exp_dt` +1 ปี · เขียน active + log `renewed` ใน `t_activation_log` + ผูกเมนูกลับ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 4.2.7, KANBAN MT-12 |
 | Broadcast ประกาศ/ข่าวสาร (Time-driven Trigger: `t_notice` → push ถึงสมาชิก active ทุกคน · mark `sent` กันส่งซ้ำ) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9.2, KANBAN MT-13 |
+| เตือนชำระหนี้รายบุคคล (Time-driven Trigger: `t_loan_acct` due_dt ใน `PAYMENT_REMINDER_DAYS` → push ข้อความรายบุคคล + บันทึก `t_reminder_log`) | ✅ ทำแล้ว | บทที่ 7 ระยะ 2, 5.9.3, KANBAN MT-13b |
 | สถาปัตยกรรม API-First — **API Layer + Bot Adapter + Mount ใน WebApp ทำแล้ว** (`app/Api/`: registry + envelope `{ok,error,data}` + 8 endpoints · EventHandler เรียกผ่าน `Api.ApiService` · `doGet`/`doPost` dispatch `/api/*` + ตรวจ API key — บทที่ 5.10) · เหลือ: Auth per-channel + LIFF/ID Token (เฟส 3) | ✅ บางส่วน (API Layer + Bot Adapter + Mount) | บทที่ 3.1.1, 4.2.6c, 5.10, 7 ระยะที่ 3, KANBAN MT-17/MT-16b |
 | Data Layer แยกตาม Repository Pattern (`MemberRepository` interface + `SheetsMemberRepository`, factory ตาม `DB_TYPE`) | ✅ ทำแล้ว (Firestore 📌 เฟส 3) | บทที่ 3.2.4, 4.2.0b |
 | Core Business Logic ล้วน (`Core/MemberRules` + `Core/LoanCalculator` — pure, เทสต์ใน node ได้) | ✅ ทำแล้ว | บทที่ 3.1.1, 4.2.0 |
