@@ -65,7 +65,7 @@
 | LIFF (LINE Frontend Framework) | เปิดฟอร์ม/ตารางภายใน LINE แทนการเปิดเว็บภายนอก ใช้ LINE Login ยืนยันตัวตน |
 | ตรวจสอบ ID Token (JWT) | ตรวจสอบ ID token จาก LIFF ด้วย Channel Secret ก่อนเชื่อถือ `sub` = userId (บทที่ 3.1.1) |
 | รองรับหลาย UI | Admin Dashboard / แอปมือถือในอนาคต เรียกใช้ API เดียวกัน |
-| แยก Data Layer (Repository Pattern) | สร้าง `MemberRepository` interface + `SheetsMemberRepository` ห่อ `SheetService` เดิม — สลับฐานข้อมูล (Firestore/PostgreSQL) ได้โดยเปลี่ยน factory จุดเดียว (บทที่ 3.2.4) |
+| ~~แยก Data Layer (Repository Pattern)~~ | ✅ ทำแล้ว — `MemberRepository` interface + `SheetsMemberRepository` ห่อ `SheetService` + factory ตาม `DB_TYPE` (การ์ด MT-20) · เหลือ Firestore implementation 📌 |
 
 ### ระยะที่ 4 — ขั้นสูง
 

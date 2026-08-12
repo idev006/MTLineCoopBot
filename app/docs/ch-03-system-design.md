@@ -137,9 +137,15 @@
 | `query(key)` | สร้างตัวช่วยค้นหา (`where`, `findBy`) |
 | `formatDate` / `formatDateTime` | จัดรูปแบบวันที่ |
 
-### 3.2.4 การออกแบบ Data Layer เพื่อรองรับการเปลี่ยนฐานข้อมูลในอนาคต (Repository Pattern) 📌 ออกแบบไว้ — เฟส 3
+### 3.2.4 การออกแบบ Data Layer เพื่อรองรับการเปลี่ยนฐานข้อมูลในอนาคต (Repository Pattern) ✅ ฐาน Sheets ทำแล้ว · Firestore 📌 เฟส 3
 
 > หลักการ: **ธุรกิจ (Business Logic) ต้องไม่รู้ว่าข้อมูลถูกเก็บไว้ที่ไหน** — เก็บไว้ใน Google Sheets วันนี้ แต่ในอนาคตอาจเปลี่ยนเป็น Firestore / PostgreSQL / ฐานข้อมูลอื่นได้โดยไม่ต้องแก้โค้ดธุรกิจ
+
+**สถานะ implement (การ์ด MT-20):**
+- ✅ `Data/MemberRepository.js` — สัญญา (interface) + `getRepository()` factory อ่าน `Config.DB_TYPE` (ค่า default `sheets`)
+- ✅ `Data/SheetsMemberRepository.js` — ห่อ `LineBot.SheetService` (SpreadsheetApp ถูกจำกัดใน layer นี้)
+- ✅ `ActivationService` + Gate ใน `EventHandler` เรียกผ่าน repository แล้ว
+- 📌 `FirestoreMemberRepository` — อนาคต (เฟส 3) — factory จะ throw อย่างชัดเจนถ้าเลือก `DB_TYPE=firestore` ยังไม่ implement
 
 **แนวคิด: Repository Pattern (แยก Data Access Layer)**
 

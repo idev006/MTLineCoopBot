@@ -12,6 +12,9 @@ MTLineCoopBot/
     ├── Config.js                # ค่าคอนฟิก + Script Properties
     ├── DataDict.js              # SSOT โครงสร้างข้อมูล (t_member_mast)
     ├── Util.js                  # ฟังก์ชันอรรถประโยชน์
+    ├── Data/                    # Data Access Layer (Repository Pattern — บทที่ 3.2.4)
+    │   ├── MemberRepository.js  # สัญญา (interface) + factory เลือก DB ตาม DB_TYPE
+    │   └── SheetsMemberRepository.js  # repository สมาชิกบน Google Sheets (ห่อ SheetService)
     ├── WebApp.js                # Entry point doPost(e)
     ├── Test.js                  # ฟังก์ชันทดสอบระบบ (verifyMenuContract ฯลฯ)
     ├── Dashboard.js             # สร้าง KPI Dashboard ของทีม (createDashboard)
@@ -32,6 +35,17 @@ MTLineCoopBot/
 ```
 
 ## 4.2 คำอธิบายโมดูล
+
+### 4.2.0 `Data/` — Data Access Layer (Repository Pattern)
+
+**`MemberRepository.js`** — สัญญาและ factory (บทที่ 3.2.4)
+- `INTERFACE` — รายการฟังก์ชันที่ทุก repository ต้องมี: `findByLineUserId` · `findByActivateCode` · `activateMember` · `isActiveMember` · `hasRole`
+- `assertImplemented(repo)` — ตรวจว่า repository ครบตามสัญญา (throw ถ้าขาด)
+- `getRepository()` — เลือก repository ตาม `Config.DB_TYPE` (`sheets` = default / `firestore` = ยังไม่ implement — throw ชัดเจน)
+
+**`SheetsMemberRepository.js`** — repository สมาชิกบน Google Sheets
+- ห่อ `LineBot.SheetService` ทั้ง 5 ฟังก์ชัน — **`SpreadsheetApp` ถูกจำกัดอยู่ใน layer นี้เท่านั้น**
+- อนาคต: เขียน `FirestoreMemberRepository` แล้วเปลี่ยน `DB_TYPE` → สลับฐานข้อมูลได้โดยไม่แตะ Core/Handler
 
 ### 4.2.1 `appsscript.json` (Manifest)
 

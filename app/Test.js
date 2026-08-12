@@ -221,6 +221,47 @@ function testWelcomeMenu() {
 }
 
 /**
+ * ทดสอบ MemberRepository (Repository Pattern — บทที่ 3.2.4):
+ * factory เลือก repository ตาม DB_TYPE + ตรวจสัญญา (interface) ครบถ้วน
+ * @returns {boolean}
+ */
+function testMemberRepository() {
+  const propsService = PropertiesService.getScriptProperties();
+
+  // 1) default (DB_TYPE='sheets') → ได้ SheetsMemberRepository ครบตามสัญญา
+  const repo = Data.MemberRepository.getRepository();
+  const names = ['findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole'];
+  const missing = names.filter(n => typeof repo[n] !== 'function');
+  if (missing.length > 0) {
+    throw new Error('testMemberRepository: SheetsMemberRepository ขาดฟังก์ชัน: ' + missing.join(', '));
+  }
+
+  // 2) assertImplemented ผ่านกับ repo ที่ครบ
+  Data.MemberRepository.assertImplemented(repo);
+
+  // 3) assertImplemented throw กับ object ที่ไม่ครบสัญญา
+  let threw = false;
+  try { Data.MemberRepository.assertImplemented({ findByLineUserId: function () {} }); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testMemberRepository: assertImplemented ควร throw เมื่อ object ไม่ครบสัญญา');
+
+  // 4) DB_TYPE=firestore → ยังไม่ implement ต้อง throw (แทนที่จะเงียบๆ ใช้ตัวผิด)
+  propsService.setProperty('DB_TYPE', 'firestore');
+  threw = false;
+  try { Data.MemberRepository.getRepository(); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testMemberRepository: DB_TYPE=firestore ควร throw (ยังไม่ implement)');
+
+  // 5) คืนค่า DB_TYPE=sheets → ทำงานได้ตามเดิม
+  propsService.deleteProperty('DB_TYPE');
+  const repo2 = Data.MemberRepository.getRepository();
+  if (typeof repo2.findByLineUserId !== 'function') {
+    throw new Error('testMemberRepository: กลับมาใช้ sheets repository ไม่ได้หลัง reset');
+  }
+
+  Logger.log('testMemberRepository OK — interface + factory (DB_TYPE switch)');
+  return true;
+}
+
+/**
  * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
  * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
  */

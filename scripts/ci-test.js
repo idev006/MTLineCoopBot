@@ -68,6 +68,8 @@ const FILE_ORDER = [
   'Config.js',
   'DataDict.js',
   'Util.js',
+  'Data/MemberRepository.js',
+  'Data/SheetsMemberRepository.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
   'LineBot/FlexBuilder.js',
@@ -95,7 +97,8 @@ const runner = `
     ['testVerifyLineSignature', testVerifyLineSignature],
     ['testVerifyWebhookSecret', testVerifyWebhookSecret],
     ['testMemberValidity', testMemberValidity],
-    ['testWelcomeMenu', testWelcomeMenu]
+    ['testWelcomeMenu', testWelcomeMenu],
+    ['testMemberRepository', testMemberRepository]
   ];
   const failed = [];
   for (const [name, fn] of tests) {

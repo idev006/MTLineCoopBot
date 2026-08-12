@@ -54,7 +54,9 @@ const Config = (() => {
     return {
       CHANNEL_ACCESS_TOKEN: _props.getProperty('CHANNEL_ACCESS_TOKEN'),
       CHANNEL_SECRET: _props.getProperty('CHANNEL_SECRET'),
-      WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET')
+      WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET'),
+      // ฐานข้อมูลของระบบ — 'sheets' (ค่า default) / 'firestore' (อนาคต, บทที่ 3.2.4)
+      DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets'
       // IMAGE_FILE_IDS ถูกกำหนดไว้ใน Config.IMAGE_FILE_IDS โดยตรง
     };
   }

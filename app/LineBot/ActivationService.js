@@ -34,9 +34,10 @@ LineBot.ActivationService = (() => {
 
       Logger.log('[Activation] Processing activation for code: ' + activateCode + ', LINE user: ' + lineUserId);
 
-      // ค้นหาสมาชิกโดย activate_code
-      Logger.log('[Activation] Calling findByActivateCode...');
-      const member = deps.SheetService.findByActivateCode(activateCode);
+      // ค้นหาสมาชิกโดย activate_code — ผ่าน MemberRepository (Data layer, บทที่ 3.2.4)
+      Logger.log('[Activation] Calling repo.findByActivateCode...');
+      const repo = Data.MemberRepository.getRepository();
+      const member = repo.findByActivateCode(activateCode);
       Logger.log('[Activation] findByActivateCode returned: ' + (member ? 'found' : 'not found'));
 
       if (!member) {
@@ -55,9 +56,9 @@ LineBot.ActivationService = (() => {
         return { success: false, reason: 'already_activated' };
       }
 
-      // Activate สมาชิก
+      // Activate สมาชิก — ผ่าน MemberRepository
       Logger.log('[Activation] Activating member at row ' + member._rowIndex);
-      const activationResult = deps.SheetService.activateMember(member._rowIndex, lineUserId);
+      const activationResult = repo.activateMember(member._rowIndex, lineUserId);
       Logger.log('[Activation] Activation result: ' + JSON.stringify(activationResult));
 
       // สร้าง Flex Message ต้อนรับ

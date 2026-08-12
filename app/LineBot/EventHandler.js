@@ -27,13 +27,15 @@ LineBot.EventHandler = (() => {
    * Gate ตรวจสิทธิ์ (บทที่ 3.7):
    * ตรวจว่าผู้ใช้ LINE เป็นสมาชิกที่ valid — ถูกผูกกับ t_member_mast ผ่าน line_user_id,
    * สถานะ active, อยู่ในช่วง [mem_eff_dt, mem_exp_dt], และมีบทบาทที่รู้จัก (member/staff/admin)
+   * ผ่าน MemberRepository (Data layer — บทที่ 3.2.4) เพื่อสลับฐานข้อมูลได้ในอนาคต
    * @param {string} lineUserId
    * @returns {Object|null} member ถ้าผ่าน / null ถ้าไม่ผ่าน
    */
   function getAuthorizedMember(lineUserId) {
-    const member = LineBot.SheetService.findByLineUserId(lineUserId);
+    const repo = Data.MemberRepository.getRepository();
+    const member = repo.findByLineUserId(lineUserId);
     if (!member) return null;
-    if (!LineBot.SheetService.isActiveMember(member)) return null;
+    if (!repo.isActiveMember(member)) return null;
     const knownRoles = ['member', 'staff', 'admin'];
     if (!knownRoles.includes(member.mem_role)) return null;
     return member;
@@ -53,8 +55,9 @@ LineBot.EventHandler = (() => {
     // ถ้าเคยถูกผูกเป็นสมาชิกแล้ว แต่ตอนนี้ไม่ valid → ยกเลิกการผูกเมนู (กลับไป Welcome)
     if (lineUserId) {
       try {
-        const member = LineBot.SheetService.findByLineUserId(lineUserId);
-        if (member && !LineBot.SheetService.isActiveMember(member)) {
+        const repo = Data.MemberRepository.getRepository();
+        const member = repo.findByLineUserId(lineUserId);
+        if (member && !repo.isActiveMember(member)) {
           if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
             RichMenu.Gating.unlinkMemberMenu(lineUserId, token);
             Logger.log(`[Gate] Unlinked member menu for expired/revoked user: ${lineUserId}`);
