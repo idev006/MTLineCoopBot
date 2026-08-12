@@ -32,6 +32,8 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 | mem_bk | number | No | - | เงินกู้คงค้าง (บาท) |
 | mem_bh | number | No | - | เงินหุ้น (บาท) |
 
+> 🧪 **ข้อมูลทดสอบ (dev/test เท่านั้น):** `SeedData.createDummyMemberMaster()` สร้าง `t_member_mast` 5 แถว (MEM001–005) — MEM001–003 ยังไม่ activate (`ACT001`–`ACT003`) ให้ activate เองใน LINE เพื่อทดสอบ use case · MEM004 หมดอายุแล้ว · MEM005 staff · **non-destructive** — ชีทที่มีข้อมูลอยู่แล้วจะข้าม (ไม่ทับข้อมูลจริง) — ดูบทที่ 5.6.4
+
 ## หลักการออกแบบตาราง
 
 - **ตำแหน่งคอลัมน์ไม่สำคัญ** — ระบบอ่าน/เขียนโดย map จาก **header row จริง** (`rowToObjectByHeaders`/`objectToRowByHeaders` + `SheetService.getHeaderMap`) จึง**สลับตำแหน่งฟิลด์ในชีทได้** โดยไม่ต้องแก้โค้ด (การ์ด MT-28) · ชื่อคอลัมน์ (header) ต้องตรงกับ DataDict เสมอ
@@ -115,7 +117,7 @@ DataDict.js เป็น SSOT ที่กำหนดโครงสร้า�
 
 > **เกณฑ์ "พร้อมส่ง":** `status='published'` + ยังไม่มี `sent_dt` + `published_dt <= ตอน broadcast` — หลังส่งครบทุกสมาชิก ระบบเขียน `sent_dt` + `status='sent'` อัตโนมัติ (รอบถัดไปไม่ส่งซ้ำ)
 
-> 📌 **หมายเหตุ (การ์ด MT-27/MT-32/MT-13):** ตารางทั้ง 6 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (ดู `app/SeedData.js` และบทที่ 5.6.4)
+> 📌 **หมายเหตุ (การ์ด MT-27/MT-32/MT-13):** ตารางทั้ง 6 นี้มี **dummy data** ผ่าน `SeedData.createDummyTables()` (รันใน Apps Script Editor) — ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` ซึ่งต้องมีอยู่ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินจริงในเมนู (รัน `createDummyMemberMaster()` เพื่อเตรียมสมาชิกทดสอบ — ดู `app/SeedData.js` และบทที่ 5.6.4)
 > เมื่อแทนที่ด้วยข้อมูลจริง: แก้ค่าในชีทได้เลย โดยไม่ต้องแก้โค้ด — โครงสร้างคอลัมน์ห้ามแกะเอง ต้องแก้ที่ `DataDict.js` (SSOT) ก่อน
 
 ## รูปแบบข้อมูลวันที่ (มาตรฐานการจัดเก็บ)

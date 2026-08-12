@@ -360,6 +360,61 @@ function testSeedData() {
 }
 
 /**
+ * ทดสอบข้อมูลทดสอบ t_member_mast (dev/test — createDummyMemberMaster):
+ * 16 คอลัมน์ตรง DataDict · activate codes ไม่ซ้ำ · FK ตรงตารางการเงิน · สถานะ/บทบาทถูกต้อง
+ * @returns {boolean}
+ */
+function testDummyMemberMaster() {
+  const rows = SeedData.getDummyMemberRows();
+  const headers = DataDict.getHeaders('MEMBER_MASTER');
+  if (headers.length !== 16) throw new Error('testDummyMemberMaster: t_member_mast ต้องมี 16 คอลัมน์ (ได้ ' + headers.length + ')');
+  if (rows.length < 4) throw new Error('testDummyMemberMaster: ต้องมีสมาชิกทดสอบอย่างน้อย 4 คน');
+
+  const memCodes = [];
+  const activateCodes = [];
+  for (const row of rows) {
+    if (row.length !== 16) {
+      throw new Error('testDummyMemberMaster: แถวมี ' + row.length + ' ค่า แต่ DataDict กำหนด 16');
+    }
+    const obj = DataDict.rowToObject('MEMBER_MASTER', row);
+    memCodes.push(obj.mem_code);
+    if (obj.activate_code) activateCodes.push(obj.activate_code);
+    if (!/^(member|staff|admin)$/.test(obj.mem_role)) {
+      throw new Error('testDummyMemberMaster: mem_role ต้องเป็น member/staff/admin');
+    }
+    if (!/^(active|inactive)$/.test(obj.mem_status)) {
+      throw new Error('testDummyMemberMaster: mem_status ต้องเป็น active/inactive');
+    }
+  }
+
+  // activate codes ต้องไม่ซ้ำกัน
+  if (new Set(activateCodes).size !== activateCodes.length) {
+    throw new Error('testDummyMemberMaster: activate_code ต้องไม่ซ้ำ');
+  }
+
+  // สมาชิกทดสอบหลัก (MEM001–003) ต้องมีข้อมูลในตารางการเงิน (FK ใช้งานได้จริง)
+  const financeCodes = new Set();
+  for (const key of ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND']) {
+    for (const row of SeedData.getDummyRows()[key]) {
+      financeCodes.add(String(row[0]));
+    }
+  }
+  for (const c of ['MEM001', 'MEM002', 'MEM003']) {
+    if (!memCodes.includes(c)) throw new Error('testDummyMemberMaster: ต้องมี ' + c);
+    if (!financeCodes.has(c)) throw new Error('testDummyMemberMaster: ' + c + ' ต้องมีข้อมูลในตารางการเงิน');
+  }
+
+  // MEM001–003 ยังไม่ activate (mem_eff_dt ว่าง) → ผู้ทดสอบ activate เองได้
+  const m1 = DataDict.rowToObject('MEMBER_MASTER', rows[0]);
+  if (m1.mem_status !== 'inactive' || m1.mem_eff_dt) {
+    throw new Error('testDummyMemberMaster: MEM001 ควรยังไม่ activate (ทดสอบ activate:ACT001 ได้)');
+  }
+
+  Logger.log('testDummyMemberMaster OK — 16 คอลัมน์ · activate codes ไม่ซ้ำ · FK ตรงการเงิน · พร้อมทดสอบ use case');
+  return true;
+}
+
+/**
  * ทดสอบ Core.NoticeRules (MT-13) — pure:
  * getPendingNotices (published + ยังไม่ส่ง + ถึงเวลา) · buildNoticeText · getBroadcastTargets
  * @returns {boolean}

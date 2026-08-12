@@ -136,6 +136,7 @@ const runner = `
     ['testMemberRepository', testMemberRepository],
     ['testMemberDataService', testMemberDataService],
     ['testSeedData', testSeedData],
+    ['testDummyMemberMaster', testDummyMemberMaster],
     ['testFinanceData', testFinanceData],
     ['testColumnReordering', testColumnReordering],
     ['testDateValidator', testDateValidator],

@@ -24,15 +24,15 @@
 | 15 | **Broadcast ประกาศ** — `t_notice` → push สมาชิก active + mark sent กันส่งซ้ำ | `LineBot/NoticeService.js` + `Core/NoticeRules.js` + repository `listNotices/markNoticeSent` | `testNoticeRules` (pending filter — published/ยังไม่ส่ง/ถึงเวลา · buildNoticeText · targets) · `testNoticeBroadcast` (Fake Sheets — broadcast ครบ · ข้าม inactive · mark sent · รอบ 2 ไม่ส่งซ้ำ) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9.2) |
 | 16 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
 | 17 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
-| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (33 ไฟล์ .js) + **23/23 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
+| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (33 ไฟล์ .js) + **24/24 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 19 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
 | 20 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
 
 ## วิธีรันหลักฐานทั้งหมด
 
 ```bash
-# 1) ชุดทดสอบสัญญา 23 ชุด (รันใน CI อัตโนมัติทุก push)
-node scripts/ci-test.js          # → ALL TESTS PASS (23/23)
+# 1) ชุดทดสอบสัญญา 24 ชุด (รันใน CI อัตโนมัติทุก push)
+node scripts/ci-test.js          # → ALL TESTS PASS (24/24)
 
 # 2) syntax ทุกไฟล์ JS (33 ไฟล์)
 for f in $(find app scripts -name "*.js"); do node --check "$f"; done

@@ -6,12 +6,17 @@
  * โครงสร้างตาราง (SSOT) อยู่ใน DataDict.js — ไฟล์นี้มีแค่ข้อมูลตัวอย่าง
  *
  * วิธีใช้ (รันใน Apps Script Editor หรือ clasp):
- *   createDummyTables()   — สร้างชีท 6 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
- *   resetDummyTables()    — ล้างข้อมูลในตารางทั้ง 6 แล้วใส่ dummy ใหม่ (dev เท่านั้น)
+ *   createDummyTables()       — สร้างชีท 6 ตาราง + dummy data (ไม่ลบข้อมูลเดิม)
+ *   createDummyMemberMaster() — สร้าง t_member_mast ข้อมูลทดสอบ (dev/test เท่านั้น —
+ *                               ชีทมีข้อมูลอยู่แล้วจะข้าม ไม่ทับของจริง)
+ *   seedAllForTesting()       — รันทั้ง 2 อย่าง (เตรียมข้อมูลสำหรับทดสอบ use case สมาชิก)
+ *   resetDummyTables()        — ล้างข้อมูลในตารางทั้ง 6 แล้วใส่ dummy ใหม่ (dev เท่านั้น)
  *
  * หมายเหตุ:
- * - ไม่แตะ t_member_mast (เป็นข้อมูลจริงของสมาชิก) — dummy การเงินใช้รหัส
- *   MEM001–MEM003 ที่ต้องมีใน t_member_mast ถึงจะเห็นข้อมูล (ดูเอกสาร MT-27)
+ * - createDummyTables() ไม่แตะ t_member_mast (เป็นข้อมูลจริงของสมาชิก) — ถ้าต้องการ
+ *   ข้อมูลทดสอบสมาชิก ให้รัน createDummyMemberMaster() แยก (dev/test เท่านั้น)
+ * - dummy การเงินใช้รหัส MEM001–MEM003 — ต้องมีใน t_member_mast ถึงจะเห็นข้อมูล
+ *   (createDummyMemberMaster() เตรียมให้แล้ว: MEM001–003 activate ได้เองด้วย ACT001–003)
  * - ตารางที่สร้าง: t_savings_acct · t_loan_acct · t_dividend · t_activation_log
  *   · t_expiry_log · t_notice (MT-13)
  */
@@ -19,8 +24,31 @@
 const SeedData = (() => {
   'use strict';
 
-  /** ตารางที่ SeedData จัดการ (key ใน DataDict) */
+  /** ตารางที่ SeedData จัดการ (key ใน DataDict) — ไม่รวม MEMBER_MASTER (ข้อมูลจริง) */
   const SEED_TABLE_KEYS = ['SAVINGS_ACCT', 'LOAN_ACCT', 'DIVIDEND', 'ACTIVATION_LOG', 'EXPIRY_LOG', 'NOTICE'];
+
+  /**
+   * ข้อมูลทดสอบ t_member_mast (dev/test เท่านั้น — 16 คอลัมน์ตรง DataDict)
+   * - MEM001–003: ยังไม่ activate (mem_eff_dt ว่าง) — activate เองได้ใน LINE ด้วย ACT001–003
+   *   → ผูก line_user_id ของผู้ทดสอบเอง แล้วทดสอบเมนูได้ทันที (MEM001 มีข้อมูลครบทุกเมนูการเงิน)
+   * - MEM004: หมดอายุแล้ว (active + มี userId placeholder) — ทดสอบ ExpiryService push/unlink
+   * - MEM005: staff (ยังไม่ activate) — เตรียมสำหรับทดสอบบทบาท staff/admin ในอนาคต
+   */
+  const MEMBER_MASTER_ROWS = [
+    ['MEM001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '', '', 'inactive', 'ACT001', '', 'member', 85, 50000, 10000],
+    ['MEM002', 'นาง', 'สมหญิง', 'รักดี', 20, 'สมาชิก', 5, '', '', 'inactive', 'ACT002', '', 'member', 80, 8000, 5000],
+    ['MEM003', 'นาย', 'ทดสอบ', 'ระบบ', 15, 'สมาชิก', 3, '', '', 'inactive', 'ACT003', '', 'member', 70, 0, 2000],
+    ['MEM004', 'นาย', 'หมดอายุ', 'ทดสอบ', 10, 'สมาชิก', 2, '2026-01-01', '2026-08-01', 'active', 'ACT004', 'U44444444444444444444444444444444', 'member', 60, 45000, 1500],
+    ['MEM005', 'นาง', 'เจ้าหน้าที่', 'ระบบ', 30, 'เจ้าหน้าที่', 8, '2026-01-01', '2026-12-31', 'active', 'STAFF001', '', 'staff', 90, 0, 0]
+  ];
+
+  /**
+   * แถวทดสอบ t_member_mast (pure — ทดสอบโครงสร้างใน CI ได้)
+   * @returns {Array<Array>}
+   */
+  function getDummyMemberRows() {
+    return MEMBER_MASTER_ROWS.map(r => [...r]);
+  }
 
   /**
    * ข้อมูลตัวอย่างต่อตาราง (pure — ทดสอบใน node ได้โดยไม่ต้องพึ่ง Sheets)
@@ -105,6 +133,37 @@ const SeedData = (() => {
   }
 
   /**
+   * สร้าง t_member_mast ข้อมูลทดสอบ (dev/test เท่านั้น — แยกจาก createDummyTables)
+   * Non-destructive: ถ้าชีทมีข้อมูลอยู่แล้ว (เช่น ข้อมูลสมาชิกจริง) จะข้าม ไม่ทับ
+   * @returns {Array<string>} รายการ mem_code ที่เติม (ว่าง = ข้ามเพราะมีข้อมูลแล้ว)
+   */
+  function createDummyMemberMaster() {
+    const tableKey = 'MEMBER_MASTER';
+    const sheet = LineBot.SheetService.getSheet(tableKey);
+    if (sheetHasData(sheet)) {
+      Logger.log('[SeedData] t_member_mast มีข้อมูลอยู่แล้ว — ข้าม (ไม่ทับข้อมูลจริง — ใช้เฉพาะชีททดสอบ/ใหม่)');
+      return [];
+    }
+    const rows = getDummyMemberRows();
+    for (const row of rows) {
+      sheet.appendRow(row);
+    }
+    Logger.log(`[SeedData] t_member_mast เติมข้อมูลทดสอบ ${rows.length} แถว (dev/test — activate ด้วย ACT001–003)`);
+    return rows.map(r => r[0]);
+  }
+
+  /**
+   * รันทั้งหมดสำหรับทดสอบ use case สมาชิก: ตาราง + dummy + t_member_mast ข้อมูลทดสอบ
+   * @returns {Object} { tables: Array<string>, members: Array<string> }
+   */
+  function seedAllForTesting() {
+    return {
+      tables: createDummyTables(),
+      members: createDummyMemberMaster()
+    };
+  }
+
+  /**
    * ล้างข้อมูล (หลัง header) แล้วใส่ dummy ใหม่ — ใช้ใน dev/test เท่านั้น
    * @returns {Array<string>} รายการตารางที่ reset
    */
@@ -130,7 +189,37 @@ const SeedData = (() => {
   return {
     SEED_TABLE_KEYS,
     getDummyRows,
+    getDummyMemberRows,
     createDummyTables,
+    createDummyMemberMaster,
+    seedAllForTesting,
     resetDummyTables
   };
 })();
+
+/**
+ * ============================================================
+ * Top-level wrappers — ให้เห็นฟังก์ชันใน Apps Script Editor
+ * (Apps Script เรียก function ระดับบนสุดได้เท่านั้น)
+ * ============================================================
+ */
+
+/** สร้างชีท 6 ตาราง + dummy data (ไม่แตะ t_member_mast) */
+function createDummyTables() {
+  return SeedData.createDummyTables();
+}
+
+/** สร้าง t_member_mast ข้อมูลทดสอบ (dev/test เท่านั้น — มีข้อมูลแล้วข้าม) */
+function createDummyMemberMaster() {
+  return SeedData.createDummyMemberMaster();
+}
+
+/** เตรียมข้อมูลทั้งหมดสำหรับทดสอบ use case สมาชิก */
+function seedAllForTesting() {
+  return SeedData.seedAllForTesting();
+}
+
+/** ล้างข้อมูล (หลัง header) แล้วใส่ dummy ใหม่ — dev/test เท่านั้น */
+function resetDummyTables() {
+  return SeedData.resetDummyTables();
+}

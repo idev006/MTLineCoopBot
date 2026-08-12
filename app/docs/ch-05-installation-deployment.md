@@ -221,14 +221,17 @@ function checkRichMenuStatus() {
 สร้างตารางตาม use case (naming: lower case + ขึ้นต้น `t_`) พร้อมข้อมูลตัวอย่างสำหรับพัฒนา/ทดสอบ:
 
 ```javascript
-// ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run
-createDummyTables(); // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log + dummy data
-// resetDummyTables(); // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
+// ใน Apps Script Editor เลือกฟังก์ชัน แล้วกด Run (ฟังก์ชันระดับบนสุดมีให้เลือกแล้ว)
+createDummyTables();       // สร้าง t_savings_acct / t_loan_acct / t_dividend / t_activation_log / t_expiry_log / t_notice + dummy data
+createDummyMemberMaster(); // (dev/test เท่านั้น) สร้าง t_member_mast ข้อมูลทดสอบ — activate ด้วย ACT001–003
+seedAllForTesting();       // รันทั้ง 2 อย่างพร้อมกัน (เตรียมข้อมูลทดสอบ use case สมาชิก)
+// resetDummyTables();     // (dev เท่านั้น) ล้างข้อมูลแล้วใส่ dummy ใหม่
 ```
 
 - **Non-destructive:** ถ้าชีทมีข้อมูลอยู่แล้วจะข้าม — ไม่ทับข้อมูลจริง
-- ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — **ต้องมีรหัสเหล่านี้ใน `t_member_mast`** ถึงจะเห็นข้อมูลการเงินในเมนู (หรือแก้ `mem_code` ในชีทให้ตรงกับสมาชิกจริง)
-- ไม่แตะ `t_member_mast` (เป็นข้อมูลจริงของสมาชิก)
+- `createDummyTables()` **ไม่แตะ `t_member_mast`** (เป็นข้อมูลจริงของสมาชิก) · ถ้าต้องการข้อมูลทดสอบสมาชิกให้รัน `createDummyMemberMaster()` แยก — **ใช้กับชีททดสอบ/ใหม่เท่านั้น** (ชีทที่มีข้อมูลจริงจะถูกข้าม)
+- ข้อมูลตัวอย่างใช้รหัสสมาชิก `MEM001`–`MEM003` — ต้องมีรหัสเหล่านี้ใน `t_member_mast` ถึงจะเห็นข้อมูลการเงินในเมนู (`createDummyMemberMaster()` เตรียมให้แล้ว)
+- **ข้อมูลทดสอบ t_member_mast (5 คน):** MEM001–003 ยังไม่ activate (`ACT001`–`ACT003`) — **activate เองได้ใน LINE** แล้วทดสอบเมนูทันที (MEM001 มีข้อมูลครบทุกเมนูการเงิน · MEM003 ไม่มีหนี้/ปันผล → ทดสอบ "ไม่พบข้อมูล") · MEM004 หมดอายุแล้ว (ทดสอบ ExpiryService push/unlink) · MEM005 staff (เตรียมบทบาทในอนาคต)
 - หลังสร้างตารางแล้ว คลิกเมนูการเงินใน LINE → เห็นข้อมูลตัวอย่าง (ดู Smoke Test 5.8)
 - `t_expiry_log` ถูกเขียนโดยอัตโนมัติทุกครั้งที่ `runExpiryCheck` รัน (การ์ด MT-32) — SeedData มี dummy ตัวอย่างให้ดูรูปแบบ
 
