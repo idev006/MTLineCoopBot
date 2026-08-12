@@ -115,7 +115,7 @@ FlexBuilder.welcomeMember(...) → สร้าง Flex Message ต้อนร�
 MessageService.replyFlex → สมาชิกเห็น "🎉 ยินดีต้อนรับ ... Activate สำเร็จ"
 ```
 
-**หมายเหตุ:** สมาชิกที่ยังไม่ได้ Activate หรือหมดอายุ จะเห็นเพียง **Welcome Menu** (เมนูต้อนรับ) ไม่เห็นเมนูสมาชิก 5 แท็บ 📌 เฟส 2 — รายละเอียดการออกแบบในบทที่ 3 หัวข้อ 3.3.6
+**หมายเหตุ:** สมาชิกที่ยังไม่ได้ Activate หรือหมดอายุ จะเห็นเพียง **Welcome Menu** (เมนูต้อนรับ) ไม่เห็นเมนูสมาชิก 5 แท็บ ✅ — รายละเอียดการออกแบบในบทที่ 3 หัวข้อ 3.3.6
 
 ### 2.3.4 Flow: เครื่องคำนวณสินเชื่อ (Web Application)
 
@@ -164,7 +164,7 @@ MessageService.replyFlex → สมาชิกเห็น "🎉 ยินด�
 | Pre-condition | Bot ถูกเพิ่มเป็นเพื่อน และ Rich Menu ถูก Deploy เรียบร้อย |
 | Main Flow | 1. สมาชิกคลิกเมนู 2. ระบบรับ postback 3. ระบบตรวจสิทธิ์ (userId → member → valid → role) ✅ 4. ระบบตอบ Flex Message ตามเมนู |
 | Post-condition | สมาชิกเห็น Flex Message ตามเมนูที่เลือก |
-| หมายเหตุ | สมาชิกที่ยังไม่ Activate / หมดอายุ ถูกปฏิเสธที่ Server แล้ว ✅ (Gate ใน EventHandler) · ส่วนการเห็นเฉพาะ Welcome Menu ยังเป็นเฟส 2 (UI) |
+| หมายเหตุ | สมาชิกที่ยังไม่ Activate / หมดอายุ ถูกปฏิเสธที่ Server ✅ (Gate) + เห็นเฉพาะ Welcome Menu ✅ (Per-User Gating บทที่ 3.3.6) — ถูกผูกเมนูสมาชิกเมื่อ Activate แล้วเท่านั้น |
 
 #### UC-02: Activate สมาชิก
 
@@ -174,7 +174,7 @@ MessageService.replyFlex → สมาชิกเห็น "🎉 ยินด�
 | Pre-condition | สมาชิกมีรหัส `activate_code` จากสหกรณ์ และแถวข้อมูลใน `t_member_mast` ยังไม่ถูก activate |
 | Main Flow | 1. พิมพ์ `activate:CODE` 2. ระบบค้นหารหัส 3. ตรวจสอบว่ายังไม่ถูกใช้ 4. เขียน `mem_eff_dt`, `mem_exp_dt`, `mem_status='active'`, `line_user_id` 5. ผูก Member Menu ให้ผู้ใช้ 📌 เฟส 2 6. ส่ง Flex Message ต้อนรับ |
 | Alternative | รหัสไม่พบ → แจ้งให้ตรวจสอบใหม่ / รหัสถูกใช้แล้ว → แจ้งว่าใช้ซ้ำไม่ได้ |
-| Post-condition | LINE User ID ถูกผูกกับรหัสสมาชิก สมาชิกเห็นเมนู 5 แท็บทันที 📌 เฟส 2 การ activate ซ้ำด้วยรหัสเดิมจะถูกปฏิเสธ |
+| Post-condition | LINE User ID ถูกผูกกับรหัสสมาชิก + **เมนูสมาชิกถูกผูก (Tab 1) ให้เห็น 5 แท็บทันที** ✅ การ activate ซ้ำด้วยรหัสเดิมจะถูกปฏิเสธ |
 
 #### UC-03: คำนวณสินเชื่อออนไลน์
 

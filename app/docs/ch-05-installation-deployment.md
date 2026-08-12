@@ -187,24 +187,25 @@ LINE Console → Channel access token → ที่ token เก่า → Deact
 
 **การป้องกันซ้ำ:** CI (`.github/workflows/ci.yml`) มี secret scan — จะ **fail** ทันทีถ้ามี token/secret hardcode ลงโค้ดอีก (ดูบทที่ 8.1.3)
 
-## 5.6 การ Deploy Rich Menu (5 แท็บ)
+## 5.6 การ Deploy Rich Menu (5 แท็บ + Welcome Menu)
 
 ### 5.6.1 เตรียมภาพ
 
 - ภาพ 5 แท็บต้องถูกอัปโหลดขึ้น Google Drive และมีสิทธิ์ให้ Apps Script อ่านได้
 - บันทึก File ID ของแต่ละภาพลงใน `Config.IMAGE_FILE_IDS`
+- **(เลือกได้)** ภาพ Welcome Menu — ใส่ File ID ใน `Config.IMAGE_FILE_IDS.WELCOME`; ถ้าว่าง ระบบจะข้ามการอัปโหลดภาพ Welcome (เมนูยังทำงานได้)
 
 ### 5.6.2 รัน Deploy
 
 1. ตรวจว่า `CHANNEL_ACCESS_TOKEN` ถูกตั้งค่าแล้ว
-2. (แนะนำ) รัน `verifyMenuContract()` ใน `app/Test.js` เพื่อตรวจว่า item id ใน MenuData ตรงกับ CAPTIONS ใน ReplyStore ครบทุกเมนู (หัวข้อ 3.3.7 / TC-12)
+2. (แนะนำ) รัน `verifyMenuContract()` + `testWelcomeMenu()` ใน `app/Test.js` เพื่อตรวจว่า item id ใน MenuData ตรงกับ CAPTIONS ใน ReplyStore ครบทุกเมนู (หัวข้อ 3.3.7 / TC-12)
 3. ใน Apps Script Editor เลือกฟังก์ชัน `main` แล้วกด **Run**
 4. ตรวจ Log ว่า:
-   - สร้าง Rich Menu ทั้ง 5 สำเร็จ (ได้ richMenuId)
-   - อัปโหลดภาพสำเร็จ
-   - Alias ทั้ง 5 ถูกสร้าง
-   - Tab 1 ถูกตั้งเป็น Default
-4. ตรวจสอบด้วยฟังก์ชัน `checkRichMenuStatus`
+   - สร้าง Rich Menu ทั้ง 6 สำเร็จ (Welcome + 5 แท็บ) ได้ richMenuId
+   - อัปโหลดภาพสำเร็จ (Welcome ถ้ามี File ID)
+   - Alias ทั้ง 6 ถูกสร้าง (`alias-welcome` + 5 แท็บ)
+   - **Welcome ถูกตั้งเป็น Default** (ผู้ไม่ Activate เห็น Welcome; สมาชิกถูกผูก Tab 1 เป็นรายบุคคลผ่าน `Gating`)
+5. ตรวจสอบด้วยฟังก์ชัน `checkRichMenuStatus`
 
 ### 5.6.3 ตรวจสอบสถานะ
 

@@ -262,6 +262,34 @@ RichMenu.MenuData = RichMenu.MenuData || {};
     };
   }
 
+  // =====================================================
+  // Welcome Menu (ค่า default — สำหรับผู้ที่ยังไม่ Activate / หมดอายุ)
+  // อ้างอิง: บทที่ 3.3.6 Per-User Rich Menu Gating
+  // หมายเหตุ: item id ของ welcome (welcome_*) ไม่นับรวมใน listItemIds()
+  // เพราะเป็นเมนูสาธารณะ ไม่ใช่เมนูสมาชิก (สัญญา Item ID ครอบคลุมเมนูสมาชิก)
+  // =====================================================
+
+  const WELCOME_MENUS = [
+    { coords: [{"x": 160, "y": 500}, {"x": 1200, "y": 505}, {"x": 1170, "y": 780}, {"x": 150, "y": 780}], action: postback('welcome_activate', 'เปิดใช้งานสมาชิก') },
+    { coords: [{"x": 1330, "y": 500}, {"x": 2360, "y": 505}, {"x": 2350, "y": 780}, {"x": 1320, "y": 780}], action: postback('welcome_howto', 'วิธีใช้งาน') },
+    { coords: [{"x": 160, "y": 900}, {"x": 1200, "y": 905}, {"x": 1170, "y": 1180}, {"x": 150, "y": 1180}], action: postback('welcome_contact', 'ติดต่อสหกรณ์') },
+    { coords: [{"x": 1330, "y": 900}, {"x": 2360, "y": 905}, {"x": 2350, "y": 1180}, {"x": 1320, "y": 1180}], action: postback('welcome_news', 'ข่าวสาร/ประกาศ') }
+  ];
+
+  /**
+   * สร้าง Welcome Menu — ใช้เป็น rich menu default สำหรับผู้ที่ยังไม่ Activate
+   * @returns {Object} payload rich menu
+   */
+  function buildWelcomeTab() {
+    return {
+      size: { ...SIZE },
+      selected: true,
+      name: 'RichMenu-Coop-Welcome',
+      chatBarText: 'เมนูต้อนรับ',
+      areas: buildMenuAreas(WELCOME_MENUS)
+    };
+  }
+
   /**
    * รวบรวม item id ทั้งหมดของเมนูย่อย (เฉพาะ action ประเภท postback ที่มี item=)
    * ใช้ตรวจสัญญา Item ID กับ ReplyStore.CAPTIONS (ดู app/Test.js)
@@ -285,6 +313,7 @@ RichMenu.MenuData = RichMenu.MenuData || {};
   RichMenu.MenuData.buildTab3 = buildTab3;
   RichMenu.MenuData.buildTab4 = buildTab4;
   RichMenu.MenuData.buildTab5 = buildTab5;
+  RichMenu.MenuData.buildWelcomeTab = buildWelcomeTab;
   RichMenu.MenuData.listItemIds = listItemIds;
   
   Logger.log('MenuData functions attached');

@@ -316,9 +316,7 @@ const TAB_1_COORDS = [
 
 > พิกัดทั้งหมดถูกนิยามใน `app/RichMenu/MenuData.js`
 
-### 3.3.6 การควบคุมเมนูตามสิทธิ์สมาชิก (Per-User Rich Menu Gating) 📌 ออกแบบไว้ — เฟส 2
-
-> หัวข้อนี้เป็นการออกแบบสำหรับเฟส 2 ยังไม่ได้ implement ในโค้ดปัจจุบัน
+### 3.3.6 การควบคุมเมนูตามสิทธิ์สมาชิก (Per-User Rich Menu Gating) ✅ ทำแล้ว
 
 สมาชิกที่ยังไม่ได้ Activate หรือหมดอายุ จะ**ไม่เห็นเมนูของสมาชิก** โดยใช้กลไก Rich Menu แบบรายบุคคล (Individual Rich Menu) ของ LINE
 
@@ -329,24 +327,26 @@ const TAB_1_COORDS = [
 | ยังไม่ได้ Activate / หมดอายุ / ไม่มีสิทธิ์ | **Welcome Menu** (เมนูต้อนรับ — เป็นค่า default) แสดงขั้นตอน Activate และข้อมูลติดต่อ |
 | Activate แล้วและ valid | **Member Menu** (Tab 1–5) — ถูกผูกเป็นรายบุคคล |
 
-**API ของ LINE ที่ใช้:**
+**API ของ LINE ที่ใช้ (implement ใน `RichMenu/ApiService.js`):**
 
 ```text
-POST   /v2/bot/user/{userId}/richmenu/{richMenuId}   # ผูกเมนูสมาชิกให้ผู้ใช้คนนี้ (แทนที่ default)
-DELETE /v2/bot/user/{userId}/richmenu                # คืนค่าไปใช้ default (Welcome Menu)
+POST   /v2/bot/user/{userId}/richmenu/{richMenuId}   # ผูกเมนูสมาชิกให้ผู้ใช้คนนี้ (แทนที่ default) — ApiService.linkUser
+DELETE /v2/bot/user/{userId}/richmenu                # คืนค่าไปใช้ default (Welcome Menu) — ApiService.unlinkUser
+GET    /v2/bot/richmenu/alias/{aliasId}              # หา richMenuId จาก alias — ApiService.getRichMenuIdByAlias
+GET    /v2/bot/user/{userId}/richmenu                # ตรวจเมนูปัจจุบันของผู้ใช้ — ApiService.getUserRichMenu
 ```
 
-**Flow หลัง Activate สำเร็จ:**
+**Flow หลัง Activate สำเร็จ (implement แล้ว):**
 1. เขียนข้อมูลสมาชิกใน `t_member_mast` (`mem_eff_dt` / `mem_exp_dt` / `mem_status` / `line_user_id`)
-2. ผูก Member Menu (Tab 1) ให้กับ `line_user_id` ผ่าน API `linkUser`
+2. ผูก Member Menu (Tab 1) ให้กับ `line_user_id` — `RichMenu.Gating.linkMemberMenu()` (เรียกจาก `ActivationService`)
 3. ส่ง Flex Message ต้อนรับ → สมาชิกเห็นเมนูสมาชิก (5 แท็บ) ทันที
 
-**Flow เมื่อหมดอายุ / ถูกเพิกถอน:**
-1. ตรวจพบสมาชิกไม่ valid (ช่วงวันหมด / `mem_status` ไม่ใช่ `active`)
-2. ยกเลิกการผูกเมนู (unlink) → กลับไปเห็น Welcome Menu
-3. (เฟส 2) แจ้งเตือนสมาชิกให้ต่ออายุ
+**Flow เมื่อหมดอายุ / ถูกเพิกถอน (implement แล้ว):**
+1. ตรวจพบสมาชิกไม่ valid (ช่วงวันหมด / `mem_status` ไม่ใช่ `active`) — ที่ Gate ใน `EventHandler`
+2. ยกเลิกการผูกเมนู (unlink) → กลับไปเห็น Welcome Menu — `RichMenu.Gating.unlinkMemberMenu()`
+3. (อนาคต) แจ้งเตือนสมาชิกให้ต่ออายุ
 
-**หมายเหตุ:** กลไกนี้ควบคุมเฉพาะ UI — การอนุญาตจริงต้องตรวจที่ Server เสมอ (ดูบทที่ 3.6–3.7)
+**หมายเหตุ:** กลไกนี้ควบคุมเฉพาะ UI — การอนุญาตจริงต้องตรวจที่ Server เสมอ (ดูบทที่ 3.6–3.7) · **การ Deploy:** `Deployer.deploy()` สร้าง Welcome Menu + ตั้งเป็น default แล้ว (ผู้ไม่ Activate เห็น Welcome อัตโนมัติ)
 
 ### 3.3.7 สัญญา Item ID และ Checklist ก่อน Deploy (Menu Item ID Contract)
 

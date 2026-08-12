@@ -77,6 +77,7 @@ const FILE_ORDER = [
   'RichMenu/MenuData.js',
   'RichMenu/ApiService.js',
   'RichMenu/Deployer.js',
+  'RichMenu/Gating.js',
   'WebApp.js',
   'Test.js'
 ];
@@ -93,7 +94,8 @@ const runner = `
     ['verifyThaiCaptions', verifyThaiCaptions],
     ['testVerifyLineSignature', testVerifyLineSignature],
     ['testVerifyWebhookSecret', testVerifyWebhookSecret],
-    ['testMemberValidity', testMemberValidity]
+    ['testMemberValidity', testMemberValidity],
+    ['testWelcomeMenu', testWelcomeMenu]
   ];
   const failed = [];
   for (const [name, fn] of tests) {

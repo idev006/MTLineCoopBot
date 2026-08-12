@@ -44,9 +44,9 @@
 
 | ฟีเจอร์ | รายละเอียด |
 |---------|-----------|
-| ควบคุมเมนูตามสิทธิ์ (Per-User Rich Menu) | Welcome Menu เป็น default; ผูกเมนูสมาชิกหลัง Activate; ยกเลิกเมื่อหมดอายุ (บทที่ 3.3.6) |
-| ตรวจสอบ X-Line-Signature | ยืนยันว่า Webhook มาจาก LINE จริงก่อนประมวลผล (บทที่ 3.6) |
-| Gate ตรวจสิทธิ์ใน EventHandler | ค้นหา member ด้วย `line_user_id` + ตรวจ `isActiveMember`/`hasRole` ก่อนตอบสนองทุกคำขอ |
+| ~~ควบคุมเมนูตามสิทธิ์ (Per-User Rich Menu)~~ | ✅ ทำแล้ว — Welcome Menu default + `linkMemberMenu` หลัง Activate + `unlinkMemberMenu` เมื่อหมดอายุ (บทที่ 3.3.6, การ์ด MT-07) |
+| ~~ตรวจสอบ X-Line-Signature~~ | ✅ ทำแล้ว — `verifyWebhookSecret` (URL token) + ฟังก์ชัน HMAC พร้อมใช้ (บทที่ 3.6, การ์ด MT-08) |
+| ~~Gate ตรวจสิทธิ์ใน EventHandler~~ | ✅ ทำแล้ว — `findByLineUserId` + `isActiveMember`/`hasRole` (บทที่ 3.7, การ์ด MT-09) |
 | ดึงข้อมูลสมาชิกจริงตามเมนู | คิวรี `t_member_mast` ด้วย `line_user_id` แล้วตอบยอดเงินฝาก/หนี้/ปันผลจริง |
 | ตรวจสอบวันหมดอายุสมาชิก | ตอบกลับเมื่อสมาชิกหมดอายุ / แจ้งเตือนก่อนหมดอายุ |
 | Renew / ต่ออายุสมาชิก | เพิ่มคำสั่งหรือ trigger ต่ออายุ `mem_exp_dt` |

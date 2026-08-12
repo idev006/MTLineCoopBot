@@ -84,6 +84,19 @@ LineBot.ActivationService = (() => {
         Logger.log('[Activation] Welcome flex message sent successfully for member: ' + member.mem_code);
       }
 
+      // ผูก Member Menu (Tab 1) ให้สมาชิกรายนี้ (Per-User Gating — บทที่ 3.3.6)
+      // ถ้าล้มเหลวไม่ทำให้ activate ล้มเหลว — สมาชิกยังเห็น Welcome อยู่จนกว่าจะผูกสำเร็จ
+      try {
+        if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
+          RichMenu.Gating.linkMemberMenu(lineUserId, token);
+          Logger.log('[Activation] Member menu linked for user: ' + lineUserId);
+        } else {
+          Logger.log('[Activation] RichMenu.Gating ไม่พร้อม — ข้ามการผูกเมนู');
+        }
+      } catch (linkError) {
+        Logger.log('[Activation] linkMemberMenu failed (ไม่บล็อก activate): ' + linkError);
+      }
+
       return {
         success: true,
         memberCode: member.mem_code,

@@ -94,6 +94,91 @@ RichMenu.ApiService = (() => {
   }
 
   /**
+   * ผูก Rich Menu ให้ผู้ใช้รายบุคคล (Per-User Rich Menu Gating — บทที่ 3.3.6)
+   * POST /v2/bot/user/{userId}/richmenu/{richMenuId}
+   * @param {string} userId - LINE userId
+   * @param {string} richMenuId
+   * @param {string} token
+   * @returns {boolean}
+   */
+  function linkUser(userId, richMenuId, token) {
+    const res = UrlFetchApp.fetch(`${API.BASE}/user/${userId}/richmenu/${richMenuId}`, {
+      method: 'post',
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    const status = res.getResponseCode();
+    Logger.log(`linkUser (${userId} -> ${richMenuId}): HTTP ${status} ${res.getContentText()}`);
+    if (status !== 200) {
+      throw new Error(`ผูก Rich Menu ไม่สำเร็จ: HTTP ${status} ${res.getContentText()}`);
+    }
+    return true;
+  }
+
+  /**
+   * ยกเลิกการผูก Rich Menu รายบุคคล — กลับไปใช้ default (Welcome Menu)
+   * DELETE /v2/bot/user/{userId}/richmenu
+   * @param {string} userId - LINE userId
+   * @param {string} token
+   * @returns {boolean}
+   */
+  function unlinkUser(userId, token) {
+    const res = UrlFetchApp.fetch(`${API.BASE}/user/${userId}/richmenu`, {
+      method: 'delete',
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    const status = res.getResponseCode();
+    Logger.log(`unlinkUser (${userId}): HTTP ${status} ${res.getContentText()}`);
+    if (status !== 200) {
+      throw new Error(`ยกเลิกการผูก Rich Menu ไม่สำเร็จ: HTTP ${status} ${res.getContentText()}`);
+    }
+    return true;
+  }
+
+  /**
+   * ดึง richMenuId จาก alias
+   * GET /v2/bot/richmenu/alias/{aliasId}
+   * @param {string} aliasId
+   * @param {string} token
+   * @returns {string}
+   */
+  function getRichMenuIdByAlias(aliasId, token) {
+    const res = UrlFetchApp.fetch(`${API.BASE}/alias/${aliasId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    const status = res.getResponseCode();
+    const body = res.getContentText();
+    if (status !== 200) {
+      throw new Error(`ไม่พบ Rich Menu จาก alias ${aliasId}: HTTP ${status} ${body}`);
+    }
+    const json = JSON.parse(body);
+    return json.richMenuId;
+  }
+
+  /**
+   * ตรวจสอบว่า Rich Menu ปัจจุบันของผู้ใช้คืออะไร (ใช้ยืนยันหลัง link/unlink)
+   * GET /v2/bot/user/{userId}/richmenu
+   * @param {string} userId - LINE userId
+   * @param {string} token
+   * @returns {string|null} richMenuId หรือ null (ยังไม่เคยผูก)
+   */
+  function getUserRichMenu(userId, token) {
+    const res = UrlFetchApp.fetch(`${API.BASE}/user/${userId}/richmenu`, {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    const status = res.getResponseCode();
+    if (status === 404) return null; // ยังไม่เคยผูก — ใช้ default อยู่
+    if (status !== 200) {
+      throw new Error(`ตรวจสอบ Rich Menu ของผู้ใช้ไม่สำเร็จ: HTTP ${status} ${res.getContentText()}`);
+    }
+    const json = JSON.parse(res.getContentText());
+    return json.richMenuId || null;
+  }
+
+  /**
    * ลบ Alias ทั้งหมด
    * @param {string} token
    */
@@ -219,6 +304,10 @@ RichMenu.ApiService = (() => {
     upsertAlias,
     setDefault,
     deleteAll,
-    checkStatus
+    checkStatus,
+    linkUser,
+    unlinkUser,
+    getRichMenuIdByAlias,
+    getUserRichMenu
   };
 })();

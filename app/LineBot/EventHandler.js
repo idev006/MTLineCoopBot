@@ -41,14 +41,54 @@ LineBot.EventHandler = (() => {
 
   /**
    * ตอบข้อความปฏิเสธเมื่อผู้ใช้ไม่มีสิทธิ์ใช้งานเมนู/คำสั่งของสมาชิก
+   * ถ้าเคยเป็นสมาชิกแต่ไม่ valid (หมดอายุ/ถูกเพิกถอน) → ยกเลิกเมนูสมาชิก
+   * ให้กลับไปเห็น Welcome Menu (Per-User Gating — บทที่ 3.3.6)
    * @param {string} replyToken
    * @param {string} token
+   * @param {string} lineUserId
    */
-  function replyUnauthorized(replyToken, token) {
+  function replyUnauthorized(replyToken, token, lineUserId) {
     const deps = getDependencies();
+
+    // ถ้าเคยถูกผูกเป็นสมาชิกแล้ว แต่ตอนนี้ไม่ valid → ยกเลิกการผูกเมนู (กลับไป Welcome)
+    if (lineUserId) {
+      try {
+        const member = LineBot.SheetService.findByLineUserId(lineUserId);
+        if (member && !LineBot.SheetService.isActiveMember(member)) {
+          if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
+            RichMenu.Gating.unlinkMemberMenu(lineUserId, token);
+            Logger.log(`[Gate] Unlinked member menu for expired/revoked user: ${lineUserId}`);
+          }
+        }
+      } catch (unlinkError) {
+        Logger.log(`[Gate] unlinkMemberMenu failed (ไม่บล็อก reply): ${unlinkError}`);
+      }
+    }
+
     deps.MessageService.reply(replyToken,
       'คุณยังไม่ได้รับสิทธิ์ใช้งานเมนูนี้ กรุณาลงทะเบียนเปิดสิทธิ์ด้วยรหัส activate ก่อน เช่น activate:ABC123',
       token);
+  }
+
+  /**
+   * รายการ item id ของ Welcome Menu (เมนูสาธารณะ — ไม่ต้องผ่าน Gate)
+   */
+  const WELCOME_ITEMS = ['welcome_activate', 'welcome_howto', 'welcome_contact', 'welcome_news'];
+
+  /**
+   * ตอบกลับเมนูสาธารณะ (Welcome Menu) — ใช้ได้โดยไม่ต้องเป็นสมาชิก
+   * @param {string} item
+   * @param {string} replyToken
+   * @param {string} token
+   * @returns {boolean} true ถ้าจัดการแล้ว
+   */
+  function handleWelcomeItem(item, replyToken, token) {
+    if (!WELCOME_ITEMS.includes(item)) return false;
+    const deps = getDependencies();
+    const text = deps.ReplyStore.get(item);
+    deps.MessageService.reply(replyToken, text, token);
+    Logger.log(`Welcome menu replied: ${item}`);
+    return true;
   }
 
   /**
@@ -75,9 +115,13 @@ LineBot.EventHandler = (() => {
     }
 
     if (params.action === 'menu_item') {
+      // Welcome Menu (เมนูสาธารณะ) — ไม่ต้องผ่าน Gate
+      if (handleWelcomeItem(params.item, replyToken, token)) {
+        return;
+      }
       // Gate: ต้องเป็นสมาชิกที่ valid ก่อนจึงจะใช้เมนูสมาชิกได้
       if (!getAuthorizedMember(event.source.userId)) {
-        replyUnauthorized(replyToken, token);
+        replyUnauthorized(replyToken, token, event.source.userId);
         return;
       }
       const caption = deps.ReplyStore.getCaption(params.item);
@@ -94,9 +138,13 @@ LineBot.EventHandler = (() => {
     // เช่น data เป็นแค่รหัสเมนูโดยตรง จึงรองรับ fallback ให้ตอบ Flex ได้เช่นกัน
     const fallbackItem = params.item || params.menu || params.action || data;
     if (fallbackItem && deps.ReplyStore.CAPTIONS[fallbackItem]) {
+      // Welcome Menu (เมนูสาธารณะ) — ไม่ต้องผ่าน Gate
+      if (handleWelcomeItem(fallbackItem, replyToken, token)) {
+        return;
+      }
       // Gate เช่นเดียวกับ menu_item — fallback ก็ต้องเป็นสมาชิกที่ valid
       if (!getAuthorizedMember(event.source.userId)) {
-        replyUnauthorized(replyToken, token);
+        replyUnauthorized(replyToken, token, event.source.userId);
         return;
       }
       const caption = deps.ReplyStore.getCaption(fallbackItem);

@@ -9,7 +9,6 @@
 
 ### ระยะที่ 2 — การควบคุมสิทธิ์และข้อมูลจริง
 
-- [ ] **[MT-07] Welcome Menu + Per-User Rich Menu Gating** — อ้างอิง: บทที่ 3.3.6 · เพิ่ม `buildWelcomeTab()`, `ApiService.linkUser/unlinkUser`, ตั้ง default
 - [ ] **[MT-10] ดึงข้อมูลจริงตามเมนู** — อ้างอิง: บทที่ 7 ระยะ 2 · ยอดเงินฝาก/หนี้/ปันผลจาก `t_member_mast`
 - [ ] **[MT-11] ตรวจสอบวันหมดอายุ** — ตอบกลับ/แจ้งเตือนเมื่อ `mem_exp_dt` ใกล้หมด
 - [ ] **[MT-12] Renew / ต่ออายุสมาชิก** — คำสั่ง/trigger ต่ออายุ `mem_exp_dt`
@@ -58,6 +57,7 @@
 - [x] **[MT-06b] เครื่องคำนวณสินเชื่อ Actual/365** — GitHub Pages (ยังรอรวมเข้ากับ LoanService เฟส 3)
 - [x] **[MT-08] ตรวจสอบความถูกต้องของ Webhook** — บทที่ 3.6, 5.5 · `Util.verifyWebhookSecret` + `Util.verifyLineSignature` + guard ใน `doPost` + test ใน Test.js · หมายเหตุ: Apps Script อ่าน header ไม่ได้ จึงใช้ `webhook_secret` ผูกท้าย URL (Issue #67764685)
 - [x] **[MT-09] Gate ตรวจสิทธิ์ใน EventHandler** — บทที่ 3.7, 6 TC-10 · `SheetService.findByLineUserId` + `getAuthorizedMember` (isActiveMember + บทบาท) ใน `EventHandler` ยกเว้น `activate:` + `testMemberValidity`
+- [x] **[MT-07] Welcome Menu + Per-User Rich Menu Gating** — อ้างอิง: บทที่ 3.3.6 · `MenuData.buildWelcomeTab()` (4 ปุ่ม: เปิดใช้งาน/วิธีใช้/ติดต่อ/ข่าวสาร) + `ApiService.linkUser`/`unlinkUser`/`getRichMenuIdByAlias`/`getUserRichMenu` + `RichMenu.Gating` (link หลัง Activate / unlink เมื่อไม่ valid) + `Deployer.deploy()` ตั้ง **Welcome เป็น default** + EventHandler ตอบ welcome items (ไม่ผ่าน Gate) + `testWelcomeMenu` (CI 6/6) · หมายเหตุ: ภาพ Welcome ใส่ File ID ใน `Config.IMAGE_FILE_IDS.WELCOME` (ว่าง = ข้ามอัปโหลด)
 - [x] **[MT-26] หมุน Channel Access Token (SEC)** — อ้างอิง: บทที่ 5.5.1 (Runbook), ch-02 R1 · token รั่วจาก initial commit (2026-08-12) → ลบออกจากโค้ด + **purge ประวัติ git (filter-repo)** + CI กันซ้ำ 2 ชั้น (regex + gitleaks ตรวจเต็มรูปแบบ) · **ยืนยันครบ 3 ข้อแล้ว:** ① `checkTokenHealth()` → HTTP 200 ② token เก่า Deactivate แล้ว ③ Executions แสดง `reply success: 200` · เพิ่ม `checkTokenHealth()` ใน Test.js ใช้ตรวจรายเดือน
   > ⚠️ **หมายเหตุ:** purge ประวัติลบ token ได้แค่จาก repo กลางเท่านั้น — **ผู้ที่ clone repo ไปก่อน purge (12 ส.ค. 2026) ยังมี token อยู่ในประวัติเก่าของตัวเอง** การหมุน token (ทำแล้วในการ์ดนี้) คือทางแก้อันเดียวที่แก้การเปิดเผยได้จริง
 
@@ -72,3 +72,4 @@
 | 2026-08-12 | MT-09 | To Do → In Progress → Done | Gate ตรวจสิทธิ์ (findByLineUserId + isActiveMember + บทบาท); ALL TESTS PASS; DoD ครบ 6 ข้อ |
 | 2026-08-12 | MT-26 | → In Progress | หมุน token (SEC) — ตรวจพบ token hardcode ใน initial commit → ลบออกจากโค้ด + CI secret scan 2 ชั้นกันซ้ำ (regex + gitleaks) · รอผู้ดูแลหมุน token ใน LINE Console |
 | 2026-08-12 | MT-26 | In Progress → Done | ยืนยันครบ 3 ข้อ (checkTokenHealth HTTP 200 / token เก่า Deactivate / Executions 200) · เพิ่ม purge ประวัติ git (filter-repo) + checkTokenHealth() · DoD ครบ |
+| 2026-08-12 | MT-07 | → In Progress → Done | Welcome Menu + Per-User Gating: buildWelcomeTab + linkUser/unlinkUser + Gating (link หลัง Activate / unlink เมื่อไม่ valid) + Welcome เป็น default · testWelcomeMenu + gating logic (4 กรณี) ผ่าน · ALL TESTS PASS 6/6 · DoD ครบ |

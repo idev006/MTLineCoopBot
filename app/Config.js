@@ -16,6 +16,7 @@ const Config = (() => {
   };
 
   const ALIAS = {
+    WELCOME: 'alias-welcome',
     TAB_1: 'alias-tab-1-profile',
     TAB_2: 'alias-tab-2-loan',
     TAB_3: 'alias-tab-3-news',
@@ -25,6 +26,8 @@ const Config = (() => {
 
   // Google Drive File IDs สำหรับภาพ Rich Menu แต่ละแท็บ
   const IMAGE_FILE_IDS = {
+    // Welcome Menu (ค่า default — ใส่ File ID ของภาพ Welcome เมื่อมี, ว่าง = ไม่อัปโหลดภาพ)
+    WELCOME: '',
     // Tab 1: ข้อมูลส่วนตัว - https://drive.google.com/file/d/17hJFYQ_363NgPVqdSkqJpXmbwjkGsDXy/view
     TAB_1: '17hJFYQ_363NgPVqdSkqJpXmbwjkGsDXy',
     // Tab 2: เงินกู้ & สวัสดิการ - https://drive.google.com/file/d/1REoevCRTD9VOOWLUbDbigM_amfJV1RqY/view

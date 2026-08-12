@@ -23,9 +23,10 @@ MTLineCoopBot/
     │   ├── ReplyStore.js        # ข้อความ/ชื่อเมนูของแต่ละ item
     │   └── SheetService.js      # ติดต่อ Google Sheets
     ├── RichMenu/                # การจัดการ Rich Menu
-    │   ├── ApiService.js        # เรียก LINE Rich Menu API
-    │   ├── Deployer.js          # ขั้นตอน deploy 5 แท็บ
-    │   └── MenuData.js          # โครงสร้าง/พิกัดเมนู 5 แท็บ
+    │   ├── ApiService.js        # เรียก LINE Rich Menu API (รวม linkUser/unlinkUser)
+    │   ├── Deployer.js          # ขั้นตอน deploy 5 แท็บ + Welcome Menu (default)
+    │   ├── Gating.js            # Per-User Gating: ผูก/ยกเลิกเมนูรายบุคคล (บทที่ 3.3.6)
+    │   └── MenuData.js          # โครงสร้าง/พิกัดเมนู 5 แท็บ + Welcome
     ├── assets/line_menu/        # ภาพ Rich Menu (tab1-5 .png/.jpg)
     └── docs/                    # เอกสารโครงการ (เล่มนี้)
 ```
@@ -130,19 +131,28 @@ Entry point ของ LINE webhook
 
 ### 4.2.8 `RichMenu/` — โมดูลจัดการ Rich Menu
 
-**`MenuData.js`** — นิยามโครงสร้างเมนู 5 แท็บ
+**`MenuData.js`** — นิยามโครงสร้างเมนู 5 แท็บ + Welcome Menu
 - พิกัดแท็บ (`TAB_1_COORDS` … `TAB_5_COORDS`) และพิกัดเมนูย่อยแต่ละแท็บ
 - ตัวช่วยสร้าง action: `postback()`, `uriAction()`, `switchTab()`, `stayTab()`
 - `calcBounds(coords)` — แปลง polygon เป็น `{x, y, width, height}`
 - `buildTab1()` … `buildTab5()` — สร้าง payload รายแท็บ
+- `buildWelcomeTab()` — สร้าง Welcome Menu (default) 4 ปุ่ม: เปิดใช้งาน / วิธีใช้ / ติดต่อ / ข่าวสาร
 - `listItemIds()` — รวบรวม item id ของเมนูย่อย (postback) เพื่อใช้ตรวจสัญญา Item ID กับ ReplyStore
+  (หมายเหตุ: welcome items `welcome_*` ไม่นับรวม — เป็นเมนูสาธารณะ)
 
 **`ApiService.js`** — เรียก LINE Rich Menu API
 - `create(payload, token)` / `uploadImage(id, driveFileId, token)` / `upsertAlias(aliasId, richMenuId, token)` / `setDefault(richMenuId, token)`
+- `linkUser(userId, richMenuId, token)` / `unlinkUser(userId, token)` — ผูก/ยกเลิกเมนูรายบุคคล (Per-User Gating)
+- `getRichMenuIdByAlias(aliasId, token)` / `getUserRichMenu(userId, token)` — หา id / ตรวจเมนูปัจจุบัน
 - `deleteAll(token)` / `checkStatus(token)` — ล้างทั้งหมด / ตรวจสถานะ
 
+**`Gating.js`** — Per-User Rich Menu Gating (บทที่ 3.3.6)
+- `linkMemberMenu(lineUserId, token)` — หา Tab 1 id ผ่าน alias แล้วผูกให้สมาชิก (เรียกหลัง Activate สำเร็จ)
+- `unlinkMemberMenu(lineUserId, token)` — ยกเลิกผูก → กลับไป Welcome (เมื่อหมดอายุ/ถูกเพิกถอน)
+- `hasMemberMenu(lineUserId, token)` — ตรวจว่าเมนูปัจจุบันเป็นเมนูสมาชิกหรือไม่
+
 **`Deployer.js`** — กระบวนการ deploy ทั้งหมด
-- `deploy()` — ลบของเก่า → สร้าง 5 เมนู → อัปโหลดภาพ → สร้าง alias → ตั้ง default
+- `deploy()` — ลบของเก่า → สร้าง Welcome + 5 เมนู → อัปโหลดภาพ → สร้าง alias → **ตั้ง Welcome เป็น default**
 - `main()` — ฟังก์ชันที่กดรันใน Apps Script
 - `checkRichMenuStatus()` — ตรวจรายงานสถานะ
 

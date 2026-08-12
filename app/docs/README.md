@@ -72,12 +72,13 @@
 |---------|-------|--------|
 | Rich Menu 5 แท็บ + Alias + Deploy | ✅ ทำแล้ว | บทที่ 3.3, 5.6 |
 | Flex Message ตอบกลับเมนู (item-id ตรงกันทั้ง 26 เมนู) | ✅ ทำแล้ว | บทที่ 3.4, 4.2.6 |
+| Welcome Menu (4 ปุ่ม) + ตอบกลับเมนูสาธารณะ (`welcome_*`) | ✅ ทำแล้ว | บทที่ 3.3.6, 4.2.8 |
 | ระบบ Activate สมาชิก (`activate:CODE`) | ✅ ทำแล้ว | บทที่ 2.3.3 |
 | DataDict SSOT (13 คอลัมน์ รวม `mem_role`) | ✅ ทำแล้ว | บทที่ 3.2 |
 | `isActiveMember` / `hasRole` / `parseDate` | ✅ ทำแล้ว | บทที่ 4.2.6 |
 | ฟังก์ชันทดสอบสัญญา (`Test.js`: `verifyMenuContract` / `verifyThaiCaptions` / `MenuData.listItemIds`) | ✅ ทำแล้ว | บทที่ 3.3.7, TC-12 |
 | เครื่องคำนวณสินเชื่อ Actual/365 (GitHub Pages) | ✅ ทำแล้ว | บทที่ 2.3.4 |
-| Welcome Menu + Per-User Rich Menu Gating (link/unlink) | 📌 ออกแบบไว้ — เฟส 2 | บทที่ 3.3.6 |
+| Welcome Menu + Per-User Rich Menu Gating (link/unlink) | ✅ ทำแล้ว | บทที่ 3.3.6, 5.6 |
 | ตรวจสอบ Webhook (`webhook_secret` token + ฟังก์ชัน HMAC-SHA256) | ✅ ทำแล้ว | บทที่ 3.6, 5.5 |
 | หมุน Channel Access Token (SEC) — หมุนแล้ว + purge ประวัติ git + CI กันซ้ำ (regex + gitleaks) | ✅ ทำแล้ว | บทที่ 5.5.1, KANBAN MT-26 |
 | `checkTokenHealth()` — ตรวจสุขภาพ token ผ่าน LINE Get Bot Info API (รันมือใน Apps Script Editor) | ✅ ทำแล้ว | บทที่ 5.5.1, 7.1.3 |

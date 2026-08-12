@@ -175,6 +175,52 @@ function checkTokenHealth() {
 }
 
 /**
+ * ทดสอบ Welcome Menu (Per-User Gating — บทที่ 3.3.6):
+ * โครงสร้างถูกต้อง + ทุก item id มี caption และข้อความตอบกลับใน ReplyStore
+ * @returns {number} จำนวนเมนู welcome ที่ตรวจผ่าน
+ */
+function testWelcomeMenu() {
+  const w = RichMenu.MenuData.buildWelcomeTab();
+  if (!w || w.size.width !== 2500 || w.size.height !== 1686) {
+    throw new Error('testWelcomeMenu: ขนาด Welcome Menu ไม่ถูกต้อง');
+  }
+  if (w.name !== 'RichMenu-Coop-Welcome') {
+    throw new Error('testWelcomeMenu: ชื่อ Welcome Menu ไม่ถูกต้อง: ' + w.name);
+  }
+  if (!w.areas || w.areas.length === 0) {
+    throw new Error('testWelcomeMenu: Welcome Menu ไม่มี areas');
+  }
+
+  // รวบรวม item id จาก postback ใน welcome menu
+  const ids = [];
+  w.areas.forEach(area => {
+    const action = area.action;
+    const data = action && action.data ? String(action.data) : '';
+    const m = data.match(/item=([^&]+)/);
+    if (m) ids.push(m[1]);
+  });
+  if (ids.length === 0) {
+    throw new Error('testWelcomeMenu: ไม่พบ postback item ใน Welcome Menu');
+  }
+
+  // ทุก item ต้องมี caption + ข้อความตอบกลับ
+  const missingCaption = ids.filter(id => !LineBot.ReplyStore.CAPTIONS[id]);
+  if (missingCaption.length > 0) {
+    throw new Error('testWelcomeMenu: ขาด CAPTIONS: ' + missingCaption.join(', '));
+  }
+  const missingReply = ids.filter(id => {
+    const text = LineBot.ReplyStore.get(id);
+    return !text || text === 'ไม่พบข้อมูลสำหรับรายการนี้';
+  });
+  if (missingReply.length > 0) {
+    throw new Error('testWelcomeMenu: ขาด reply text: ' + missingReply.join(', '));
+  }
+
+  Logger.log('testWelcomeMenu OK — ' + ids.length + ' เมนู (โครงสร้าง + captions + replies)');
+  return ids.length;
+}
+
+/**
  * ตรวจ caption เป็นภาษาไทย (ไม่มี id ภาษาอังกฤษหลุดไปแสดงแก่สมาชิก)
  * @returns {number} จำนวนเมนูที่ caption เป็นภาษาไทย
  */
