@@ -536,11 +536,15 @@ function testLoanReminders() {
   if (summary.skipped !== 1) throw new Error('testLoanReminders: skipped ควร 1');
   if (summary.pushed !== 1) throw new Error('testLoanReminders: pushed ควร 1 (' + summary.pushed + ')');
 
-  // เตือนเฉพาะ LN-001 (M001) — ข้อความรายบุคคล
+  // เตือนเฉพาะ LN-001 (M001) — Flex Card รายบุคคล (การ์ด MT-36)
   if (sent.length !== 1) throw new Error('testLoanReminders: ควร push 1 ครั้ง');
   if (sent[0].to !== 'U11111111111111111111111111111111') throw new Error('testLoanReminders: ต้อง push ถึง M001');
-  if (!sent[0].text.includes('LN-001') || !sent[0].text.includes('คุณนาย สมชาย ใจดี') || !sent[0].text.includes('อีก 8 วัน')) {
-    throw new Error('testLoanReminders: ข้อความต้องเป็นรายบุคคล (ชื่อ + สัญญา + วันเหลือ)');
+  const cardJson = JSON.stringify(sent[0].text);
+  if (!sent[0].text || sent[0].text.type !== 'flex' || !sent[0].text.altText.includes('คุณนาย สมชาย ใจดี')) {
+    throw new Error('testLoanReminders: ต้อง push Flex Card (loanReminderCard)');
+  }
+  if (!cardJson.includes('LN-001') || !cardJson.includes('45,000.00 บาท') || !cardJson.includes('อีก 8 วัน')) {
+    throw new Error('testLoanReminders: การ์ดต้องมีข้อมูลรายบุคคล (ชื่อ + สัญญา + ยอด + วันเหลือ)');
   }
 
   // audit trail: reminded (M001/LN-001) + skipped (M002/LN-003)
@@ -689,8 +693,13 @@ function testNoticeBroadcast() {
   if (summary.targets !== 3) throw new Error('testNoticeBroadcast: targets ควร 3 (' + summary.targets + ')');
   if (summary.pushed !== 3) throw new Error('testNoticeBroadcast: pushed ควร 3 (' + summary.pushed + ')');
 
-  // ทุก active member ได้รับประกาศ NTC-0002 (มีหัวข้อ) · inactive ไม่ได้รับ
-  if (!sent.every(s => s.text.includes('ประชุมใหญ่สามัญ'))) throw new Error('testNoticeBroadcast: ข้อความต้องเป็น NTC-0002');
+  // ทุก active member ได้รับประกาศ NTC-0002 — Flex Card (noticeCard — การ์ด MT-36) · inactive ไม่ได้รับ
+  if (!sent.every(s => s.text && s.text.type === 'flex')) throw new Error('testNoticeBroadcast: ต้อง push Flex Card (noticeCard)');
+  if (!sent.every(s => s.text.altText.includes('ประชุมใหญ่สามัญ'))) throw new Error('testNoticeBroadcast: การ์ดต้องเป็น NTC-0002');
+  if (!JSON.stringify(sent[0].text).includes('ประชุมวันที่ 20 ส.ค. 2569') ||
+      !JSON.stringify(sent[0].text).includes('2026-08-06 09:00:00')) {
+    throw new Error('testNoticeBroadcast: การ์ดต้องมีเนื้อหา + ประกาศเมื่อ');
+  }
   if (!sent.some(s => s.to === 'U11111111111111111111111111111111')) throw new Error('testNoticeBroadcast: M001 ไม่ได้รับประกาศ');
   if (!sent.some(s => s.to === 'U22222222222222222222222222222222')) throw new Error('testNoticeBroadcast: M002 ไม่ได้รับประกาศ');
   if (!sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testNoticeBroadcast: M003 ไม่ได้รับประกาศ');
@@ -713,6 +722,66 @@ function testNoticeBroadcast() {
   if (summary2.pushed !== 0) throw new Error('testNoticeBroadcast: รอบ 2 pushed ควร 0');
 
   Logger.log('testNoticeBroadcast OK — broadcast + mark sent + ไม่ส่งซ้ำ (Fake Sheets + fake sender)');
+  return true;
+}
+
+/**
+ * ทดสอบ Flex Card ประกาศ/เตือนชำระ (การ์ด MT-36):
+ * noticeCard (📢 + title + message + ประกาศเมื่อ) · loanReminderCard (💳 + ชื่อ + สัญญา + ยอด + ครบกำหนด) —
+ * ตามมาตรฐาน 3.4 (altText ไทย · สีจาก FlexTheme · โครงสร้างจาก component library)
+ * @returns {boolean}
+ */
+function testNoticeLoanCards() {
+  const FB = LineBot.FlexBuilder;
+  const T = LineBot.FlexTheme;
+
+  // 1) noticeCard — ข้อมูลครบ (หัวข้อ/เนื้อหา/ประกาศเมื่อ)
+  const nc = FB.noticeCard({
+    notice_id: 'NTC-0002',
+    title: 'ประชุมใหญ่สามัญ',
+    message: 'ประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น.',
+    published_dt: '2026-08-06 09:00:00'
+  });
+  if (nc.type !== 'flex' || !nc.altText.includes('ประชุมใหญ่สามัญ')) {
+    throw new Error('testNoticeLoanCards: noticeCard altText ต้องมีหัวข้อ');
+  }
+  if (nc.contents.header.contents[0].text !== '📢 ประกาศสหกรณ์' ||
+      nc.contents.header.backgroundColor !== T.brandColor) {
+    throw new Error('testNoticeLoanCards: noticeCard header ผิด');
+  }
+  const ncJson = JSON.stringify(nc);
+  for (const s of ['ประชุมใหญ่สามัญ', 'ประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น.', 'ประกาศเมื่อ', '2026-08-06 09:00:00']) {
+    if (!ncJson.includes(s)) throw new Error('testNoticeLoanCards: noticeCard ไม่มีข้อมูล "' + s + '"');
+  }
+  if (!nc.contents.footer || nc.contents.footer.contents[0].action.data !== 'action=ack_menu') {
+    throw new Error('testNoticeLoanCards: noticeCard footer ผิด');
+  }
+
+  // 2) loanReminderCard — ข้อมูลรายบุคคล (ชื่อ/สัญญา/ยอด/ครบกำหนด + วันเหลือ)
+  const lr = FB.loanReminderCard(
+    { loan_no: 'LN-001', outstanding: 45000, due_dt: '2026-08-20' },
+    { mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี' }, 8);
+  if (lr.type !== 'flex' || !lr.altText.includes('คุณนาย สมชาย ใจดี')) {
+    throw new Error('testNoticeLoanCards: loanReminderCard altText ต้องมีชื่อ');
+  }
+  if (lr.contents.header.contents[0].text !== '💳 เตือนชำระหนี้') {
+    throw new Error('testNoticeLoanCards: loanReminderCard header ผิด');
+  }
+  const lrJson = JSON.stringify(lr);
+  for (const s of ['คุณนาย สมชาย ใจดี', 'LN-001', '45,000.00 บาท', '2026-08-20 (อีก 8 วัน)', 'กรุณาชำระภายในกำหนด']) {
+    if (!lrJson.includes(s)) throw new Error('testNoticeLoanCards: loanReminderCard ไม่มีข้อมูล "' + s + '"');
+  }
+  if (!lr.contents.footer || lr.contents.footer.contents[0].action.data !== 'action=ack_menu') {
+    throw new Error('testNoticeLoanCards: loanReminderCard footer ผิด');
+  }
+
+  // 3) สีจาก FlexTheme (ไม่มี hex hardcode — scan ระดับไฟล์ใน CI แล้ว + ฟังก์ชันตรวจ)
+  const src = [FB.noticeCard, FB.loanReminderCard].map(f => f.toString()).join('\n');
+  if (/#[0-9A-Fa-f]{6}/.test(src)) {
+    throw new Error('testNoticeLoanCards: ฟังก์ชันต้องไม่ hardcode สี hex (ใช้ FlexTheme)');
+  }
+
+  Logger.log('testNoticeLoanCards OK — noticeCard + loanReminderCard ตามมาตรฐาน 3.4 (FlexTheme + component library)');
   return true;
 }
 
@@ -1809,7 +1878,7 @@ function testFlexComponents() {
   const src = [FB.text, FB.button, FB.separator, FB.labelValueRow, FB.statusBadge,
     FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.buttonRow, FB.bubbleFrame,
     FB.menuClicked, FB.welcomeMember, FB.messageBox, FB.profileCard, FB.financeCard,
-    FB.alertCard, FB.confirmCard]
+    FB.alertCard, FB.confirmCard, FB.noticeCard, FB.loanReminderCard]
     .map(f => f.toString()).join('\n');
   if (/#[0-9A-Fa-f]{6}/.test(src)) {
     throw new Error('testFlexComponents: ฟังก์ชัน component ต้องไม่ hardcode สี hex (ใช้ FlexTheme)');

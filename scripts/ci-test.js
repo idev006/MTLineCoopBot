@@ -181,6 +181,7 @@ const runner = `
     ['testNoticeBroadcast', testNoticeBroadcast],
     ['testLoanRules', testLoanRules],
     ['testLoanReminders', testLoanReminders],
+    ['testNoticeLoanCards', testNoticeLoanCards],
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator],
     ['testFlexComponents', testFlexComponents],

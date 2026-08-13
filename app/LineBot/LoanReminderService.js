@@ -9,6 +9,7 @@
  * - setupReminderTrigger() — สร้าง Time-driven Trigger รายวัน
  *
  * DI: opts.repo / opts.sender / opts.now / opts.reminderDays / opts.builder / opts.logger
+ * ค่า default builder = FlexBuilder.loanReminderCard (Flex Card รายบุคคล — การ์ด MT-36)
  * ต่างจาก broadcast ประกาศ: ข้อความเป็นรายบุคคล (ไม่ใช่ข้อความเดียวถึงทุกคน) และ
  * audit trail ทุกสัญญาที่ถึงรอบเตือน (reminded / skipped — ไม่มี userId หรือไม่ active)
  */
@@ -29,8 +30,8 @@ LineBot.LoanReminderService = (() => {
     const repo = o.repo || Data.MemberRepository.getRepository();
     const now = o.now || new Date();
     const reminderDays = o.reminderDays !== undefined ? o.reminderDays : Config.get().PAYMENT_REMINDER_DAYS;
-    const sender = o.sender || function (to, text, tk) { return LineBot.MessageService.push(to, text, tk); };
-    const builder = o.builder || Core.LoanRules.buildLoanReminderText;
+    const sender = o.sender || function (to, msg, tk) { return LineBot.MessageService.pushFlex(to, msg, tk); };
+    const builder = o.builder || LineBot.FlexBuilder.loanReminderCard;
     const logger = o.logger || function (entry) { return repo.logReminder(entry); };
 
     const loans = repo.listLoans();

@@ -223,6 +223,18 @@
 | ผลที่คาดหวัง | 1–2. alertCard ระดับถูกต้อง (สี/ไอคอนจาก FlexTheme) 3. confirmCard มีปุ่ม [ยกเลิก] [ยืนยันต่ออายุ] + `mem_exp_dt` ยังไม่เปลี่ยน 4. `mem_exp_dt` ขยาย +1 ปี + alertCard เขียว 5. alertCard แดง "ไม่พบรหัสต่ออายุนี้ในระบบ" 6. ข้อความ "ยกเลิกการต่ออายุสมาชิกแล้ว" 7. CI: `PASS testAlertConfirmCards` + `PASS testActivateViaApi` |
 | ผ่าน/ไม่ผ่าน | ☐ |
 
+### 6.2.22 TC-22: Flex Card ประกาศ/เตือนชำระ (การ์ด MT-36)
+
+> **รันได้กับโค้ดปัจจุบัน** — เป็นการทดสอบใน CI (`testNoticeLoanCards` + `testNoticeBroadcast` + `testLoanReminders`); สำหรับมือตรวจพฤติกรรมผู้ใช้:
+
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| วัตถุประสงค์ | ยืนยันว่าประกาศจาก `t_notice` และเตือนชำระจาก `t_loan_acct` ถูก push เป็น **Flex Card** (`noticeCard` / `loanReminderCard`) ตามมาตรฐานบท 3.4 — ข้อมูลเหมือนข้อความ text เดิม |
+| ข้อมูลตั้งต้น | ประกาศที่พร้อมส่ง (`status='published'` + ยังไม่มี `sent_dt`) · สัญญากู้ `due_dt` ภายใน `PAYMENT_REMINDER_DAYS` (14 วัน) ของสมาชิกที่ activate แล้ว |
+| ขั้นตอน | 1. รัน `runNoticeBroadcast` (หรือรอ trigger รายวัน) → สมาชิก active ได้รับ **การ์ด 📢** 2. รัน `runLoanReminders` (หรือรอ trigger) → สมาชิกที่สัญญาถึงรอบได้รับ **การ์ด 💳** 3. ตรวจ `t_notice` ถูก mark `sent` · `t_reminder_log` ถูกบันทึก 4. (CI) รัน `testNoticeLoanCards`/`testNoticeBroadcast`/`testLoanReminders` |
+| ผลที่คาดหวัง | 1. การ์ดประกาศ: header "📢 ประกาศสหกรณ์" + หัวข้อ/เนื้อหา/ประกาศเมื่อ (ข้อมูลเดียวกับ `buildNoticeText`) 2. การ์ดเตือนชำระ: header "💳 เตือนชำระหนี้" + ชื่อสมาชิก/สัญญา/ยอดคงค้าง/ครบกำหนด+วันเหลือ (ข้อมูลเดียวกับ `buildLoanReminderText`) 3. audit trail เหมือนเดิม 4. CI: `PASS testNoticeLoanCards` + `PASS testNoticeBroadcast` + `PASS testLoanReminders` |
+| ผ่าน/ไม่ผ่าน | ☐ |
+
 ## 6.3 การตรวจสอบ Log (Log Inspection)
 
 Log ทั้งหมดอยู่ใน **Apps Script Editor → Executions** (หรือ Stackdriver Logging)
@@ -297,4 +309,4 @@ reply success: 200 {}
 
 ## สรุปท้ายบท
 
-บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 21 กรณี (TC-01–21) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต
+บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 22 กรณี (TC-01–22) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต

@@ -86,10 +86,38 @@ LineBot.MessageService = (() => {
     return { ok: statusCode === 200, statusCode, body };
   }
 
+  /**
+   * ส่ง Flex Message Push ถึงผู้ใช้ (การ์ด MT-36 — ประกาศ/เตือนชำระเป็น Flex Card)
+   * ต่างจาก push (text) — ส่ง flexMessage ที่สร้างจาก LineBot.FlexBuilder
+   * @param {string} to - LINE userId
+   * @param {Object} flexMessage - flex message object (จาก FlexBuilder)
+   * @param {string} token
+   * @returns {{ok: boolean, statusCode: number, body: string}}
+   */
+  function pushFlex(to, flexMessage, token) {
+    if (!to) return { ok: false, statusCode: 0, body: 'missing userId' };
+    const res = UrlFetchApp.fetch(PUSH_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: `Bearer ${token}` },
+      payload: JSON.stringify({ to, messages: [flexMessage] }),
+      muteHttpExceptions: true
+    });
+    const statusCode = res.getResponseCode();
+    const body = res.getContentText();
+    if (statusCode !== 200) {
+      Logger.log(`pushFlex error: ${statusCode} ${body}`);
+    } else {
+      Logger.log(`pushFlex success: ${statusCode} ${body}`);
+    }
+    return { ok: statusCode === 200, statusCode, body };
+  }
+
   return {
     reply,
     replyFlex,
     send,
-    push
+    push,
+    pushFlex
   };
 })();

@@ -7,7 +7,8 @@
  * - setupNoticeTrigger()  — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor)
  *
  * DI สำหรับทดสอบ (node): opts.repo / opts.sender / opts.now / opts.builder
- * ค่า default = repository จริง / MessageService.push / เวลาจริง / Core.NoticeRules
+ * ค่า default = repository จริง / MessageService.pushFlex / เวลาจริง /
+ * FlexBuilder.noticeCard (Flex Card — การ์ด MT-36)
  *
  * ⚠️ ใช้ Push API (ต่างจาก Reply) — ต้องใช้ userId ไม่ใช่ replyToken
  * สมาชิกที่ไม่มี line_user_id (ยังไม่ activate) จะถูกข้าม — เป็นกลุ่มเป้าหมายที่
@@ -29,8 +30,8 @@ LineBot.NoticeService = (() => {
     const o = opts || {};
     const repo = o.repo || Data.MemberRepository.getRepository();
     const now = o.now || new Date();
-    const sender = o.sender || function (to, text, tk) { return LineBot.MessageService.push(to, text, tk); };
-    const builder = o.builder || Core.NoticeRules.buildNoticeText;
+    const sender = o.sender || function (to, msg, tk) { return LineBot.MessageService.pushFlex(to, msg, tk); };
+    const builder = o.builder || LineBot.FlexBuilder.noticeCard;
 
     const notices = repo.listNotices();
     const pending = Core.NoticeRules.getPendingNotices(notices, now);

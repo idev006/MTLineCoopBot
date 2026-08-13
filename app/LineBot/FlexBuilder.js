@@ -350,6 +350,72 @@ LineBot.FlexBuilder = (() => {
   }
 
   /**
+   * สร้าง Flex Card ประกาศ/ข่าวสาร (การ์ด MT-36 — แทน buildNoticeText)
+   * ข้อมูลจาก t_notice: title + message + published_dt
+   * @param {Object} notice - { title, message, published_dt }
+   * @returns {Object}
+   */
+  function noticeCard(notice) {
+    const n = notice || {};
+    const body = [];
+    if (n.title) {
+      body.push(text(n.title, { weight: 'bold', size: 'lg', wrap: true, color: FlexTheme().textPrimary, align: 'center' }));
+    }
+    if (n.message) {
+      body.push(text(n.message, { size: 'sm', wrap: true, color: FlexTheme().textSecondary, margin: 'md' }));
+    }
+    if (n.published_dt) {
+      body.push(separator('lg'));
+      body.push(infoBox([labelValueRow('ประกาศเมื่อ', n.published_dt)]));
+    }
+    return {
+      type: 'flex',
+      altText: `📢 ประกาศสหกรณ์${n.title ? ' — ' + n.title : ''}`,
+      contents: bubbleFrame({
+        header: header('📢 ประกาศสหกรณ์', { align: 'center' }),
+        body: bodyBox(body),
+        footer: footerButton('ตกลง', 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
+   * สร้าง Flex Card เตือนชำระหนี้รายบุคคล (การ์ด MT-36 — แทน buildLoanReminderText)
+   * ข้อมูลจาก t_loan_acct + t_member_mast: ชื่อสมาชิก + สัญญา + ยอดคงค้าง + ครบกำหนด
+   * @param {Object} loan - { loan_no, outstanding, due_dt }
+   * @param {Object} member - { mem_title, mem_fname, mem_lname }
+   * @param {number} daysLeft - จำนวนวันเหลือถึงกำหนด
+   * @returns {Object}
+   */
+  function loanReminderCard(loan, member, daysLeft) {
+    const l = loan || {};
+    const name = [member && member.mem_title, member && member.mem_fname, member && member.mem_lname]
+      .filter(Boolean).join(' ') || 'สมาชิก';
+
+    const rows = [];
+    if (l.loan_no) rows.push(labelValueRow('สัญญา', l.loan_no));
+    if (hasValue(l.outstanding)) rows.push(labelValueRow('ยอดคงค้าง', money(l.outstanding)));
+    if (l.due_dt) rows.push(labelValueRow('ครบกำหนด', `${l.due_dt} (อีก ${daysLeft} วัน)`));
+
+    return {
+      type: 'flex',
+      altText: `💳 เตือนชำระหนี้ — คุณ${name}`,
+      contents: bubbleFrame({
+        header: header('💳 เตือนชำระหนี้', { align: 'center' }),
+        body: bodyBox([
+          text(`คุณ${name}`, { weight: 'bold', size: 'lg', wrap: true, color: FlexTheme().textPrimary, align: 'center' }),
+          infoBox(rows),
+          separator('lg'),
+          text('กรุณาชำระภายในกำหนด เพื่อรักษาเครดิตการกู้ยืม — ติดต่อสหกรณ์หากมีข้อสงสัย', {
+            size: 'xs', wrap: true, color: FlexTheme().textSecondary
+          })
+        ]),
+        footer: footerButton('ตกลง', 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
    * สร้าง Flex Card แสดงโปรไฟล์สมาชิก (การ์ด MT-34 — แทนข้อความ text)
    * ข้อมูลเหมือน buildProfileText: ชื่อ/รหัส/บทบาท/ตำแหน่ง(+คะแนน)/คะแนนสมาชิก/
    * คะแนนความดี/เงินกู้คงค้าง/เงินหุ้น/สถานะ/สิทธิ์ใช้งาน (+คำเตือนหมดอายุถ้ามี)
@@ -569,6 +635,8 @@ LineBot.FlexBuilder = (() => {
     financeCard,
     alertCard,
     confirmCard,
+    noticeCard,
+    loanReminderCard,
     // Atoms
     text,
     button,

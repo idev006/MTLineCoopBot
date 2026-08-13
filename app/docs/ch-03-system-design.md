@@ -69,7 +69,7 @@
 { "ok": false, "error": { "code": "MEMBER_INVALID", "message": "..." } }
 ```
 
-> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (32/32) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
+> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (33/33) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
 
 **การยืนยันตัวตนรายช่องทาง (Per-Request Auth):**
 
@@ -449,7 +449,7 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 |-----|--------|-----------|---------|
 | **1. Atoms** — องค์ประกอบย่อยที่สุดของ LINE Flex | `text()` · `button()` · `separator()` · `labelValueRow(label, value)` · `statusBadge(status)` | ทุกข้อความ / ปุ่ม / เส้นคั่น / แถวข้อมูล / ป้ายสถานะ |
 | **2. Molecules** — กล่อง/ส่วนประกอบที่รวม atoms | `header(title, opts?)` · `bodyBox(contents, opts?)` · `infoBox(rows, opts?)` · `footerButton(label, data, opts?)` · `buttonRow(buttons, opts?)` (ปุ่มแนวนอนหลายปุ่ม) · **`bubbleFrame({header, body, footer, size})`** (ประกอบส่วนต่าง ๆ เป็น bubble) | โครงสร้าง header/body/footer ของการ์ดทุกใบ |
-| **3. Templates** — การ์ดสำเร็จรูปตาม use case | `menuClicked(caption)` · `welcomeMember(member)` · `messageBox(options)` · `profileCard(member, {warning})` · `financeCard(data)` · **`alertCard({level, title, message})`** (success ✅ / warning ⚠️ / error ❌) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก) | ตอบเมนู · ต้อนรับ activate · กล่องข้อความ · โปรไฟล์ · การเงิน · แจ้งเตือน/ผลลัพธ์ · ยืนยันการกระทำ (ต่ออายุ) |
+| **3. Templates** — การ์ดสำเร็จรูปตาม use case | `menuClicked(caption)` · `welcomeMember(member)` · `messageBox(options)` · `profileCard(member, {warning})` · `financeCard(data)` · **`alertCard({level, title, message})`** (success ✅ / warning ⚠️ / error ❌) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก) · **`noticeCard(notice)`** (ประกาศ 📢) · **`loanReminderCard(loan, member, daysLeft)`** (เตือนชำระ 💳) | ตอบเมนู · ต้อนรับ activate · กล่องข้อความ · โปรไฟล์ · การเงิน · แจ้งเตือน/ผลลัพธ์ · ยืนยันการกระทำ (ต่ออายุ) · ประกาศ · เตือนชำระหนี้ |
 
 **หลักการจัดชั้น:** ชั้นต่ำ (atoms) ไม่รู้จักชั้นบน · ชั้นสูง (templates) ประกอบจากชั้นล่างเท่านั้น — เพิ่มการ์ดใหม่ = ประกอบจาก atoms/molecules ที่มี (ไม่สร้างโครงสร้างซ้ำ)
 
@@ -458,7 +458,7 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 | ประเภท | กฎ | ตัวอย่าง |
 |--------|-----|---------|
 | Atom / Molecule | ตั้งตาม**สิ่งที่สร้าง** (camelCase) — ไม่ลงท้ายด้วยอะไรพิเศษ | `text` / `button` / `infoBox` / `header` |
-| Template | ตั้งตาม**การใช้งาน** · การ์ดข้อมูลลงท้ายด้วย `Card` | `profileCard` / `financeCard` (อนาคต: `noticeCard` / `loanReminderCard`) |
+| Template | ตั้งตาม**การใช้งาน** · การ์ดข้อมูลลงท้ายด้วย `Card` | `profileCard` / `financeCard` / `noticeCard` / `loanReminderCard` |
 | Opts | ใช้ชื่อไทย-อังกฤษผสมตามฟิลด์ข้อมูลจริง · `opts?` ระบุว่าไม่บังคับ | `profileCard(member, { warning })` |
 
 #### ง. กฎการใช้งาน (Usage Rules)
@@ -475,8 +475,8 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 - [ ] เพิ่ม template ใน `FlexBuilder.js` (ชั้น 3) — ประกอบจาก atoms/molecules เท่านั้น ไม่มี `type:'flex'` ซ้ำกันเอง
 - [ ] สีทั้งหมดอ่านจาก `LineBot.FlexTheme` — ไม่มี hex hardcode
 - [ ] มี `altText` ภาษาไทย · รับข้อมูลที่จัดรูปแบบแล้ว (ไม่คำนวณเอง)
-- [ ] เพิ่มกรณีตรวจใน `testFlexComponents` (โครงสร้าง + ไม่มี hex) / `testFinanceCards` (ข้อมูลครบ ไม่ปลอมตัวเลข) — ตามประเภทการ์ด
-- [ ] ใช้ template ที่ `EventHandler` (หรือ service) ผ่าน `replyFlex` — **ไม่สร้าง flex object ตรง ๆ ใน EventHandler/service**
+- [ ] เพิ่มกรณีตรวจใน `testFlexComponents` (โครงสร้าง + ไม่มี hex) / `testFinanceCards` (ข้อมูลครบ ไม่ปลอมตัวเลข) / `testNoticeLoanCards` (ประกาศ/เตือนชำระ) — ตามประเภทการ์ด
+- [ ] ใช้ template ที่ `EventHandler` (หรือ service) ผ่าน `replyFlex`/`pushFlex` — **ไม่สร้าง flex object ตรง ๆ ใน EventHandler/service**
 - [ ] รัน `node scripts/ci-test.js` — ต้องผ่าน `flex-theme-scan` + `flex-usage-scan` + `ALL TESTS PASS`
 - [ ] อัปเดตแคตตาล็อก 3 ชั้นในหัวข้อ ข. นี้ (ถ้าเพิ่ม component ใหม่)
 
@@ -488,6 +488,7 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 | `flex-usage-scan` | ไม่มี `type:'flex'`/`type:'bubble'` นอก `FlexBuilder.js` | `scripts/ci-test.js` |
 | `testFlexComponents` | tokens/atoms/molecules/frame + templates + ไม่มี hex ในฟังก์ชัน | `Test.js` |
 | `testFinanceCards` | profileCard/financeCard ข้อมูลครบเหมือน text · noData ไม่ปลอมตัวเลข | `Test.js` |
+| `testNoticeLoanCards` | noticeCard/loanReminderCard ข้อมูลครบเหมือน text (ประกาศ/เตือนชำระ) | `Test.js` |
 
 ### 3.4.1 `menuClicked(menuCaption)` — ตอบเมื่อคลิกเมนู
 
@@ -537,6 +538,20 @@ LineBot.FlexBuilder.alertCard({
 - โครงสร้าง: Header "❓ ..." + Body (ข้อความ + กล่องข้อมูล `info`) + Footer **ปุ่ม 2 ปุ่มแนวนอน** (`buttonRow`): [ยกเลิก (secondary)] [ยืนยัน (primary)]
 - `okData`/`cancelData` เป็น postback data — เช่น `action=confirm_renew&code=ACT001` / `action=cancel_renew`
 - **Flow ต่ออายุ (2 ขั้น):** ① ผู้ใช้ส่ง `renew`/`renew:CODE` → `confirmCard` ② กด "ยืนยันต่ออายุ" → postback `action=confirm_renew` → `RenewalService.handleConfirmRenew` → `alertCard` (สำเร็จ/ผิดพลาด) · กด "ยกเลิก" → `action=cancel_renew` → ข้อความยกเลิก
+
+### 3.4.6 `noticeCard(notice)` — การ์ดประกาศ/ข่าวสาร (การ์ด MT-36)
+
+- **ใช้กับ:** broadcast ประกาศจาก `t_notice` (แทน `buildNoticeText` — `NoticeService.runNoticeBroadcast` push เป็นการ์ด)
+- **ข้อมูล:** `title` (หัวข้อ) · `message` (เนื้อหา) · `published_dt` (ประกาศเมื่อ — กล่อง `labelValueRow`)
+- **โครงสร้าง:** Header "📢 ประกาศสหกรณ์" (สี `brandColor`) + Body (หัวข้อ bold + เนื้อหา + เส้นคั่น + กล่อง "ประกาศเมื่อ") + Footer (ปุ่ม "ตกลง")
+- **altText:** `📢 ประกาศสหกรณ์ — <title>`
+
+### 3.4.7 `loanReminderCard(loan, member, daysLeft)` — การ์ดเตือนชำระหนี้ (การ์ด MT-36)
+
+- **ใช้กับ:** เตือนชำระหนี้รายบุคคลจาก `t_loan_acct` (แทน `buildLoanReminderText` — `LoanReminderService.runLoanReminders` push เป็นการ์ด)
+- **ข้อมูล:** ชื่อสมาชิก (จาก `member`) · `loan_no` (สัญญา) · `outstanding` (ยอดคงค้าง — `formatMoney`) · `due_dt` + `daysLeft` (ครบกำหนด + วันเหลือ)
+- **โครงสร้าง:** Header "💳 เตือนชำระหนี้" + Body (ชื่อสมาชิก bold + กล่องข้อมูล `labelValueRow` + คำแนะนำชำระ) + Footer (ปุ่ม "ตกลง")
+- **altText:** `💳 เตือนชำระหนี้ — คุณ<ชื่อ>` — สมาชิกเห็นการ์ด**รายบุคคล** (ต่างจากประกาศที่ทุกคนได้ข้อความเดียวกัน)
 
 ## 3.5 การออกแบบ Webhook และ Event Handling
 

@@ -172,9 +172,10 @@ Entry point ของ LINE webhook
 - `testApiMount()` — ทดสอบ API Mount ใน WebApp (บทที่ 5.10): `/api/health` เปิดสาธารณะ · path อื่นไม่มี/ผิด api_key → `UNAUTHORIZED` · profile/activate ผ่าน mount (key จาก query/body) · **LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม** (webhook_secret ตรวจเหมือนเดิม)
 - `testRenewal()` — ทดสอบต่ออายุ: `computeRenewal` (ต่อจาก exp เดิม/วันนี้) + `performRenew` (รหัส/ตัวเอง · เขียนชีท · active · gater ผูกเมนู · log renewed) · รหัสผิด/ไม่พบสมาชิก (MT-12)
 - `testNoticeRules()` — ทดสอบ `Core.NoticeRules` (pure): pending filter (published + ยังไม่ส่ง + ถึงเวลา · ข้ามส่งแล้ว/draft/ยังไม่ถึงเวลา) · buildNoticeText · getBroadcastTargets (MT-13)
-- `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13)
+- `testNoticeBroadcast()` — ทดสอบ `runNoticeBroadcast` เต็ม path (Fake Sheets + fake sender): broadcast **Flex Card (`noticeCard`)** ถึง active ทุกคน · ข้าม inactive/ไม่มี userId · mark sent (`sent_dt` + status) · **รันรอบ 2 ไม่ส่งซ้ำ** (MT-13/MT-36)
 - `testLoanRules()` — ทดสอบ `Core.LoanRules` (pure): due filter (`due_dt ∈ [now, now+days]` · ข้ามเลยกำหนด/ไกลเกิน/ไม่มี due) · daysLeft · buildLoanReminderText รายบุคคล · isReminderTarget (MT-13b)
-- `testLoanReminders()` — ทดสอบ `runLoanReminders` เต็ม path (Fake Sheets + fake sender): เตือนเฉพาะสัญญาที่ถึงรอบ · ข้อความรายบุคคล · skipped (ไม่มี userId) · **ตรวจ t_reminder_log** (reminded/skipped) (MT-13b)
+- `testLoanReminders()` — ทดสอบ `runLoanReminders` เต็ม path (Fake Sheets + fake sender): เตือนเฉพาะสัญญาที่ถึงรอบ · **Flex Card รายบุคคล (`loanReminderCard`)** · skipped (ไม่มี userId) · **ตรวจ t_reminder_log** (reminded/skipped) (MT-13b/MT-36)
+- `testNoticeLoanCards()` — ทดสอบ `FlexBuilder.noticeCard`/`loanReminderCard` (การ์ด MT-36): โครงสร้างตามมาตรฐาน 3.4 (altText ไทย · header/sีจาก FlexTheme · ข้อมูลครบเหมือน buildNoticeText/buildLoanReminderText · ไม่ hardcode hex)
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -239,14 +240,14 @@ Entry point ของ LINE webhook
 - `setupExpiryTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
 - ฟังก์ชันระดับบนสุด `runExpiryCheck()` = entry point ของ trigger (ส่งต่อให้ ExpiryService)
 
-**`NoticeService.js`** — Broadcast ประกาศ/ข่าวสารถึงสมาชิก (การ์ด MT-13)
-- `runNoticeBroadcast(token, opts?)` — อ่านประกาศจาก `t_notice` ผ่าน repository (`listNotices`) → `Core.NoticeRules.getPendingNotices` (published + ยังไม่ส่ง + ถึงเวลา) → push ประกาศถึงสมาชิก active ทุกคนที่มี `line_user_id` (`getBroadcastTargets`) → `markNoticeSent` (เขียน `sent_dt` + `status='sent'` กันส่งซ้ำรอบถัดไป)
+**`NoticeService.js`** — Broadcast ประกาศ/ข่าวสารถึงสมาชิก (การ์ด MT-13/MT-36)
+- `runNoticeBroadcast(token, opts?)` — อ่านประกาศจาก `t_notice` ผ่าน repository (`listNotices`) → `Core.NoticeRules.getPendingNotices` (published + ยังไม่ส่ง + ถึงเวลา) → **push Flex Card (`FlexBuilder.noticeCard`) ผ่าน `MessageService.pushFlex`** ถึงสมาชิก active ทุกคนที่มี `line_user_id` (`getBroadcastTargets`) → `markNoticeSent` (เขียน `sent_dt` + `status='sent'` กันส่งซ้ำรอบถัดไป)
   - รับ `opts.repo/sender/now/builder` เพื่อทดสอบใน node · คืน summary `{ notices, pending, sent, targets, pushed }`
 - `setupNoticeTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor — ดูบทที่ 5.9)
 - ฟังก์ชันระดับบนสุด `runNoticeBroadcast()` = entry point ของ trigger (ส่งต่อให้ NoticeService)
 
-**`LoanReminderService.js`** — เตือนชำระหนี้ (การ์ด MT-13b) — pattern เดียวกับ ExpiryService/NoticeService
-- `runLoanReminders(token, opts?)` — อ่านสัญญา (`repo.listLoans`) + สมาชิก (`listMembers`) → `Core.LoanRules.getDueLoans` (due_dt ในหน้าต่าง `PAYMENT_REMINDER_DAYS`) → **push ข้อความรายบุคคล** (ชื่อสมาชิกจริง — ต่างจาก broadcast) → บันทึก `t_reminder_log` (status `reminded`/`skipped` — skipped = สมาชิกไม่มี userId/ไม่ active)
+**`LoanReminderService.js`** — เตือนชำระหนี้ (การ์ด MT-13b/MT-36) — pattern เดียวกับ ExpiryService/NoticeService
+- `runLoanReminders(token, opts?)` — อ่านสัญญา (`repo.listLoans`) + สมาชิก (`listMembers`) → `Core.LoanRules.getDueLoans` (due_dt ในหน้าต่าง `PAYMENT_REMINDER_DAYS`) → **push Flex Card รายบุคคล (`FlexBuilder.loanReminderCard`) ผ่าน `MessageService.pushFlex`** (ชื่อสมาชิกจริง — ต่างจาก broadcast) → บันทึก `t_reminder_log` (status `reminded`/`skipped` — skipped = สมาชิกไม่มี userId/ไม่ active)
   - รับ `opts.repo/sender/now/reminderDays/builder/logger` เพื่อทดสอบใน node · คืน summary `{ loans, due, reminded, skipped, pushed }`
 - `setupReminderTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (ดูบทที่ 5.9.3)
 - ฟังก์ชันระดับบนสุด `runLoanReminders()` = entry point ของ trigger
@@ -266,15 +267,16 @@ Entry point ของ LINE webhook
 - 🚫 **ห้าม hardcode สี hex ในโค้ดอื่น** — อ่านจากที่นี่ (กันด้วย CI `flex-theme-scan` + `testFlexComponents`)
 
 **`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33/MT-34) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
-- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม) · **`alertCard({level, title, message})`** (success/warning/error — การ์ด MT-35) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก — การ์ด MT-35)
+- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม) · **`alertCard({level, title, message})`** (success/warning/error — การ์ด MT-35) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก — การ์ด MT-35) · **`noticeCard(notice)`** / **`loanReminderCard(loan, member, daysLeft)`** — การ์ดประกาศ/เตือนชำระ (การ์ด MT-36 — ข้อมูลเหมือน text เดิม)
 - **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
 - **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)` / `buttonRow(buttons, opts?)` (ปุ่มแนวนอนหลายปุ่ม)
 - **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ
-- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`
+- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`/`testNoticeLoanCards`
 
 **`MessageService.js`** — ส่งข้อความผ่าน LINE Messaging API
 - `reply()` / `replyFlex()` / `send()` — ตอบกลับ (ต้องมี replyToken)
 - `push(to, text, token)` — **Push API** ใช้ใน scheduled trigger (MT-11) — ส่งด้วย userId ได้ทุกเวลา (ต่างจาก reply ที่จำกัด 60 วินาที)
+- `pushFlex(to, flexMessage, token)` — **Push API แบบ Flex** (การ์ด MT-36) — ใช้ส่งประกาศ/เตือนชำระเป็น Flex Card
 - ทุกฟังก์ชันคืนค่า `{ ok, statusCode, body }` เพื่อการ debug
 
 **`ReplyStore.js`** — คลังข้อความและชื่อเมนู (การ์ด MT-14: ไม่มี placeholder คงเหลือ)

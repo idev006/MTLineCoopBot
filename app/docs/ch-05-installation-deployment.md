@@ -279,18 +279,18 @@ seedAllForTesting();       // รันทั้ง 2 อย่างพร้�
 1. ตรวจว่ามีชีท `t_notice` (รัน `createDummyTables()` — บทที่ 5.6.4 — หรือสร้างเองตาม DataDict)
 2. เพิ่มประกาศที่ต้องการส่ง: `status='published'` + `sent_dt` ว่าง + `published_dt` = เวลาเริ่มส่ง (ประกาศที่ `sent_dt` มีค่าแล้วจะ**ไม่ถูกส่งซ้ำ**)
 3. สร้าง trigger เช่นเดียวกับ 5.9.1 แต่ **Function:** `runNoticeBroadcast` (หรือรัน `setupNoticeTrigger(9)` ครั้งเดียว — ดู `app/LineBot/NoticeService.js`)
-4. ทดสอบ: รัน `runNoticeBroadcast` ด้วยมือ → ตรวจ Log `[NoticeBroadcast] notices=... pending=... sent=... targets=... pushed=...` + แถวประกาศถูก mark `sent`
+4. ทดสอบ: รัน `runNoticeBroadcast` ด้วยมือ → สมาชิก active ได้รับ **Flex Card 📢** (`noticeCard` — การ์ด MT-36) → ตรวจ Log `[NoticeBroadcast] notices=... pending=... sent=... targets=... pushed=...` + แถวประกาศถูก mark `sent`
 
-> ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `push error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง) · สมาชิกที่ยังไม่ activate (ไม่มี `line_user_id`) จะถูกข้าม
+> ⚠️ Push API ต้องใช้ `CHANNEL_ACCESS_TOKEN` — ถ้าส่งไม่ได้ ให้ตรวจ `pushFlex error: 4xx` ใน Log (เช่น 403 = bot ถูกบล็อก, 400 = userId ไม่ถูกต้อง) · สมาชิกที่ยังไม่ activate (ไม่มี `line_user_id`) จะถูกข้าม
 
 ### 5.9.3 Trigger เตือนชำระหนี้ (`runLoanReminders` — การ์ด MT-13b)
 
 1. ตรวจว่ามีชีท `t_loan_acct` ที่มี `due_dt` (รัน `createDummyTables()` — มีสัญญา `LN-2026-003` (MEM003) ครบกำหนด 2026-08-20 ให้ทดสอบได้ทันที)
 2. สร้าง trigger เช่นเดียวกับ 5.9.1 แต่ **Function:** `runLoanReminders` (หรือรัน `setupReminderTrigger(9)` ครั้งเดียว — ดู `app/LineBot/LoanReminderService.js`)
 3. ตั้งค่า (ไม่บังคับ): Script Properties → `PAYMENT_REMINDER_DAYS` = จำนวนวันก่อนครบกำหนดที่ถือว่า "ถึงรอบเตือน" (ค่า default 14)
-4. ทดสอบ: รัน `runLoanReminders` ด้วยมือ → ตรวจ Log `[LoanReminder] loans=... due=... reminded=... skipped=... pushed=...` + แถวใน `t_reminder_log` (status `reminded`/`skipped`)
+4. ทดสอบ: รัน `runLoanReminders` ด้วยมือ → สมาชิกที่สัญญาถึงรอบได้รับ **Flex Card 💳 รายบุคคล** (`loanReminderCard` — การ์ด MT-36) → ตรวจ Log `[LoanReminder] loans=... due=... reminded=... skipped=... pushed=...` + แถวใน `t_reminder_log` (status `reminded`/`skipped`)
 
-> ต่างจาก broadcast ประกาศ (ข้อความเดียวถึงทุกคน): เตือนชำระเป็น**ข้อความรายบุคคล** (ชื่อสมาชิก + เลขสัญญา + ยอดคงค้าง + วันครบกำหนด) · สมาชิกไม่มี `line_user_id`/ไม่ active → บันทึก `skipped` (ไม่พัง)
+> ต่างจาก broadcast ประกาศ (การ์ดเดียวถึงทุกคน): เตือนชำระเป็น**การ์ดรายบุคคล** (ชื่อสมาชิก + เลขสัญญา + ยอดคงค้าง + วันครบกำหนด) · สมาชิกไม่มี `line_user_id`/ไม่ active → บันทึก `skipped` (ไม่พัง)
 
 ## 5.10 Mount API ใน WebApp (`/api/*`) — doGet/doPost dispatch ผ่าน Api.ApiService
 
