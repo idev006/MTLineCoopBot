@@ -1554,3 +1554,139 @@ function verifyThaiCaptions() {
   Logger.log('Thai captions OK — ครบ ' + ids.length + ' เมนู');
   return ids.length;
 }
+
+/**
+ * ทดสอบ Flex Component Library (การ์ด MT-33):
+ * FlexTheme design tokens (SSOT) · atoms (text/button/labelValueRow/statusBadge/separator) ·
+ * molecules (header/bodyBox/infoBox/footerButton) · bubbleFrame ·
+ * refactor menuClicked/welcomeMember/messageBox ใช้ component เดียวกัน —
+ * payload เหมือนเดิม (ไม่เปลี่ยนพฤติกรรมผู้ใช้) + ไม่มี hex color hardcode ในฟังก์ชัน
+ * @returns {boolean}
+ */
+function testFlexComponents() {
+  const FB = LineBot.FlexBuilder;
+  const T = LineBot.FlexTheme;
+
+  // 1) Design tokens (SSOT)
+  if (T.brandColor !== '#1DB446') throw new Error('testFlexComponents: brandColor ผิด');
+  if (T.white !== '#FFFFFF') throw new Error('testFlexComponents: white ผิด');
+  if (T.textPrimary !== '#333333') throw new Error('testFlexComponents: textPrimary ผิด');
+  if (T.textSecondary !== '#888888') throw new Error('testFlexComponents: textSecondary ผิด');
+  if (T.boxBg !== '#F0F8F0') throw new Error('testFlexComponents: boxBg ผิด');
+  if (T.bubbleSize !== 'kilo') throw new Error('testFlexComponents: bubbleSize ผิด');
+  if (!T.statusColors || !T.statusColors.active || !T.statusColors.expired) {
+    throw new Error('testFlexComponents: statusColors ไม่ครบ');
+  }
+
+  // 2) Atoms
+  const t = FB.text('สวัสดี', { weight: 'bold', size: 'sm', color: T.textSecondary, wrap: true, margin: 'md' });
+  if (t.type !== 'text' || t.text !== 'สวัสดี' || t.weight !== 'bold' || t.size !== 'sm' ||
+      t.color !== T.textSecondary || !t.wrap || t.margin !== 'md') {
+    throw new Error('testFlexComponents: text() ผิด');
+  }
+
+  const b = FB.button('ตกลง', { data: 'action=ack' }, { style: 'primary', color: T.brandColor });
+  if (b.type !== 'button' || b.style !== 'primary' || b.color !== T.brandColor ||
+      b.action.type !== 'postback' || b.action.label !== 'ตกลง' || b.action.data !== 'action=ack') {
+    throw new Error('testFlexComponents: button() ผิด');
+  }
+
+  const sep = FB.separator();
+  if (sep.type !== 'separator' || sep.margin !== 'lg') throw new Error('testFlexComponents: separator() ผิด');
+
+  const row = FB.labelValueRow('รหัสสมาชิก', 'M001');
+  if (row.type !== 'box' || row.layout !== 'baseline' || row.contents.length !== 2 || row.contents[1].text !== 'M001') {
+    throw new Error('testFlexComponents: labelValueRow() ผิด');
+  }
+
+  const badge = FB.statusBadge('active');
+  if (badge.type !== 'box' || badge.backgroundColor !== T.statusColors.active ||
+      !badge.contents || !badge.contents[0] || badge.contents[0].color !== T.white) {
+    throw new Error('testFlexComponents: statusBadge(active) ผิด');
+  }
+  const badgeUnknown = FB.statusBadge('unknown');
+  if (badgeUnknown.backgroundColor !== T.textSecondary) {
+    throw new Error('testFlexComponents: statusBadge(ไม่รู้จัก) ควรเป็นสีเทา default');
+  }
+
+  // 3) Molecules
+  const h = FB.header('🎉 ยินดีต้อนรับ');
+  if (h.type !== 'box' || h.backgroundColor !== T.brandColor || h.paddingAll !== 'lg' ||
+      h.contents[0].size !== 'lg' || h.contents[0].color !== T.white) {
+    throw new Error('testFlexComponents: header() default ผิด');
+  }
+
+  const ib = FB.infoBox([FB.text('x')]);
+  if (ib.type !== 'box' || ib.backgroundColor !== T.boxBg || ib.cornerRadius !== 'md' || ib.margin !== 'lg') {
+    throw new Error('testFlexComponents: infoBox() default ผิด');
+  }
+
+  const fb = FB.footerButton('ตกลง', 'action=ack');
+  if (fb.type !== 'box' || !fb.contents[0] || fb.contents[0].action.data !== 'action=ack' ||
+      fb.contents[0].color !== T.brandColor) {
+    throw new Error('testFlexComponents: footerButton() ผิด');
+  }
+
+  const frame = FB.bubbleFrame({ header: h, body: FB.bodyBox([t]) });
+  if (frame.type !== 'bubble' || frame.size !== 'kilo' || !frame.header || !frame.body || frame.footer) {
+    throw new Error('testFlexComponents: bubbleFrame() ผิด');
+  }
+
+  // 4) Templates — refactor ไม่เปลี่ยนพฤติกรรมผู้ใช้ (โครงสร้างเดิมครบถ้วน)
+  const mc = FB.menuClicked('บัญชีเงินฝาก');
+  if (mc.type !== 'flex' || mc.altText !== 'คุณเลือกเมนู บัญชีเงินฝาก') {
+    throw new Error('testFlexComponents: menuClicked altText ผิด');
+  }
+  if (mc.contents.type !== 'bubble' || mc.contents.size !== 'kilo') {
+    throw new Error('testFlexComponents: menuClicked bubble ผิด');
+  }
+  if (mc.contents.header.backgroundColor !== T.brandColor || mc.contents.header.contents[0].text !== 'เมนูที่เลือก') {
+    throw new Error('testFlexComponents: menuClicked header ผิด');
+  }
+  if (mc.contents.body.contents.length !== 2 || mc.contents.body.contents[0].text !== 'คุณเลือกเมนู บัญชีเงินฝาก') {
+    throw new Error('testFlexComponents: menuClicked body ผิด');
+  }
+  if (!mc.contents.footer || mc.contents.footer.contents[0].action.data !== 'action=ack_menu') {
+    throw new Error('testFlexComponents: menuClicked footer ผิด');
+  }
+
+  const wm = FB.welcomeMember({
+    memTitle: 'นาย', memFname: 'สมชาย', memLname: 'ใจดี', memCode: 'M001',
+    memEffDt: new Date(2026, 7, 12), memExpDt: new Date(2027, 7, 12)
+  });
+  const wmJson = JSON.stringify(wm);
+  if (!wmJson.includes('ยินดีต้อนรับ นายสมชาย ใจดี')) throw new Error('testFlexComponents: welcomeMember altText ผิด');
+  if (!wmJson.includes('รหัสสมาชิก: M001') || !wmJson.includes('✅ Activate สำเร็จ') ||
+      !wmJson.includes('วันที่ activate: 12/8/2026') || !wmJson.includes('วันหมดอายุ: 12/8/2027')) {
+    throw new Error('testFlexComponents: welcomeMember body ผิด');
+  }
+  if (!wm.contents.footer || wm.contents.footer.contents[0].action.data !== 'action=show_main_menu') {
+    throw new Error('testFlexComponents: welcomeMember footer ผิด');
+  }
+
+  const mb = FB.messageBox({
+    title: 'ประกาศ', message: 'สหกรณ์ปิดทำการ', icon: '📢',
+    extraContents: [FB.text('รายละเอียด')],
+    footerButton: { label: 'ตกลง', data: 'action=ack' }
+  });
+  const mbJson = JSON.stringify(mb);
+  if (mb.altText !== 'ประกาศ') throw new Error('testFlexComponents: messageBox altText ผิด');
+  if (!mbJson.includes('📢 ประกาศ')) throw new Error('testFlexComponents: messageBox icon+title ผิด');
+  if (mb.contents.body.contents.length !== 3) throw new Error('testFlexComponents: messageBox body ต้องมี message+separator+infoBox');
+  if (mb.contents.body.contents[2].backgroundColor !== T.boxBg) throw new Error('testFlexComponents: messageBox infoBox สีผิด');
+  if (!mb.contents.footer || mb.contents.footer.contents[0].action.data !== 'action=ack') {
+    throw new Error('testFlexComponents: messageBox footer ผิด');
+  }
+
+  // 5) ไม่มี hex color hardcode ใน component/ฟังก์ชัน (สีมาจาก FlexTheme เท่านั้น)
+  const src = [FB.text, FB.button, FB.separator, FB.labelValueRow, FB.statusBadge,
+    FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.bubbleFrame,
+    FB.menuClicked, FB.welcomeMember, FB.messageBox]
+    .map(f => f.toString()).join('\n');
+  if (/#[0-9A-Fa-f]{6}/.test(src)) {
+    throw new Error('testFlexComponents: ฟังก์ชัน component ต้องไม่ hardcode สี hex (ใช้ FlexTheme)');
+  }
+
+  Logger.log('testFlexComponents OK — FlexTheme + atoms + molecules + bubbleFrame + refactor ไม่เปลี่ยนพฤติกรรม');
+  return true;
+}

@@ -31,7 +31,8 @@ MTLineCoopBot/
     │   ├── LoanReminderService.js # เตือนชำระหนี้ (MT-13b) — t_loan_acct → push รายบุคคล
     │   ├── EventHandler.js      # Router จัดการ event
     │   ├── MemberDataService.js # จัดรูปแบบข้อมูลสมาชิกจริง (MT-10) — profile/เมนูการเงิน
-    │   ├── FlexBuilder.js       # สร้าง Flex Message
+    │   ├── FlexTheme.js         # Design tokens ของ Flex Message (MT-33) — สี/ขนาด/รัศมี SSOT
+    │   ├── FlexBuilder.js       # Flex Component Library + สร้าง Flex Message (MT-33)
     │   ├── MessageService.js    # เรียก LINE Reply API
     │   ├── ReplyStore.js        # ข้อความ/ชื่อเมนูของแต่ละ item
     │   └── SheetService.js      # ติดต่อ Google Sheets
@@ -255,8 +256,18 @@ Entry point ของ LINE webhook
 - `buildExpiryWarning(member, expiry)` / `appendExpiryWarning(text, member, expiry)` — ข้อความเตือนวันหมดอายุ (การ์ด MT-11) — ใช้ใน ExpiryService (push) + EventHandler (แนบท้ายคำตอบ)
 - `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
 
-**`FlexBuilder.js`** — ตัวสร้าง Flex Message
-- `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)`
+**`FlexTheme.js`** — Design Tokens ของ Flex Message (การ์ด MT-33 — SSOT)
+- `brandColor`/`white`/`textPrimary`/`textMuted`/`textSecondary`/`boxBg` — สีมาตรฐาน
+- `statusColors` — สีตามสถานะ (active/paid/sent/expiring/expired/draft) ใช้กับ `statusBadge`
+- `bubbleSize`/`paddingMd`/`paddingLg`/`radiusMd` — ขนาดมาตรฐาน
+- 🚫 **ห้าม hardcode สี hex ในโค้ดอื่น** — อ่านจากที่นี่ (กันด้วย CI `flex-theme-scan` + `testFlexComponents`)
+
+**`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
+- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้)
+- **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
+- **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)`
+- **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ
+- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · เทสต์ `testFlexComponents`
 
 **`MessageService.js`** — ส่งข้อความผ่าน LINE Messaging API
 - `reply()` / `replyFlex()` / `send()` — ตอบกลับ (ต้องมี replyToken)
@@ -360,7 +371,7 @@ Entry point ของ LINE webhook
 ### 4.5.2 เพิ่มฟังก์ชันการตอบกลับเฉพาะเมนู
 
 1. ใน `EventHandler.handlePostback` เพิ่มเงื่อนไข `if (params.item === 'new_item') { ... }`
-2. สร้าง builder หรือใช้ `FlexBuilder.messageBox()` ในการตอบกลับ
+2. สร้าง builder หรือใช้ `FlexBuilder.messageBox()` ในการตอบกลับ (หรือประกอบการ์ดจาก component: `header`/`infoBox`/`footerButton` + `bubbleFrame` — การ์ด MT-33)
 3. Deploy Web App version ใหม่
 
 ### 4.5.3 เพิ่มตารางข้อมูลใหม่ใน Google Sheets

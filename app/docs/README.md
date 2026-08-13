@@ -72,6 +72,7 @@
 |---------|-------|--------|
 | Rich Menu 5 แท็บ + Alias + Deploy | ✅ ทำแล้ว | บทที่ 3.3, 5.6 |
 | Flex Message ตอบกลับเมนู (item-id ตรงกันทั้ง 26 เมนู) | ✅ ทำแล้ว | บทที่ 3.4, 4.2.6 |
+| Flex Component Library — `FlexTheme` (design tokens SSOT) + atoms/molecules/`bubbleFrame` + refactor `menuClicked`/`welcomeMember`/`messageBox` (payload เหมือนเดิม — พฤติกรรมผู้ใช้ไม่เปลี่ยน) | ✅ ทำแล้ว | บทที่ 3.4, KANBAN MT-33 |
 | Welcome Menu (4 ปุ่ม) + ตอบกลับเมนูสาธารณะ (`welcome_*`) | ✅ ทำแล้ว | บทที่ 3.3.6, 4.2.8 |
 | ระบบ Activate สมาชิก (`activate:CODE`) | ✅ ทำแล้ว | บทที่ 2.3.3 |
 | DataDict SSOT (16 คอลัมน์ — รวม `mem_kk` คะแนนความดี / `mem_bk` เงินกู้คงค้าง / `mem_bh` เงินหุ้น) | ✅ ทำแล้ว | บทที่ 3.2, 4.2.7 |

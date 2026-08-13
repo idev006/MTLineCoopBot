@@ -187,6 +187,18 @@
 | ผลที่คาดหวัง | 1. Flex ต้อนรับมีชื่อจริง + `line_user_id`/`mem_status='active'` ถูกเขียนผ่าน API 2–3. ข้อความ error เหมือนเดิม (มาจาก API error code) 4. `mem_exp_dt` ขยาย +1 ปี (deterministic — seam `ctx.internal.now`) 5. CI: เรียก `POST /api/member/activate`/`renew` — ไม่ทำ find+write เอง |
 | ผ่าน/ไม่ผ่าน | ☐ |
 
+### 6.2.19 TC-19: Flex Component Library (การ์ด MT-33)
+
+> **รันได้กับโค้ดปัจจุบัน** — เป็นการทดสอบใน CI (`testFlexComponents` + `flex-theme-scan`); สำหรับมือตรวจพฤติกรรมผู้ใช้:
+
+| หัวข้อ | รายละเอียด |
+|--------|-----------|
+| วัตถุประสงค์ | ยืนยันว่า Flex Message ทั้งหมดสร้างจาก **Component Library มาตรฐานเดียวกัน** (`FlexTheme` design tokens + atoms + molecules + `bubbleFrame`) · สีไม่ hardcode ในโค้ด · refactor แล้ว **payload เหมือนเดิม** (พฤติกรรมผู้ใช้ไม่เปลี่ยน) |
+| ข้อมูลตั้งต้น | รหัสปัจจุบัน (หลังการ์ด MT-33) · สมาชิก activate แล้ว |
+| ขั้นตอน | 1. (CI) รัน `testFlexComponents` — ตรวจ FlexTheme/atoms/molecules/bubbleFrame + template ครบโครงสร้าง 2. (CI) `flex-theme-scan` — scan `FlexBuilder.js` ไม่ให้มี hex color 3. (มือ) คลิกเมนู → เห็น Flex "คุณเลือกเมนู..." เหมือนเดิม 4. (มือ) activate สมาชิกใหม่ → เห็น Flex ต้อนรับเหมือนเดิม |
+| ผลที่คาดหวัง | 1. CI: `testFlexComponents OK` — component ทั้งหมด + `menuClicked`/`welcomeMember`/`messageBox` ครบโครงสร้างเดิม 2. CI: `PASS flex-theme-scan` 3–4. หน้าจอผู้ใช้ไม่เปลี่ยน (มีแต่โครงสร้างโค้ดที่รวมมาตรฐาน) |
+| ผ่าน/ไม่ผ่าน | ☐ |
+
 ## 6.3 การตรวจสอบ Log (Log Inspection)
 
 Log ทั้งหมดอยู่ใน **Apps Script Editor → Executions** (หรือ Stackdriver Logging)
@@ -261,4 +273,4 @@ reply success: 200 {}
 
 ## สรุปท้ายบท
 
-บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 18 กรณี (TC-01–18) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต
+บทนี้นำเสนอกลยุทธ์การทดสอบ 3 ระดับ Test Cases หลัก 19 กรณี (TC-01–19) แนวทางการตรวจสอบ Log และการแก้ไขปัญหาที่พบบ่อย บทที่ 7 กล่าวถึงการบำรุงรักษาและแผนการพัฒนาในอนาคต

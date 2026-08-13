@@ -69,7 +69,7 @@
 { "ok": false, "error": { "code": "MEMBER_INVALID", "message": "..." } }
 ```
 
-> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (29/29) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
+> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (30/30) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
 
 **การยืนยันตัวตนรายช่องทาง (Per-Request Auth):**
 
@@ -418,12 +418,29 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 
 ## 3.4 การออกแบบ Flex Message (Message Design)
 
-ระบบมีตัวสร้าง Flex Message 3 รูปแบบใน `FlexBuilder.js`
+### 3.4.0 Flex Component Library (มาตรฐานกลาง — การ์ด MT-33)
+
+ระบบมี **Flex Component Library** ใน `FlexBuilder.js` + `FlexTheme.js` เพื่อให้ทุกการ์ด Flex มีมาตรฐานเดียวกัน (ไม่ duplicate code) ประกอบด้วย 4 ชั้น:
+
+| ชั้น | องค์ประกอบ | ไฟล์ |
+|-----|-----------|------|
+| 0. Design Tokens | `FlexTheme` — สี/ขนาด/รัศมี/สถานะ ทั้งหมด (SSOT) | `FlexTheme.js` |
+| 1. Atoms | `text()` · `button()` · `separator()` · `labelValueRow()` · `statusBadge()` | `FlexBuilder.js` |
+| 2. Molecules | `header()` · `bodyBox()` · `infoBox()` · `footerButton()` | `FlexBuilder.js` |
+| 3. Frame | `bubbleFrame({header, body, footer, size})` | `FlexBuilder.js` |
+| 4. Templates | `menuClicked()` · `welcomeMember()` · `messageBox()` | `FlexBuilder.js` |
+
+**กฎการใช้ (มาตรฐานร่วม):**
+
+- 🚫 **ห้าม hardcode สี hex ในโค้ด** — สีทุกสีอ่านจาก `LineBot.FlexTheme` (เปลี่ยนธีม = แก้ `FlexTheme.js` ไฟล์เดียว) · กันด้วย CI: `flex-theme-scan` (scan `FlexBuilder.js` ไม่ให้มี hex color) + `testFlexComponents` ตรวจฟังก์ชัน component
+- Component เป็น **pure function** — รับ props → คืน Flex object → เทสต์ใน node ได้ (`testFlexComponents`)
+- สร้างการ์ดใหม่ = ประกอบจาก component ที่มี (เช่น ใช้ `header` + `infoBox` + `footerButton` + `bubbleFrame`) ไม่ใช่สร้างโครงสร้างซ้ำ
+- เตรียมใช้ต่อ: `statusBadge` (สถานะสมาชิก/หนี้/ประกาศ) · `labelValueRow` (โปรไฟล์/การเงิน) · `messageBox` (แจ้งเตือน/ยืนยัน) — การ์ด `profileCard`/`financeCard`/`noticeCard` ในเฟสถัดไป
 
 ### 3.4.1 `menuClicked(menuCaption)` — ตอบเมื่อคลิกเมนู
 
 - **altText:** `คุณเลือกเมนู <ชื่อเมนู>`
-- **โครงสร้าง:** Header (สีเขียว `#1DB446`) + Body (ชื่อเมนู + "ระบบกำลังดำเนินการตามคำขอของคุณ") + Footer (ปุ่ม "ตกลง")
+- **โครงสร้าง:** Header (สีเขียว `brandColor`) + Body (ชื่อเมนู + "ระบบกำลังดำเนินการตามคำขอของคุณ") + Footer (ปุ่ม "ตกลง")
 
 ### 3.4.2 `welcomeMember(member)` — ต้อนรับหลัง Activate สำเร็จ
 
@@ -432,7 +449,7 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 
 ### 3.4.3 `messageBox(options)` — กล่องข้อความอเนกประสงค์
 
-พารามิเตอร์ที่ปรับได้: `title`, `message`, `headerColor`, `bodyTextColor`, `boxColor`, `icon`, `extraContents`, `footerButton`, `size`
+พารามิเตอร์ที่ปรับได้: `title`, `message`, `headerColor`, `bodyTextColor`, `boxColor`, `icon`, `extraContents`, `footerButton`, `size` (ค่า default อ่านจาก `FlexTheme`)
 
 **ตัวอย่างการใช้งาน:**
 
@@ -444,6 +461,8 @@ LineBot.FlexBuilder.messageBox({
   footerButton: { label: 'ตกลง', data: 'action=ack_announce' }
 });
 ```
+
+> **หมายเหตุ:** ทั้ง 3 template refactor มาใช้ component library เดียวกัน (การ์ด MT-33) — payload ที่ผู้ใช้เห็น**เหมือนเดิมทุกประการ** (ยืนยันด้วย `testFlexComponents`)
 
 ## 3.5 การออกแบบ Webhook และ Event Handling
 

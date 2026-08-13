@@ -24,17 +24,18 @@
 | 15 | **แจ้งเตือนตามเวลา** — Broadcast ประกาศ (`t_notice`) + เตือนชำระรายบุคคล (`t_loan_acct`) + audit trail | `LineBot/NoticeService.js` + `LineBot/LoanReminderService.js` + `Core/NoticeRules.js` + `Core/LoanRules.js` | `testNoticeRules`/`testNoticeBroadcast` (pending filter · broadcast · mark sent · ไม่ส่งซ้ำ) · `testLoanRules`/`testLoanReminders` (due filter · ข้อความรายบุคคล · skipped · ตรวจ t_reminder_log) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9.2/5.9.3) |
 | 16 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
 | 17 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
-| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (35 ไฟล์ .js) + **29/29 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
+| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (36 ไฟล์ .js) + **30/30 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 19 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
 | 20 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
+| 21 | **Flex Component Library** — design tokens SSOT (FlexTheme) + component เดียวกัน ไม่ duplicate code + **ไม่ hardcode สี** | `LineBot/FlexTheme.js` + `FlexBuilder.js` (atoms/molecules/bubbleFrame) | `testFlexComponents` (tokens/atoms/molecules/frame/templates — payload เหมือนเดิม) · **`flex-theme-scan`** (CI scan FlexBuilder.js ไม่ให้มี hex color) | 🧪 | ✅ |
 
 ## วิธีรันหลักฐานทั้งหมด
 
 ```bash
-# 1) ชุดทดสอบสัญญา 29 ชุด (รันใน CI อัตโนมัติทุก push)
-node scripts/ci-test.js          # → ALL TESTS PASS (29/29)
+# 1) ชุดทดสอบสัญญา 30 ชุด (รันใน CI อัตโนมัติทุก push)
+node scripts/ci-test.js          # → ALL TESTS PASS (30/30)
 
-# 2) syntax ทุกไฟล์ JS (35 ไฟล์)
+# 2) syntax ทุกไฟล์ JS (36 ไฟล์)
 for f in $(find app scripts -name "*.js"); do node --check "$f"; done
 
 # 3) secret scan — ประวัติ git เต็มรูปแบบ (CI รัน gitleaks job)
@@ -50,6 +51,6 @@ setupNoticeTrigger(9)            # ตั้ง trigger broadcast ประก�
 
 ## สรุปความพร้อม
 
-- **20/20 เสาหลักผ่าน** — 17 ข้อมีหลักฐานรันใน **CI อัตโนมัติ** (🧪) · 3 ข้อต้องรันด้วยมือ (✋: DoD review, checkTokenHealth, process security)
+- **21/21 เสาหลักผ่าน** — 18 ข้อมีหลักฐานรันใน **CI อัตโนมัติ** (🧪) · 3 ข้อต้องรันด้วยมือ (✋: DoD review, checkTokenHealth, process security)
 - **ทุกเสาหลักพร้อมต่อยอด** — จุดที่ออกแบบไว้แต่ยังไม่ implement ระบุชัดเจนในคอลัมน์สถานะ (📌 เฟส 3)
 - **กฎ:** ถ้าเพิ่ม/แก้เสาหลักใด ต้องอัปเดตตารางนี้ + หลักฐานการทดสอบด้วย (DoD ข้อ 3 — บทที่ 8.1.3)

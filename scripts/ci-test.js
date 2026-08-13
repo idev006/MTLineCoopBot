@@ -36,6 +36,18 @@ for (const file of fs.readdirSync(APP_DIR, { recursive: true })) {
   if (TOKEN_PATTERN.test(content)) scanHits.push(rel);
 }
 
+// ── 1.5) Flex theme scan: ห้าม hardcode สี hex ใน FlexBuilder (สีต้องมาจาก FlexTheme) ──
+// กันไม่ให้ developer ใส่สีใหม่ลงใน component โดยไม่ผ่าน design tokens (การ์ด MT-33)
+const flexBuilderPath = path.join(APP_DIR, 'LineBot', 'FlexBuilder.js');
+const flexBuilderSrc = fs.readFileSync(flexBuilderPath, 'utf8');
+const HEX_COLOR_PATTERN = /#[0-9A-Fa-f]{6}\b/;
+let flexThemeOk = true;
+if (HEX_COLOR_PATTERN.test(flexBuilderSrc)) {
+  flexThemeOk = false;
+  console.error('FAIL  flex-theme-scan — พบ hex color hardcode ใน FlexBuilder.js');
+  console.error('      สีทุกสีต้องอ่านจาก LineBot.FlexTheme (FlexTheme.js) — เปลี่ยนธีมที่ไฟล์เดียว');
+}
+
 // ── 2) จำลอง Apps Script services ──
 const props = {};
 const sandbox = {
@@ -99,6 +111,7 @@ const FILE_ORDER = [
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
   'LineBot/MemberDataService.js',
+  'LineBot/FlexTheme.js',
   'LineBot/FlexBuilder.js',
   'LineBot/MessageService.js',
   'LineBot/ActivationService.js',
@@ -157,7 +170,8 @@ const runner = `
     ['testLoanRules', testLoanRules],
     ['testLoanReminders', testLoanReminders],
     ['testCoreMemberRules', testCoreMemberRules],
-    ['testLoanCalculator', testLoanCalculator]
+    ['testLoanCalculator', testLoanCalculator],
+    ['testFlexComponents', testFlexComponents]
   ];
   const failed = [];
   for (const [name, fn] of tests) {
@@ -186,6 +200,10 @@ if (scanHits.length > 0) {
 } else {
   console.log('PASS  secret-scan');
 }
+
+// Flex theme scan
+if (!flexThemeOk) ok = false;
+else console.log('PASS  flex-theme-scan');
 
 // Contract tests
 try {
