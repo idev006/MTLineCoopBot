@@ -350,6 +350,33 @@ LineBot.FlexBuilder = (() => {
   }
 
   /**
+   * สร้าง Flex Card เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-37 — แทน text ใน replyContentItem)
+   * ข้อมูลจาก t_content (content_text) หรือ ReplyStore — header = ชื่อเมนูภาษาไทย (caption)
+   * @param {Object} o - { title, text, updatedDt? }
+   * @returns {Object}
+   */
+  function contentCard(o) {
+    const c = o || {};
+    const title = c.title || 'ข้อมูล';
+    const body = [
+      text(c.text || '', { size: 'md', wrap: true, color: FlexTheme().textPrimary })
+    ];
+    if (c.updatedDt) {
+      body.push(separator('lg'));
+      body.push(infoBox([labelValueRow('ปรับปรุงล่าสุด', c.updatedDt)]));
+    }
+    return {
+      type: 'flex',
+      altText: title,
+      contents: bubbleFrame({
+        header: header(`📄 ${title}`.trim(), { align: 'center' }),
+        body: bodyBox(body),
+        footer: footerButton('ตกลง', 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
    * สร้าง Flex Card ประกาศ/ข่าวสาร (การ์ด MT-36 — แทน buildNoticeText)
    * ข้อมูลจาก t_notice: title + message + published_dt
    * @param {Object} notice - { title, message, published_dt }
@@ -637,6 +664,7 @@ LineBot.FlexBuilder = (() => {
     confirmCard,
     noticeCard,
     loanReminderCard,
+    contentCard,
     // Atoms
     text,
     button,

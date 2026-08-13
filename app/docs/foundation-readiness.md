@@ -24,16 +24,16 @@
 | 15 | **แจ้งเตือนตามเวลา** — Broadcast ประกาศ (`t_notice`) + เตือนชำระรายบุคคล (`t_loan_acct`) + audit trail — **push เป็น Flex Card** (`noticeCard`/`loanReminderCard` — การ์ด MT-36) | `LineBot/NoticeService.js` + `LineBot/LoanReminderService.js` + `Core/NoticeRules.js` + `Core/LoanRules.js` + `FlexBuilder.noticeCard/loanReminderCard` + `MessageService.pushFlex` | `testNoticeRules`/`testNoticeBroadcast` (pending filter · broadcast การ์ด · mark sent · ไม่ส่งซ้ำ) · `testLoanRules`/`testLoanReminders` (due filter · การ์ดรายบุคคล · skipped · ตรวจ t_reminder_log) · `testNoticeLoanCards` (โครงสร้าง 2 การ์ด) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9.2/5.9.3) |
 | 16 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
 | 17 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
-| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (36 ไฟล์ .js) + **33/33 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
+| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (36 ไฟล์ .js) + **34/34 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 19 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
 | 20 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
-| 21 | **Flex Component Standard + การ์ดข้อมูล** — design tokens SSOT (FlexTheme) + แคตตาล็อก 3 ชั้น (atoms/molecules/templates) + **ไม่ hardcode สี** + **ห้าม raw flex object นอก FlexBuilder** · profile/การเงิน/ผลลัพธ์/ประกาศ/เตือนชำระตอบ **Flex Card** ข้อมูลเหมือนเดิม | `LineBot/FlexTheme.js` + `FlexBuilder.js` (atoms/molecules/bubbleFrame + `profileCard`/`financeCard`/`alertCard`/`confirmCard`/`noticeCard`/`loanReminderCard`) + `MemberDataService.buildFinanceCardData` + `MessageService.pushFlex` | `testFlexComponents` (tokens/atoms/molecules/frame/templates — payload เหมือนเดิม) · **`flex-theme-scan`** (CI scan FlexBuilder.js ไม่ให้มี hex color) · **`flex-usage-scan`** (CI scan ไม่ให้มี `type:'flex'`/`'bubble'` นอก FlexBuilder.js — บทที่ 3.4) · `testFinanceCards` (การ์ดข้อมูลครบเหมือน text + noData ไม่ปลอมตัวเลข + EventHandler ตอบการ์ดผ่าน API) · `testAlertConfirmCards` (alertCard 3 ระดับ + confirmCard + ต่ออายุ 2 ขั้น) · `testNoticeLoanCards` (noticeCard/loanReminderCard ข้อมูลครบเหมือน text) | 🧪 | ✅ |
+| 21 | **Flex Component Standard + การ์ดข้อมูล** — design tokens SSOT (FlexTheme) + แคตตาล็อก 3 ชั้น (atoms/molecules/templates) + **ไม่ hardcode สี** + **ห้าม raw flex object นอก FlexBuilder** · profile/การเงิน/ผลลัพธ์/ประกาศ/เตือนชำระ/**เนื้อหาเมนูข้อมูล**ตอบ **Flex Card** ข้อมูลเหมือนเดิม | `LineBot/FlexTheme.js` + `FlexBuilder.js` (atoms/molecules/bubbleFrame + `profileCard`/`financeCard`/`alertCard`/`confirmCard`/`noticeCard`/`loanReminderCard`/`contentCard`) + `MemberDataService.buildFinanceCardData` + `MessageService.pushFlex` | `testFlexComponents` (tokens/atoms/molecules/frame/templates — payload เหมือนเดิม) · **`flex-theme-scan`** (CI scan FlexBuilder.js ไม่ให้มี hex color) · **`flex-usage-scan`** (CI scan ไม่ให้มี `type:'flex'`/`'bubble'` นอก FlexBuilder.js — บทที่ 3.4) · `testFinanceCards` (การ์ดข้อมูลครบเหมือน text + noData ไม่ปลอมตัวเลข + EventHandler ตอบการ์ดผ่าน API) · `testAlertConfirmCards` (alertCard 3 ระดับ + confirmCard + ต่ออายุ 2 ขั้น) · `testNoticeLoanCards` (noticeCard/loanReminderCard ข้อมูลครบเหมือน text) · `testContentCards` (contentCard โครงสร้างตามมาตรฐาน + replyContentItem ตอบการ์ด + fallback text) | 🧪 | ✅ |
 
 ## วิธีรันหลักฐานทั้งหมด
 
 ```bash
-# 1) ชุดทดสอบสัญญา 33 ชุด (รันใน CI อัตโนมัติทุก push)
-node scripts/ci-test.js          # → ALL TESTS PASS (33/33)
+# 1) ชุดทดสอบสัญญา 34 ชุด (รันใน CI อัตโนมัติทุก push)
+node scripts/ci-test.js          # → ALL TESTS PASS (34/34)
 
 # 2) syntax ทุกไฟล์ JS (36 ไฟล์)
 for f in $(find app scripts -name "*.js"); do node --check "$f"; done
@@ -52,6 +52,6 @@ setupNoticeTrigger(9)            # ตั้ง trigger broadcast ประก�
 ## สรุปความพร้อม
 
 - **21/21 เสาหลักผ่าน** — 18 ข้อมีหลักฐานรันใน **CI อัตโนมัติ** (🧪) · 3 ข้อต้องรันด้วยมือ (✋: DoD review, checkTokenHealth, process security)
-- **33/33 ชุดทดสอบสัญญาผ่าน** — รวม `testNoticeLoanCards` (การ์ดประกาศ/เตือนชำระ — การ์ด MT-36)
+- **34/34 ชุดทดสอบสัญญาผ่าน** — รวม `testNoticeLoanCards` (การ์ดประกาศ/เตือนชำระ — การ์ด MT-36) + `testContentCards` (การ์ดเนื้อหาเมนูข้อมูล — การ์ด MT-37)
 - **ทุกเสาหลักพร้อมต่อยอด** — จุดที่ออกแบบไว้แต่ยังไม่ implement ระบุชัดเจนในคอลัมน์สถานะ (📌 เฟส 3)
 - **กฎ:** ถ้าเพิ่ม/แก้เสาหลักใด ต้องอัปเดตตารางนี้ + หลักฐานการทดสอบด้วย (DoD ข้อ 3 — บทที่ 8.1.3)

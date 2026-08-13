@@ -406,9 +406,9 @@ function testNoPlaceholders() {
 }
 
 /**
- * ทดสอบเมนูข้อมูลตอบเนื้อหาจริง (การ์ด MT-14) ผ่าน EventHandler:
- * มี t_content → ตอบจากตาราง · ไม่มี t_content → fallback ข้อความจริงใน ReplyStore
- * (ไม่ใช่ flex "คุณเลือกเมนู..." placeholder)
+ * ทดสอบเมนูข้อมูลตอบ contentCard (การ์ด MT-14/MT-37) ผ่าน EventHandler:
+ * มี t_content → ตอบ contentCard จากตาราง · ไม่มี t_content → fallback
+ * contentCard จากข้อความจริงใน ReplyStore (ไม่ใช่ flex "คุณเลือกเมนู..." placeholder)
  * @returns {boolean}
  */
 function testContentReply() {
@@ -424,30 +424,107 @@ function testContentReply() {
     ['welfare', '🎁 สวัสดิการ: ค่ารักษาพยาบาล 80% สูงสุด 30,000 บาท/ปี — แก้ไขได้ที่ชีท t_content', '2026-08-12 09:00:00']
   ];
 
-  const replies = [];
-  const origReply = LineBot.MessageService.reply;
-  LineBot.MessageService.reply = function (replyToken, text) { replies.push(text); return { ok: true }; };
+  const cards = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  LineBot.MessageService.replyFlex = function (replyToken, flex) { cards.push(flex); return { ok: true }; };
   const user = { source: { userId: 'U11111111111111111111111111111111' } };
   try {
-    // welfare: มีใน t_content → ตอบเนื้อหาจากตาราง
+    // welfare: มีใน t_content → ตอบ contentCard จากตาราง
     LineBot.EventHandler.handlePostback(
       { ...user, replyToken: 'RT1', postback: { data: 'action=menu_item&item=welfare' } }, 'TOKEN');
-    // emergency: ไม่มีใน t_content → fallback ข้อความจริงใน ReplyStore (ไม่ใช่ flex placeholder)
+    // emergency: ไม่มีใน t_content → fallback contentCard จากข้อความจริงใน ReplyStore
     LineBot.EventHandler.handlePostback(
       { ...user, replyToken: 'RT2', postback: { data: 'action=menu_item&item=emergency' } }, 'TOKEN');
   } finally {
+    LineBot.MessageService.replyFlex = origReplyFlex;
+  }
+
+  if (cards.length !== 2) throw new Error('testContentReply: ควรตอบ contentCard 2 ใบ (ได้ ' + cards.length + ')');
+  if (!cards[0] || cards[0].type !== 'flex') throw new Error('testContentReply: welfare ต้องตอบ flex card');
+  const c0 = JSON.stringify(cards[0]);
+  if (!c0.includes('สวัสดิการสมาชิก') || !c0.includes('ค่ารักษาพยาบาล 80%')) {
+    throw new Error('testContentReply: welfare ต้องเป็น contentCard จาก t_content (caption + เนื้อหา)');
+  }
+  const c1 = JSON.stringify(cards[1]);
+  if (!c1.includes('กองทุนฉุกเฉิน') || !c1.includes('วงเงินกู้ฉุกเฉิน')) {
+    throw new Error('testContentReply: emergency ต้องเป็น contentCard จากข้อความจริงใน ReplyStore');
+  }
+  if (c1.includes('คุณเลือกเมนู')) throw new Error('testContentReply: emergency ต้องไม่ตอบ flex placeholder');
+  if (c1.includes('ยังไม่มีข้อมูล')) throw new Error('testContentReply: emergency ต้องเป็นข้อความจริง');
+
+  Logger.log('testContentReply OK — contentCard จาก t_content ก่อน · fallback ReplyStore จริง · ไม่มี flex placeholder (MT-37)');
+  return true;
+}
+
+/**
+ * ทดสอบ Flex Card เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-37):
+ * contentCard (📄 + caption ไทย + เนื้อหา wrap + ปรับปรุงล่าสุด + ปุ่มตกลง) —
+ * ตามมาตรฐาน 3.4 (altText ไทย · สีจาก FlexTheme · ไม่ hardcode hex) +
+ * EventHandler fallback ข้อความ text เมื่อ replyFlex ส่งไม่ได้
+ * @returns {boolean}
+ */
+function testContentCards() {
+  const FB = LineBot.FlexBuilder;
+  const T = LineBot.FlexTheme;
+
+  // 1) contentCard — caption + เนื้อหา + updatedDt
+  const cc = FB.contentCard({
+    title: 'สวัสดิการสมาชิก',
+    text: 'ค่ารักษาพยาบาล 80% สูงสุด 30,000 บาท/ปี',
+    updatedDt: '2026-08-12 09:00:00'
+  });
+  if (cc.type !== 'flex' || cc.altText !== 'สวัสดิการสมาชิก') {
+    throw new Error('testContentCards: contentCard altText ต้องเป็น caption');
+  }
+  if (cc.contents.header.contents[0].text !== '📄 สวัสดิการสมาชิก' ||
+      cc.contents.header.backgroundColor !== T.brandColor) {
+    throw new Error('testContentCards: contentCard header ผิด');
+  }
+  const ccJson = JSON.stringify(cc);
+  for (const s of ['ค่ารักษาพยาบาล 80% สูงสุด 30,000 บาท/ปี', 'ปรับปรุงล่าสุด', '2026-08-12 09:00:00']) {
+    if (!ccJson.includes(s)) throw new Error('testContentCards: contentCard ไม่มีข้อมูล "' + s + '"');
+  }
+  if (!cc.contents.footer || cc.contents.footer.contents[0].action.data !== 'action=ack_menu') {
+    throw new Error('testContentCards: contentCard footer ผิด');
+  }
+
+  // 2) ไม่มี updatedDt → ไม่มีกล่อง "ปรับปรุงล่าสุด"
+  const cc2Json = JSON.stringify(FB.contentCard({ title: 'คำถามที่พบบ่อย', text: 'FAQ 1...' }));
+  if (cc2Json.includes('ปรับปรุงล่าสุด')) throw new Error('testContentCards: ไม่มี updatedDt ต้องไม่แสดงกล่อง');
+
+  // 3) สีจาก FlexTheme (ไม่มี hex hardcode)
+  const src = FB.contentCard.toString();
+  if (/#[0-9A-Fa-f]{6}/.test(src)) throw new Error('testContentCards: ฟังก์ชันต้องไม่ hardcode สี hex');
+
+  // 4) EventHandler: replyFlex ล้มเหลว → fallback ข้อความ text เดิม (พฤติกรรมไม่พัง)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
+  ];
+  delete __fakeSheets['t_content'];
+  __fakeSheets['t_content'] = [
+    DataDict.getHeaders('CONTENT'),
+    ['welfare', '🎁 สวัสดิการ: ค่ารักษาพยาบาล 80% สูงสุด 30,000 บาท/ปี — แก้ไขได้ที่ชีท t_content', '2026-08-12 09:00:00']
+  ];
+  const textReplies = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  const origReply = LineBot.MessageService.reply;
+  LineBot.MessageService.replyFlex = function () { return { ok: false, statusCode: 500, body: 'err' }; };
+  LineBot.MessageService.reply = function (replyToken, text) { textReplies.push(text); return { ok: true }; };
+  const user = { source: { userId: 'U11111111111111111111111111111111' } };
+  try {
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT1', postback: { data: 'action=menu_item&item=welfare' } }, 'TOKEN');
+  } finally {
+    LineBot.MessageService.replyFlex = origReplyFlex;
     LineBot.MessageService.reply = origReply;
   }
-
-  if (!replies[0] || !replies[0].includes('ค่ารักษาพยาบาล 80%')) {
-    throw new Error('testContentReply: welfare ต้องตอบเนื้อหาจาก t_content');
+  if (textReplies.length !== 1 || !textReplies[0].includes('ค่ารักษาพยาบาล 80%')) {
+    throw new Error('testContentCards: replyFlex ล้มเหลวต้อง fallback ข้อความ text เดิม');
   }
-  if (!replies[1]) throw new Error('testContentReply: emergency ต้องมีคำตอบ');
-  if (replies[1].includes('คุณเลือกเมนู')) throw new Error('testContentReply: emergency ต้องไม่ตอบ flex placeholder');
-  if (replies[1].includes('ยังไม่มีข้อมูล')) throw new Error('testContentReply: emergency ต้องเป็นข้อความจริง');
-  if (!replies[1].includes('กองทุนฉุกเฉิน')) throw new Error('testContentReply: emergency ต้องมีเนื้อหาจริง');
 
-  Logger.log('testContentReply OK — t_content ก่อน · fallback ReplyStore จริง · ไม่มี flex placeholder (MT-14)');
+  Logger.log('testContentCards OK — contentCard (caption + เนื้อหา + updatedDt) + fallback text (MT-37)');
   return true;
 }
 
@@ -1878,7 +1955,7 @@ function testFlexComponents() {
   const src = [FB.text, FB.button, FB.separator, FB.labelValueRow, FB.statusBadge,
     FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.buttonRow, FB.bubbleFrame,
     FB.menuClicked, FB.welcomeMember, FB.messageBox, FB.profileCard, FB.financeCard,
-    FB.alertCard, FB.confirmCard, FB.noticeCard, FB.loanReminderCard]
+    FB.alertCard, FB.confirmCard, FB.noticeCard, FB.loanReminderCard, FB.contentCard]
     .map(f => f.toString()).join('\n');
   if (/#[0-9A-Fa-f]{6}/.test(src)) {
     throw new Error('testFlexComponents: ฟังก์ชัน component ต้องไม่ hardcode สี hex (ใช้ FlexTheme)');

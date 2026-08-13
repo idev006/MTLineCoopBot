@@ -159,7 +159,7 @@ Entry point ของ LINE webhook
 - `testMemberDataService()` — ทดสอบ profile ข้อมูลจริง + เมนูการเงินตอบสถานะจริง (MT-10)
 - `testSeedData()` — ทดสอบ dummy rows ตรงคอลัมน์ DataDict + ครบ 8 ตาราง (MT-27/32/13/13b/14)
 - `testNoPlaceholders()` — ทดสอบว่าไม่มี placeholder คงเหลือใน `ReplyStore`/`WELCOME`/`t_content` (ยังไม่มีข้อมูล/XXX-/กำลังดึง/placeholder/เริ่มขั้นตอน) + ครบทุกรายการ (MT-14)
-- `testContentReply()` — ทดสอบเมนูข้อมูลผ่าน EventHandler: มี `t_content` → ตอบจากตาราง · ไม่มี → fallback ข้อความจริงใน ReplyStore (ไม่ใช่ flex "คุณเลือกเมนู...") (MT-14)
+- `testContentReply()` — ทดสอบเมนูข้อมูลผ่าน EventHandler: มี `t_content` → ตอบ **Flex Card** จากตาราง · ไม่มี → fallback ข้อความจริงใน ReplyStore (ไม่ใช่ flex "คุณเลือกเมนู...") (MT-14/MT-37)
 - `testFinanceData()` — ทดสอบ Data Layer เต็ม path: seed → repository → `buildFinanceText` ข้อมูลจริง (ผ่าน Fake SpreadsheetApp ใน CI — MT-27)
 - `testColumnReordering()` — ทดสอบ **สลับตำแหน่งคอลัมน์** ใน `t_member_mast`/`t_savings_acct` แล้วอ่าน/เขียนยังถูกต้อง (Header-driven — MT-28)
 - `testDateValidator()` — ทดสอบตัวตรวจรูปแบบวันที่: ปฏิเสธ `dd-mm-yyyy`/`T`/`Z`/mixed · ยอมรับ `yyyy-mm-dd` + ค่าว่าง/Date object · `objectToRow` throw พร้อมชื่อคอลัมน์ (MT-29)
@@ -176,6 +176,7 @@ Entry point ของ LINE webhook
 - `testLoanRules()` — ทดสอบ `Core.LoanRules` (pure): due filter (`due_dt ∈ [now, now+days]` · ข้ามเลยกำหนด/ไกลเกิน/ไม่มี due) · daysLeft · buildLoanReminderText รายบุคคล · isReminderTarget (MT-13b)
 - `testLoanReminders()` — ทดสอบ `runLoanReminders` เต็ม path (Fake Sheets + fake sender): เตือนเฉพาะสัญญาที่ถึงรอบ · **Flex Card รายบุคคล (`loanReminderCard`)** · skipped (ไม่มี userId) · **ตรวจ t_reminder_log** (reminded/skipped) (MT-13b/MT-36)
 - `testNoticeLoanCards()` — ทดสอบ `FlexBuilder.noticeCard`/`loanReminderCard` (การ์ด MT-36): โครงสร้างตามมาตรฐาน 3.4 (altText ไทย · header/sีจาก FlexTheme · ข้อมูลครบเหมือน buildNoticeText/buildLoanReminderText · ไม่ hardcode hex)
+- `testContentCards()` — ทดสอบ `FlexBuilder.contentCard` (การ์ด MT-37): โครงสร้างตามมาตรฐาน 3.4 (header caption ไทย · เนื้อหา wrap · กล่องปรับปรุงล่าสุด · altText ไทย · ไม่ hardcode hex) + `replyContentItem` ตอบการ์ดผ่าน `replyFlex` · **fallback ข้อความ text เดิมถ้าการ์ดส่งไม่ได้**
 - `checkTokenHealth()` — **ตรวจสุขภาพ Channel Access Token** เรียก LINE `GET /v2/bot/info` → รายงาน `ok/status` + ข้อมูล Bot (ใช้หลังหมุน token บทที่ 5.5.1 หรือตรวจรายเดือน) · **ไม่รันใน CI** (ต้องใช้ token จริง + network)
 
 ### 4.2.6b `SeedData.js` — สร้างตาราง + dummy data (การ์ด MT-27)
@@ -214,7 +215,7 @@ Entry point ของ LINE webhook
 **`EventHandler.js`** — Router กลาง (การ์ด MT-17: Bot เป็น UI Adapter)
 - `getAuthorizedMember(lineUserId)` — **Gate ตรวจสิทธิ์ (auth)** ผ่าน repository (`findByLineUserId` + `isActiveMember` + บทบาท) — ยกเว้น `activate:`/Welcome items
 - `apiGet(path, lineUserId)` — เรียกข้อมูลสมาชิกผ่าน **`Api.ApiService.handleRequest`** (endpoint เดียวกับ UI อื่น ๆ): profile → `/api/member/profile` · เมนูการเงิน → `/api/member/savings` | `/loans` | `/dividends` (ตาม `FINANCIAL_API` map — ดึงเฉพาะตารางที่เมนูนั้นใช้) · ถ้า API คืน error → `replyApiDataError` (ข้อความแจ้งเตือน ไม่พัง)
-- `replyContentItem(item, replyToken, token)` — ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14): ① อ่านจาก `t_content` (data-driven — แก้ไขในชีทได้) ② fallback ข้อความจริงใน ReplyStore ③ flex card ทางเลือกสุดท้าย
+- `replyContentItem(item, replyToken, token)` — ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14/MT-37): ① อ่านจาก `t_content` (data-driven — แก้ไขในชีทได้) ② fallback ข้อความจริงใน ReplyStore → ตอบ **`contentCard` ผ่าน `replyFlex`** (fallback ข้อความ text เดิมถ้าการ์ดส่งไม่ได้)
 - จัดรูปแบบข้อความ (MemberDataService) ยังอยู่ใน UI layer — พฤติกรรมผู้ใช้ไม่เปลี่ยน
 - `handlePostback(event, token)` — postback: switch_tab/stay_tab/menu_item (Welcome ผ่านก่อน Gate → profile/finance ผ่าน API → flex อื่น ๆ) + fallback Rich Menu เดิม
 - `handlePostback(event, token)` — แยก `params` ด้วย `Util.parseQueryString` แล้วตัดสินใจตามตารางในบทที่ 3.5.3
@@ -267,11 +268,11 @@ Entry point ของ LINE webhook
 - 🚫 **ห้าม hardcode สี hex ในโค้ดอื่น** — อ่านจากที่นี่ (กันด้วย CI `flex-theme-scan` + `testFlexComponents`)
 
 **`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33/MT-34) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
-- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม) · **`alertCard({level, title, message})`** (success/warning/error — การ์ด MT-35) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก — การ์ด MT-35) · **`noticeCard(notice)`** / **`loanReminderCard(loan, member, daysLeft)`** — การ์ดประกาศ/เตือนชำระ (การ์ด MT-36 — ข้อมูลเหมือน text เดิม)
+- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม) · **`alertCard({level, title, message})`** (success/warning/error — การ์ด MT-35) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก — การ์ด MT-35) · **`noticeCard(notice)`** / **`loanReminderCard(loan, member, daysLeft)`** — การ์ดประกาศ/เตือนชำระ (การ์ด MT-36 — ข้อมูลเหมือน text เดิม) · **`contentCard({title, text, updatedDt?})`** — การ์ดเนื้อหาเมนูข้อมูล t_content (การ์ด MT-37 — header caption ไทย + เนื้อหา wrap)
 - **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
 - **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)` / `buttonRow(buttons, opts?)` (ปุ่มแนวนอนหลายปุ่ม)
 - **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ
-- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`/`testNoticeLoanCards`
+- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`/`testNoticeLoanCards`/`testContentCards`
 
 **`MessageService.js`** — ส่งข้อความผ่าน LINE Messaging API
 - `reply()` / `replyFlex()` / `send()` — ตอบกลับ (ต้องมี replyToken)

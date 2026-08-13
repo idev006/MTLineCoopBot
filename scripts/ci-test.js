@@ -166,6 +166,7 @@ const runner = `
     ['testDummyMemberMaster', testDummyMemberMaster],
     ['testNoPlaceholders', testNoPlaceholders],
     ['testContentReply', testContentReply],
+    ['testContentCards', testContentCards],
     ['testFinanceData', testFinanceData],
     ['testColumnReordering', testColumnReordering],
     ['testDateValidator', testDateValidator],

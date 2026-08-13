@@ -64,10 +64,11 @@ LineBot.EventHandler = (() => {
   }
 
   /**
-   * ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14) — data-driven:
-   * 1) อ่านจากตาราง t_content (แก้ไขได้ในชีท ไม่ต้องแก้โค้ด)
-   * 2) ถ้าไม่มี → ข้อความ static จริงใน ReplyStore
+   * ตอบเนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14/MT-37) — data-driven:
+   * 1) อ่านจากตาราง t_content (แก้ไขได้ในชีท ไม่ต้องแก้โค้ด) → ตอบ **contentCard**
+   * 2) ถ้าไม่มี → ข้อความ static จริงใน ReplyStore → ตอบ **contentCard** (caption + ข้อความจริง)
    * 3) ถ้าเป็น sentinel ('ไม่พบข้อมูลสำหรับรายการนี้') → คืน false (ให้ flex ตอบแทน)
+   * ถ้าการ์ดส่งไม่ได้ (replyFlex ไม่สำเร็จ) → fallback ข้อความ text เดิม (พฤติกรรมไม่พัง)
    * @param {string} item
    * @param {string} replyToken
    * @param {string} token
@@ -75,12 +76,18 @@ LineBot.EventHandler = (() => {
    */
   function replyContentItem(item, replyToken, token) {
     if (!item) return false;
+    const deps = getDependencies();
+    const caption = deps.ReplyStore.getCaption(item) || item;
     // 1) t_content (data-driven)
     try {
       const repo = Data.MemberRepository.getRepository();
       const content = repo.getContent(item);
       if (content) {
-        getDependencies().MessageService.reply(replyToken, content, token);
+        const card = deps.FlexBuilder.contentCard({ title: caption, text: content });
+        const result = deps.MessageService.replyFlex(replyToken, card, token);
+        if (!result.ok) {
+          deps.MessageService.reply(replyToken, content, token);
+        }
         Logger.log(`Content menu replied from t_content: ${item}`);
         return true;
       }
@@ -88,9 +95,13 @@ LineBot.EventHandler = (() => {
       Logger.log(`[Content] getContent failed (fallback ไป ReplyStore): ${contentErr}`);
     }
     // 2) ReplyStore static (ข้อความจริง — ไม่ใช่ flex placeholder)
-    const text = getDependencies().ReplyStore.get(item);
+    const text = deps.ReplyStore.get(item);
     if (text && text !== 'ไม่พบข้อมูลสำหรับรายการนี้') {
-      getDependencies().MessageService.reply(replyToken, text, token);
+      const card = deps.FlexBuilder.contentCard({ title: caption, text });
+      const result = deps.MessageService.replyFlex(replyToken, card, token);
+      if (!result.ok) {
+        deps.MessageService.reply(replyToken, text, token);
+      }
       Logger.log(`Content menu replied from ReplyStore: ${item}`);
       return true;
     }
