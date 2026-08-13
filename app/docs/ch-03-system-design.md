@@ -69,7 +69,7 @@
 { "ok": false, "error": { "code": "MEMBER_INVALID", "message": "..." } }
 ```
 
-> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (30/30) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
+> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (31/31) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
 
 **การยืนยันตัวตนรายช่องทาง (Per-Request Auth):**
 
@@ -435,7 +435,8 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 - 🚫 **ห้าม hardcode สี hex ในโค้ด** — สีทุกสีอ่านจาก `LineBot.FlexTheme` (เปลี่ยนธีม = แก้ `FlexTheme.js` ไฟล์เดียว) · กันด้วย CI: `flex-theme-scan` (scan `FlexBuilder.js` ไม่ให้มี hex color) + `testFlexComponents` ตรวจฟังก์ชัน component
 - Component เป็น **pure function** — รับ props → คืน Flex object → เทสต์ใน node ได้ (`testFlexComponents`)
 - สร้างการ์ดใหม่ = ประกอบจาก component ที่มี (เช่น ใช้ `header` + `infoBox` + `footerButton` + `bubbleFrame`) ไม่ใช่สร้างโครงสร้างซ้ำ
-- เตรียมใช้ต่อ: `statusBadge` (สถานะสมาชิก/หนี้/ประกาศ) · `labelValueRow` (โปรไฟล์/การเงิน) · `messageBox` (แจ้งเตือน/ยืนยัน) — การ์ด `profileCard`/`financeCard`/`noticeCard` ในเฟสถัดไป
+- ✅ ใช้แล้ว: `profileCard` (ข้อมูลส่วนตัว) · `financeCard` (เงินฝาก/หนี้/ปันผล/หุ้น) — การ์ด MT-34 · `statusBadge` (สถานะสมาชิก) · `labelValueRow` (แถวข้อมูล) · `messageBox` (แจ้งเตือน/ยืนยัน)
+- เตรียมใช้ต่อ: `noticeCard` (ประกาศจาก `t_notice`) · `loanReminderCard` (เตือนชำระ) — ใช้ component ชุดเดียวกัน
 
 ### 3.4.1 `menuClicked(menuCaption)` — ตอบเมื่อคลิกเมนู
 

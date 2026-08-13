@@ -130,6 +130,17 @@ LineBot.EventHandler = (() => {
   }
 
   /**
+   * ข้อความเตือนวันหมดอายุ (ถ้ามี) — ใส่เป็นกล่องเตือนใน Flex Card (การ์ด MT-34)
+   * @param {Object} member
+   * @returns {string} '' ถ้าไม่ควรเตือน
+   */
+  function getExpiryWarningText(member) {
+    if (!member) return '';
+    const expiry = Core.MemberRules.getExpiryStatus(member, undefined, Config.get().EXPIRY_WARNING_DAYS);
+    return LineBot.MemberDataService.buildExpiryWarning(member, expiry);
+  }
+
+  /**
    * ตอบข้อความปฏิเสธเมื่อผู้ใช้ไม่มีสิทธิ์ใช้งานเมนู/คำสั่งของสมาชิก
    * ถ้าเคยเป็นสมาชิกแต่ไม่ valid (หมดอายุ/ถูกเพิกถอน) → ยกเลิกเมนูสมาชิก
    * ให้กลับไปเห็น Welcome Menu (Per-User Gating — บทที่ 3.3.6)
@@ -217,12 +228,19 @@ LineBot.EventHandler = (() => {
         return;
       }
       // MT-17 (Bot เป็น UI Adapter): ข้อมูลสมาชิกเรียกผ่าน Api.ApiService —
-      // endpoint เดียวกับ UI อื่น ๆ · ยังจัดรูปแบบข้อความที่ MemberDataService (UI layer)
+      // endpoint เดียวกับ UI อื่น ๆ · จัดรูปแบบการ์ดที่ MemberDataService + FlexBuilder (UI layer)
+      // MT-34: profile/การเงินตอบเป็น Flex Card (ข้อมูลเหมือนเดิม) — fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้
       if (params.item === 'profile') {
         const env = apiGet('/api/member/profile', event.source.userId);
         if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
-        const profileText = deps.MemberData.buildProfileText(env.data);
-        deps.MessageService.reply(replyToken, withExpiryWarning(profileText, member), token);
+        const memberData = env.data;
+        const card = deps.FlexBuilder.profileCard(memberData, { warning: getExpiryWarningText(memberData) });
+        const result = deps.MessageService.replyFlex(replyToken, card, token);
+        if (!result.ok) {
+          Logger.log(`Profile card reply failed (${result.statusCode}) — fallback ข้อความเดิม`);
+          const profileText = deps.MemberData.buildProfileText(memberData);
+          deps.MessageService.reply(replyToken, withExpiryWarning(profileText, member), token);
+        }
         Logger.log(`Profile replied via API for ${member.mem_code}`);
         return;
       }
@@ -233,8 +251,16 @@ LineBot.EventHandler = (() => {
         if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
         const financeData = { savings: [], loans: [], dividends: [] };
         financeData[key] = (env.data && env.data[key]) || [];
-        const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
-        deps.MessageService.reply(replyToken, withExpiryWarning(financeText, member), token);
+        const card = deps.FlexBuilder.financeCard({
+          ...deps.MemberData.buildFinanceCardData(params.item, member, financeData),
+          warning: getExpiryWarningText(member)
+        });
+        const result = deps.MessageService.replyFlex(replyToken, card, token);
+        if (!result.ok) {
+          Logger.log(`Finance card reply failed (${result.statusCode}) — fallback ข้อความเดิม`);
+          const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
+          deps.MessageService.reply(replyToken, withExpiryWarning(financeText, member), token);
+        }
         Logger.log(`Financial menu replied via API: ${params.item}`);
         return;
       }

@@ -34,12 +34,13 @@
 
 ## 🔄 In Progress (WIP ≤ 3)
 
-- _(ว่าง)_
+- [ ] **[MT-34] Flex Card ข้อมูลสมาชิก/การเงิน** — บทที่ 3.4 · `FlexBuilder.profileCard`/`financeCard` (ใช้ component library MT-33) · `MemberDataService.buildFinanceCardData` (pure) · EventHandler ตอบ `replyFlex` การ์ด (fallback ข้อความเดิม) + `testFinanceCards`
 
 ---
 
 ## ✅ Done
 
+- [x] **[MT-34] Flex Card ข้อมูลสมาชิก/การเงิน** — อ้างอิง: บทที่ 3.4, ch-06 TC-20 · `FlexBuilder.profileCard(member)` (ชื่อ/รหัส/สถานะ badge/บทบาท/ตำแหน่ง+คะแนน/คะแนนสมาชิก/คะแนนความดี/เงินกู้คงค้าง/เงินหุ้น/สิทธิ์ใช้งาน) + `financeCard(data)` (rows + รวมยอด + noData) — ประกอบจาก component library (MT-33) · `MemberDataService.buildFinanceCardData` (pure — ข้อมูลเหมือน buildFinanceText ไม่หาย · ไม่ปลอมตัวเลข) · EventHandler ตอบ `replyFlex` การ์ดผ่าน API เดียวกัน (MT-17) + **fallback ข้อความเดิม** ถ้าการ์ดส่งไม่ได้ · คำเตือนหมดอายุแสดงเป็นกล่องเตือนใน card · `testFinanceCards` (การ์ด + noData + EventHandler) · ALL TESTS PASS 31/31
 - [x] **[MT-33] Flex Component Library** — อ้างอิง: บทที่ 3.4, ch-06 TC-19 · `LineBot/FlexTheme.js` (ใหม่ — design tokens SSOT: สี/ขนาด/รัศมี/`statusColors`) · `FlexBuilder.js` refactor เป็น **Component Library**: atoms (`text`/`button`/`separator`/`labelValueRow`/`statusBadge`) + molecules (`header`/`bodyBox`/`infoBox`/`footerButton`) + `bubbleFrame` · refactor `menuClicked`/`welcomeMember`/`messageBox` ใช้ component เดียวกัน — **payload เหมือนเดิม (พฤติกรรมผู้ใช้ไม่เปลี่ยน)** · กัน hardcode สีด้วย `flex-theme-scan` (CI — scan FlexBuilder.js ไม่ให้มี hex) + `testFlexComponents` (tokens/atoms/molecules/frame/templates + ไม่มี hex ในฟังก์ชัน) · ALL TESTS PASS 30/30
 
 - [x] **[MT-01] Rich Menu 5 แท็บ + Alias + Deploy** — บทที่ 3.3, 5.6
@@ -93,6 +94,7 @@
 | 2026-08-12 | MT-27b | → In Progress → Done | เตรียมข้อมูลทดสอบ use case สมาชิก: `SeedData.createDummyMemberMaster()` (dev/test — t_member_mast MEM001–005: MEM001–003 activate ได้ด้วย ACT001–003 · MEM004 หมดอายุ · MEM005 staff · non-destructive) + top-level wrappers (createDummyTables/createDummyMemberMaster/seedAllForTesting/resetDummyTables ใน Editor) + testDummyMemberMaster (16 คอลัมน์/activate codes ไม่ซ้ำ/FK ตรงการเงิน) · ALL TESTS PASS 24/24 · DoD ครบ |
 | 2026-08-12 | MT-13b | → In Progress → Done | เตือนชำระรายบุคคล: Config.PAYMENT_REMINDER_DAYS + DataDict t_reminder_log + SeedData 7 ตาราง (+ dummy loan ใกล้ครบกำหนด) + Core.LoanRules (due filter/text รายบุคคล/target) + LoanReminderService.runLoanReminders (push รายบุคคล + log reminded/skipped) + setupReminderTrigger + repo.listLoans/logReminder + testLoanRules/testLoanReminders · ALL TESTS PASS 26/26 · DoD ครบ |
 | 2026-08-12 | MT-14 | → In Progress → Done | ปรับปรุงข้อความตอบกลับ: DataDict t_content (content_key/content_text/updated_dt) + SeedData 8 ตาราง (เนื้อหาจริงทุกเมนู) + repo.getContent + EventHandler.replyContentItem (t_content → fallback ReplyStore → flex สุดท้าย) + ReplyStore แทนที่ placeholder ทั้งหมด (TAB_1–5/WELCOME — ยังไม่มีข้อมูล/XXX-/กำลังดึง/เริ่มขั้นตอน) + testNoPlaceholders + testContentReply · ALL TESTS PASS 28/28 · DoD ครบ |
+| 2026-08-13 | MT-34 | → In Progress → Done | Flex Card ข้อมูลสมาชิก/การเงิน: FlexBuilder.profileCard/financeCard (ใช้ component MT-33) + MemberDataService.buildFinanceCardData (pure — ข้อมูลเหมือน text ไม่หาย) + EventHandler ตอบ replyFlex การ์ดผ่าน API + fallback ข้อความเดิม + คำเตือนหมดอายุใน card + testFinanceCards · ALL TESTS PASS 31/31 · DoD ครบ |
 | 2026-08-13 | MT-33 | → In Progress → Done | Flex Component Library: FlexTheme.js (design tokens SSOT) + FlexBuilder refactor (atoms text/button/separator/labelValueRow/statusBadge · molecules header/bodyBox/infoBox/footerButton · bubbleFrame) · menuClicked/welcomeMember/messageBox ใช้ component เดียวกัน payload เหมือนเดิม · CI เพิ่ม flex-theme-scan (ห้าม hex hardcode) + testFlexComponents · ALL TESTS PASS 30/30 · DoD ครบ |
 | 2026-08-12 | MT-08 | To Do → In Progress → Done | implement `webhook_secret` + ฟังก์ชัน HMAC; DoD ครบ 6 ข้อ (test ผ่าน, syntax ผ่าน, README ✅, เอกสารตรงโค้ด) |
 | 2026-08-12 | MT-09 | To Do → In Progress → Done | Gate ตรวจสิทธิ์ (findByLineUserId + isActiveMember + บทบาท); ALL TESTS PASS; DoD ครบ 6 ข้อ |

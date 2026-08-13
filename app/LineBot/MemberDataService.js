@@ -20,6 +20,17 @@ LineBot.MemberDataService = (() => {
   const FINANCIAL_ITEMS = ['saving_acct', 'chk_balance', 'dividends', 'share_capital', 'loan_balance'];
 
   /**
+   * ไอคอนของเมนูการเงิน (ใช้ใน Flex Card — การ์ด MT-34)
+   */
+  const FINANCIAL_ICONS = {
+    saving_acct: '💰',
+    chk_balance: '💳',
+    loan_balance: '💳',
+    dividends: '📈',
+    share_capital: '📈'
+  };
+
+  /**
    * สร้างข้อความโปรไฟล์สมาชิกจากข้อมูลจริง
    * @param {Object} member - member object จาก repository
    * @returns {string}
@@ -144,6 +155,88 @@ LineBot.MemberDataService = (() => {
   }
 
   /**
+   * สร้างข้อมูลสำหรับ Flex Card เมนูการเงิน (การ์ด MT-34)
+   * ข้อมูลเหมือน buildFinanceText — rows/total/noData (ไม่ปลอมตัวเลข)
+   * @param {string} item - item id ของเมนูการเงิน
+   * @param {Object} member - member object
+   * @param {Object} financeData - { savings: [], loans: [], dividends: [] }
+   * @returns {Object} { title, icon, memberCode, rows: [{label,value}], total: {label,value}|null, noData: {message}|null }
+   */
+  function buildFinanceCardData(item, member, financeData) {
+    const caption = LineBot.ReplyStore.getCaption(item);
+    const data = financeData || { savings: [], loans: [], dividends: [] };
+    const base = {
+      title: caption,
+      icon: FINANCIAL_ICONS[item] || '💼',
+      memberCode: (member && member.mem_code) || '',
+      rows: [],
+      total: null,
+      noData: null
+    };
+
+    if (item === 'saving_acct') {
+      if (!data.savings || data.savings.length === 0) return noDataCard(base, 'บัญชีเงินฝาก');
+      base.rows = data.savings.map(s => ({
+        label: `${s.acct_type || 'บัญชี'} (${s.acct_no})`,
+        value: `${formatMoney(s.balance)} บาท`
+      }));
+      const total = data.savings.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
+      base.total = { label: 'รวมเงินฝาก', value: `${formatMoney(total)} บาท` };
+      return base;
+    }
+
+    if (item === 'chk_balance') {
+      if (!data.savings || data.savings.length === 0) return noDataCard(base, 'ยอดเงินฝาก');
+      const total = data.savings.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
+      base.rows = [{ label: 'จำนวนบัญชี', value: `${data.savings.length} บัญชี` }];
+      base.total = { label: 'ยอดเงินฝากรวม', value: `${formatMoney(total)} บาท` };
+      return base;
+    }
+
+    if (item === 'loan_balance') {
+      if (!data.loans || data.loans.length === 0) return noDataCard(base, 'ยอดหนี้');
+      base.rows = data.loans.map(l => ({
+        label: l.loan_no || '-',
+        value: `${formatMoney(l.outstanding)} บาท${l.due_dt ? ' (ครบกำหนด ' + l.due_dt + ')' : ''}`
+      }));
+      const total = data.loans.reduce((sum, l) => sum + (Number(l.outstanding) || 0), 0);
+      base.total = { label: 'รวมหนี้คงค้าง', value: `${formatMoney(total)} บาท` };
+      return base;
+    }
+
+    if (item === 'dividends') {
+      if (!data.dividends || data.dividends.length === 0) return noDataCard(base, 'เงินปันผล');
+      base.rows = data.dividends.map(d => ({
+        label: `ปี ${d.year}`,
+        value: `ปันผล ${formatMoney(d.dividend_amt)} บาท`
+      }));
+      return base;
+    }
+
+    if (item === 'share_capital') {
+      if (!data.dividends || data.dividends.length === 0) return noDataCard(base, 'เงินหุ้น');
+      const latest = data.dividends.reduce((a, b) => (Number(b.year) > Number(a.year) ? b : a));
+      base.rows = [{
+        label: `เงินหุ้น/ทุนเรือนหุ้น (ล่าสุด ปี ${latest.year})`,
+        value: `${formatMoney(latest.share_capital)} บาท`
+      }];
+      return base;
+    }
+
+    return noDataCard(base, 'ข้อมูลการเงิน');
+  }
+
+  /**
+   * ค่าที่คืนเมื่อไม่มีข้อมูล (ตอบสถานะจริง — ไม่ปลอมตัวเลข)
+   * @param {Object} base
+   * @param {string} label - ชื่อข้อมูล
+   * @returns {Object}
+   */
+  function noDataCard(base, label) {
+    return { ...base, noData: { label: label, message: `ไม่พบข้อมูล${label}สำหรับรหัสสมาชิกนี้` } };
+  }
+
+  /**
    * ข้อความเมื่อไม่มีข้อมูล (ตอบสถานะจริง — ไม่ปลอมตัวเลข)
    * @param {string} header
    * @param {string} label - ชื่อข้อมูล
@@ -204,6 +297,7 @@ LineBot.MemberDataService = (() => {
   return {
     buildProfileText,
     buildFinanceText,
+    buildFinanceCardData,
     buildExpiryWarning,
     appendExpiryWarning,
     isFinancialItem,

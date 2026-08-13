@@ -1187,11 +1187,11 @@ function testBotUsesApi() {
     apiCalls.push({ method, path });
     return origHandle(method, path, opts);
   };
-  // fake MessageService.reply — เก็บข้อความที่ตอบผู้ใช้
-  const replies = [];
-  const origReply = LineBot.MessageService.reply;
-  LineBot.MessageService.reply = function (replyToken, text) {
-    replies.push(text);
+  // fake MessageService.replyFlex — เก็บการ์ดที่ตอบผู้ใช้ (MT-34: profile/การเงินตอบ Flex Card)
+  const flexReplies = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  LineBot.MessageService.replyFlex = function (replyToken, flex) {
+    flexReplies.push(flex);
     return { ok: true };
   };
 
@@ -1205,7 +1205,7 @@ function testBotUsesApi() {
       { ...user, replyToken: 'RT2', postback: { data: 'action=menu_item&item=saving_acct' } }, 'TOKEN');
   } finally {
     Api.ApiService.handleRequest = origHandle;
-    LineBot.MessageService.reply = origReply;
+    LineBot.MessageService.replyFlex = origReplyFlex;
   }
 
   // 3) ตรวจว่าเรียก API ครบทั้ง 2 เส้นทาง (GET)
@@ -1215,15 +1215,20 @@ function testBotUsesApi() {
   if (apiCalls.length !== 2) throw new Error('testBotUsesApi: ควรเรียก API 2 ครั้ง (ได้ ' + apiCalls.length + ')');
   if (apiCalls.some(c => c.method !== 'GET')) throw new Error('testBotUsesApi: data read ต้องเป็น GET');
 
-  // 4) user-visible behavior เหมือนเดิม: profile มีชื่อ/คะแนนตำแหน่ง/ฟิลด์ใหม่ · finance มีข้อมูลจริง
-  if (!replies[0] || !replies[0].includes('สมชาย ใจดี')) throw new Error('testBotUsesApi: profile ต้องมีชื่อ');
-  if (!replies[0] || !replies[0].includes('คะแนน 10')) throw new Error('testBotUsesApi: profile ต้องมีคะแนนตำแหน่ง (mem_position_score ผ่าน API)');
-  if (!replies[0] || !replies[0].includes('คะแนนความดี: 85')) throw new Error('testBotUsesApi: profile ต้องมี mem_kk ผ่าน API');
-  if (!replies[0] || !replies[0].includes('50,000.00 บาท')) throw new Error('testBotUsesApi: profile ต้องมี mem_bk (formatMoney) ผ่าน API');
-  if (!replies[1] || !replies[1].includes('25,000.00 บาท')) throw new Error('testBotUsesApi: saving reply ต้องมีข้อมูลจริงจาก t_savings_acct ผ่าน API');
-  if (!replies[1] || !replies[1].includes('รวมเงินฝาก')) throw new Error('testBotUsesApi: saving reply ต้องมีรวมยอด');
+  // 4) user-visible behavior เหมือนเดิม (แต่เป็น Flex Card): profile มีชื่อ/คะแนนตำแหน่ง/ฟิลด์ใหม่ · finance มีข้อมูลจริง
+  if (flexReplies.length !== 2) throw new Error('testBotUsesApi: ควร replyFlex 2 ครั้ง (ได้ ' + flexReplies.length + ')');
+  const pJson = JSON.stringify(flexReplies[0]);
+  if (!pJson.includes('สมชาย ใจดี')) throw new Error('testBotUsesApi: profile การ์ดต้องมีชื่อ');
+  if (!pJson.includes('คะแนน 10')) throw new Error('testBotUsesApi: profile การ์ดต้องมีคะแนนตำแหน่ง (mem_position_score ผ่าน API)');
+  if (!pJson.includes('คะแนนความดี') || !pJson.includes('"text":"85"')) throw new Error('testBotUsesApi: profile การ์ดต้องมี mem_kk ผ่าน API');
+  if (!pJson.includes('50,000.00 บาท')) throw new Error('testBotUsesApi: profile การ์ดต้องมี mem_bk (formatMoney) ผ่าน API');
+  if (!pJson.includes('ใช้งานอยู่')) throw new Error('testBotUsesApi: profile การ์ดต้องมีสถานะ badge');
+  const sJson = JSON.stringify(flexReplies[1]);
+  if (!sJson.includes('25,000.00 บาท')) throw new Error('testBotUsesApi: saving การ์ดต้องมีข้อมูลจริงจาก t_savings_acct ผ่าน API');
+  // 1 บัญชี 25,000 → รวมเงินฝาก 25,000.00 (total box แสดง label + ยอดรวม)
+  if (!sJson.includes('รวมเงินฝาก') || !/"text":"25,000\.00 บาท"/.test(sJson)) throw new Error('testBotUsesApi: saving การ์ดต้องมีรวมยอด');
 
-  Logger.log('testBotUsesApi OK — postback → Api.ApiService (profile/savings) → ข้อความเหมือนเดิม');
+  Logger.log('testBotUsesApi OK — postback → Api.ApiService (profile/savings) → Flex Card ข้อมูลเหมือนเดิม');
   return true;
 }
 
@@ -1681,12 +1686,123 @@ function testFlexComponents() {
   // 5) ไม่มี hex color hardcode ใน component/ฟังก์ชัน (สีมาจาก FlexTheme เท่านั้น)
   const src = [FB.text, FB.button, FB.separator, FB.labelValueRow, FB.statusBadge,
     FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.bubbleFrame,
-    FB.menuClicked, FB.welcomeMember, FB.messageBox]
+    FB.menuClicked, FB.welcomeMember, FB.messageBox, FB.profileCard, FB.financeCard]
     .map(f => f.toString()).join('\n');
   if (/#[0-9A-Fa-f]{6}/.test(src)) {
     throw new Error('testFlexComponents: ฟังก์ชัน component ต้องไม่ hardcode สี hex (ใช้ FlexTheme)');
   }
 
   Logger.log('testFlexComponents OK — FlexTheme + atoms + molecules + bubbleFrame + refactor ไม่เปลี่ยนพฤติกรรม');
+  return true;
+}
+
+/**
+ * ทดสอบ Flex Card ข้อมูลสมาชิก/การเงิน (การ์ด MT-34):
+ * profileCard / financeCard แสดงข้อมูลเหมือน buildProfileText/buildFinanceText (ไม่หาย) ·
+ * MemberDataService.buildFinanceCardData (rows/total/noData — ไม่ปลอมตัวเลข) ·
+ * EventHandler ตอบการ์ดผ่าน replyFlex (ผ่าน API เดียวกัน)
+ * @returns {boolean}
+ */
+function testFinanceCards() {
+  const FB = LineBot.FlexBuilder;
+
+  // 1) profileCard — ข้อมูลครบเหมือน buildProfileText
+  const member = {
+    mem_title: 'นาย', mem_fname: 'สมชาย', mem_lname: 'ใจดี', mem_code: 'M001',
+    mem_role: 'member', mem_position: 'กรรมการ', mem_position_score: 10, mem_rank_score: 25,
+    mem_status: 'active', mem_eff_dt: '2026-08-06', mem_exp_dt: '2027-08-06',
+    mem_kk: 85, mem_bk: 50000, mem_bh: 10000
+  };
+  const pc = FB.profileCard(member);
+  if (pc.type !== 'flex' || pc.contents.header.contents[0].text !== '👤 ข้อมูลส่วนตัว') {
+    throw new Error('testFinanceCards: profileCard header ผิด');
+  }
+  const pcJson = JSON.stringify(pc);
+  for (const s of ['สมชาย ใจดี', 'รหัสสมาชิก: M001', 'สมาชิก', 'กรรมการ (คะแนน 10)', '25',
+    'คะแนนความดี', '85', '50,000.00 บาท', '10,000.00 บาท', 'ใช้งานอยู่', '2026-08-06 → 2027-08-06']) {
+    if (!pcJson.includes(s)) throw new Error('testFinanceCards: profileCard ไม่มีข้อมูล "' + s + '"');
+  }
+  if (!pc.contents.footer || pc.contents.footer.contents[0].action.data !== 'action=ack_menu') {
+    throw new Error('testFinanceCards: profileCard footer ผิด');
+  }
+
+  // 1b) ไม่มีค่า mem_kk/bk/bh → ซ่อนบรรทัดนั้น (เหมือน buildProfileText)
+  const pc2Json = JSON.stringify(FB.profileCard({ ...member, mem_kk: undefined, mem_bk: null, mem_bh: '' }));
+  if (pc2Json.includes('คะแนนความดี') || pc2Json.includes('เงินกู้คงค้าง') || pc2Json.includes('เงินหุ้น')) {
+    throw new Error('testFinanceCards: profileCard ควรซ่อนฟิลด์ที่ไม่มีค่า');
+  }
+
+  // 1c) คำเตือนหมดอายุ → แสดงกล่องเตือนใน card
+  const pc3Json = JSON.stringify(FB.profileCard(member, { warning: '⚠️ สิทธิ์จะหมดอายุในอีก 14 วัน' }));
+  if (!pc3Json.includes('สิทธิ์จะหมดอายุในอีก 14 วัน')) throw new Error('testFinanceCards: profileCard ต้องแสดงคำเตือน');
+
+  // 2) buildFinanceCardData — savings (rows + total) ข้อมูลเหมือน buildFinanceText
+  const S = LineBot.MemberDataService;
+  const savingData = S.buildFinanceCardData('saving_acct', { mem_code: 'M001' }, {
+    savings: [
+      { acct_no: 'SAV-0001', acct_type: 'ออมทรัพย์', balance: 25000 },
+      { acct_no: 'SAV-0011', acct_type: 'ออมทรัพย์พิเศษ', balance: 100000 }
+    ]
+  });
+  if (savingData.rows.length !== 2 || !savingData.total || savingData.total.label !== 'รวมเงินฝาก') {
+    throw new Error('testFinanceCards: buildFinanceCardData(savings) ผิด');
+  }
+  const fcJson = JSON.stringify(FB.financeCard(savingData));
+  for (const s of ['บัญชีเงินฝาก', 'รหัสสมาชิก: M001', 'ออมทรัพย์ (SAV-0001)', '25,000.00 บาท',
+    'ออมทรัพย์พิเศษ (SAV-0011)', '100,000.00 บาท', 'รวมเงินฝาก', '125,000.00 บาท']) {
+    if (!fcJson.includes(s)) throw new Error('testFinanceCards: financeCard ไม่มีข้อมูล "' + s + '"');
+  }
+
+  // 3) loan_balance — rows + due + total
+  const loanData = S.buildFinanceCardData('loan_balance', { mem_code: 'M001' }, {
+    loans: [{ loan_no: 'LN-001', outstanding: 45000, due_dt: '2026-08-20' }]
+  });
+  const fcLoanJson = JSON.stringify(FB.financeCard(loanData));
+  for (const s of ['LN-001', '45,000.00 บาท', 'ครบกำหนด 2026-08-20', 'รวมหนี้คงค้าง']) {
+    if (!fcLoanJson.includes(s)) throw new Error('testFinanceCards: financeCard loan ไม่มีข้อมูล "' + s + '"');
+  }
+
+  // 4) ไม่มีข้อมูล → noData box (ไม่ปลอมตัวเลข)
+  const empty = S.buildFinanceCardData('loan_balance', { mem_code: 'MEM003' }, { savings: [], loans: [], dividends: [] });
+  if (!empty.noData || empty.noData.message !== 'ไม่พบข้อมูลยอดหนี้สำหรับรหัสสมาชิกนี้') {
+    throw new Error('testFinanceCards: buildFinanceCardData noData ผิด');
+  }
+  const fcEmptyJson = JSON.stringify(FB.financeCard(empty));
+  if (!fcEmptyJson.includes('ไม่พบข้อมูลยอดหนี้สำหรับรหัสสมาชิกนี้')) {
+    throw new Error('testFinanceCards: financeCard ต้องแสดง noData');
+  }
+  if (/\d{3,}[.,]\d{2}\s*บาท/.test(fcEmptyJson)) throw new Error('testFinanceCards: noData ต้องไม่มีตัวเลขยอดเงินปลอม');
+
+  // 5) EventHandler — postback → replyFlex การ์ด (ผ่าน API เดียวกัน)
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
+  ];
+  delete __fakeSheets['t_savings_acct'];
+  __fakeSheets['t_savings_acct'] = [
+    DataDict.getHeaders('SAVINGS_ACCT'),
+    ['M001', 'SAV-0001', 'ออมทรัพย์', 25000, '2026-08-01']
+  ];
+
+  const flexReplies = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  LineBot.MessageService.replyFlex = function (rt, flex) { flexReplies.push(flex); return { ok: true }; };
+  const user = { source: { userId: 'U11111111111111111111111111111111' } };
+  try {
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT1', postback: { data: 'action=menu_item&item=profile' } }, 'TOKEN');
+    LineBot.EventHandler.handlePostback(
+      { ...user, replyToken: 'RT2', postback: { data: 'action=menu_item&item=saving_acct' } }, 'TOKEN');
+  } finally {
+    LineBot.MessageService.replyFlex = origReplyFlex;
+  }
+  if (flexReplies.length !== 2) throw new Error('testFinanceCards: ควร replyFlex 2 ครั้ง (ได้ ' + flexReplies.length + ')');
+  const r0 = JSON.stringify(flexReplies[0]);
+  if (!r0.includes('ข้อมูลส่วนตัว') || !r0.includes('สมชาย ใจดี')) throw new Error('testFinanceCards: profile ต้องตอบการ์ด');
+  const r1 = JSON.stringify(flexReplies[1]);
+  if (!r1.includes('รวมเงินฝาก') || !r1.includes('25,000.00 บาท')) throw new Error('testFinanceCards: saving ต้องตอบการ์ด');
+
+  Logger.log('testFinanceCards OK — profileCard/financeCard + EventHandler ตอบการ์ดผ่าน API (ข้อมูลเหมือนเดิม)');
   return true;
 }

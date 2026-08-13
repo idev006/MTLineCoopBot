@@ -249,9 +249,10 @@ Entry point ของ LINE webhook
 - `setupReminderTrigger(hour?)` — สร้าง Time-driven Trigger รายวัน (ดูบทที่ 5.9.3)
 - ฟังก์ชันระดับบนสุด `runLoanReminders()` = entry point ของ trigger
 
-**`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27)
-- `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์
-- `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข)
+**`MemberDataService.js`** — จัดรูปแบบข้อมูลสมาชิกจริง (การ์ด MT-10/MT-27/MT-34)
+- `buildProfileText(member)` — โปรไฟล์จริงจาก `t_member_mast`: ชื่อ/รหัส/บทบาท/ตำแหน่ง+คะแนน/ช่วงวันสิทธิ์ (ใช้เป็น fallback เมื่อส่งการ์ดไม่ได้)
+- `buildFinanceText(item, member, financeData)` — เมนูการเงินแสดง**ข้อมูลจริง**จาก `t_savings_acct`/`t_loan_acct`/`t_dividend` (ผ่าน `financeData` ที่ EventHandler ดึงจาก repository — pure ฟังก์ชัน ทดสอบใน node ได้) · ถ้าไม่มีข้อมูล → ตอบ "ไม่พบข้อมูล" (ไม่ปลอมตัวเลข) (ใช้เป็น fallback)
+- `buildFinanceCardData(item, member, financeData)` — สร้างข้อมูลสำหรับ **Flex Card** (การ์ด MT-34): `{ title, icon, memberCode, rows: [{label,value}], total, noData }` — ข้อมูลเหมือน `buildFinanceText` ไม่หาย
 - `formatMoney(value)` — จัดรูปแบบตัวเลขเป็นเงินไทย (เช่น `25,000.00`)
 - `buildExpiryWarning(member, expiry)` / `appendExpiryWarning(text, member, expiry)` — ข้อความเตือนวันหมดอายุ (การ์ด MT-11) — ใช้ใน ExpiryService (push) + EventHandler (แนบท้ายคำตอบ)
 - `isFinancialItem(item)` / `FINANCIAL_ITEMS` — กลุ่มเมนูการเงิน (saving_acct, chk_balance, dividends, share_capital, loan_balance)
@@ -262,8 +263,8 @@ Entry point ของ LINE webhook
 - `bubbleSize`/`paddingMd`/`paddingLg`/`radiusMd` — ขนาดมาตรฐาน
 - 🚫 **ห้าม hardcode สี hex ในโค้ดอื่น** — อ่านจากที่นี่ (กันด้วย CI `flex-theme-scan` + `testFlexComponents`)
 
-**`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
-- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้)
+**`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33/MT-34) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
+- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม)
 - **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
 - **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)`
 - **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ

@@ -24,16 +24,16 @@
 | 15 | **แจ้งเตือนตามเวลา** — Broadcast ประกาศ (`t_notice`) + เตือนชำระรายบุคคล (`t_loan_acct`) + audit trail | `LineBot/NoticeService.js` + `LineBot/LoanReminderService.js` + `Core/NoticeRules.js` + `Core/LoanRules.js` | `testNoticeRules`/`testNoticeBroadcast` (pending filter · broadcast · mark sent · ไม่ส่งซ้ำ) · `testLoanRules`/`testLoanReminders` (due filter · ข้อความรายบุคคล · skipped · ตรวจ t_reminder_log) | 🧪 | ✅ (ต้องตั้ง trigger — บทที่ 5.9.2/5.9.3) |
 | 16 | **ข้อมูลการเงินจริง** — t_savings_acct/t_loan_acct/t_dividend + dummy | `MemberDataService.buildFinanceText` + repository | `testFinanceData` (seed→repository→buildFinanceText ข้อมูลจริง ไม่ปลอม) · `testSeedData` | 🧪 | ✅ (dummy; ข้อมูลจริง 📌) |
 | 17 | **Webhook Auth** — webhook_secret (URL) + HMAC-SHA256 พร้อมใช้ | `Util.verifyWebhookSecret/verifyLineSignature` + WebApp.doPost | `testVerifyLineSignature` (6 test vectors) · `testVerifyWebhookSecret` | 🧪 | ✅ (X-Line-Signature จำกัด Apps Script) |
-| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (36 ไฟล์ .js) + **30/30 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
+| 18 | **CI อัตโนมัติ** — syntax + contract tests + secret scan 2 ชั้น | `.github/workflows/ci.yml` + `scripts/ci-test.js` + `.gitleaks.toml` | ทุก push ขึ้น `main`: `node --check` (36 ไฟล์ .js) + **31/31 tests** + regex scan + **gitleaks** (ประวัติเต็ม) | 🧪 | ✅ |
 | 19 | **Security: token** — ไม่ hardcode + หมุนได้ + ตรวจสุขภาพ | Script Properties + `Config` + `Test.checkTokenHealth` | `checkTokenHealth` (LINE Get Bot Info — รายงาน 200/401) · secret-scan ใน CI (regex + gitleaks) | ✋ (รายเดือน) | ✅ |
 | 20 | **Security: กระบวนการ** — Runbook + Incident response + audit trail | SECURITY.md · ch-05 5.5.1 · KANBAN MT-26 | ประวัติ purge (filter-repo) + allowlist ลบแล้ว + audit trail `t_activation_log` / `t_expiry_log` (dummy) | ✋ | ✅ |
-| 21 | **Flex Component Library** — design tokens SSOT (FlexTheme) + component เดียวกัน ไม่ duplicate code + **ไม่ hardcode สี** | `LineBot/FlexTheme.js` + `FlexBuilder.js` (atoms/molecules/bubbleFrame) | `testFlexComponents` (tokens/atoms/molecules/frame/templates — payload เหมือนเดิม) · **`flex-theme-scan`** (CI scan FlexBuilder.js ไม่ให้มี hex color) | 🧪 | ✅ |
+| 21 | **Flex Component Library + การ์ดข้อมูล** — design tokens SSOT (FlexTheme) + component เดียวกัน ไม่ duplicate code + **ไม่ hardcode สี** · profile/การเงินตอบ **Flex Card** ข้อมูลเหมือนเดิม | `LineBot/FlexTheme.js` + `FlexBuilder.js` (atoms/molecules/bubbleFrame + `profileCard`/`financeCard`) + `MemberDataService.buildFinanceCardData` | `testFlexComponents` (tokens/atoms/molecules/frame/templates — payload เหมือนเดิม) · **`flex-theme-scan`** (CI scan FlexBuilder.js ไม่ให้มี hex color) · `testFinanceCards` (การ์ดข้อมูลครบเหมือน text + noData ไม่ปลอมตัวเลข + EventHandler ตอบการ์ดผ่าน API) | 🧪 | ✅ |
 
 ## วิธีรันหลักฐานทั้งหมด
 
 ```bash
-# 1) ชุดทดสอบสัญญา 30 ชุด (รันใน CI อัตโนมัติทุก push)
-node scripts/ci-test.js          # → ALL TESTS PASS (30/30)
+# 1) ชุดทดสอบสัญญา 31 ชุด (รันใน CI อัตโนมัติทุก push)
+node scripts/ci-test.js          # → ALL TESTS PASS (31/31)
 
 # 2) syntax ทุกไฟล์ JS (36 ไฟล์)
 for f in $(find app scripts -name "*.js"); do node --check "$f"; done

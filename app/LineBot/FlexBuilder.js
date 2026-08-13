@@ -97,10 +97,36 @@ LineBot.FlexBuilder = (() => {
     active: 'ใช้งานอยู่',
     paid: 'ชำระแล้ว',
     sent: 'ส่งแล้ว',
+    inactive: 'ยังไม่เปิดใช้งาน',
     expiring: 'ใกล้หมดอายุ',
     expired: 'หมดอายุ',
     draft: 'ร่าง'
   };
+
+  // ป้ายภาษาไทยของบทบาทสมาชิก
+  const ROLE_LABELS = {
+    member: 'สมาชิก',
+    staff: 'เจ้าหน้าที่',
+    admin: 'ผู้ดูแลระบบ'
+  };
+
+  /**
+   * ตรวจว่าค่ามีอยู่จริง (ไม่ใช่ undefined / null / '')
+   * @param {*} value
+   * @returns {boolean}
+   */
+  function hasValue(value) {
+    return value !== undefined && value !== null && value !== '';
+  }
+
+  /**
+   * จัดรูปแบบเงิน (เรียก MemberDataService.formatMoney — เดิมไม่มีซ้ำ)
+   * @param {*} value
+   * @returns {string} เช่น '50,000.00 บาท'
+   */
+  function money(value) {
+    return `${LineBot.MemberDataService.formatMoney(value)} บาท`;
+  }
 
   /**
    * สร้าง badge แสดงสถานะ (พื้นหลังตามสีสถานะใน FlexTheme)
@@ -232,6 +258,107 @@ LineBot.FlexBuilder = (() => {
   // ══════════════════════════════════════════════════════════════
 
   /**
+   * กล่องคำเตือน (พื้นหลัง amber/แดง + ตัวอักษรขาว) — ใช้ท้ายการ์ดเมื่อมีคำเตือน
+   * @param {string} message
+   * @returns {Object}
+   */
+  function warningBox(message) {
+    return infoBox([
+      text(message, { size: 'sm', color: FlexTheme().white, wrap: true })
+    ], { backgroundColor: FlexTheme().statusColors.expiring });
+  }
+
+  /**
+   * สร้าง Flex Card แสดงโปรไฟล์สมาชิก (การ์ด MT-34 — แทนข้อความ text)
+   * ข้อมูลเหมือน buildProfileText: ชื่อ/รหัส/บทบาท/ตำแหน่ง(+คะแนน)/คะแนนสมาชิก/
+   * คะแนนความดี/เงินกู้คงค้าง/เงินหุ้น/สถานะ/สิทธิ์ใช้งาน (+คำเตือนหมดอายุถ้ามี)
+   * @param {Object} member - member object จาก API /api/member/profile
+   * @param {Object} [opts] - { warning }
+   * @returns {Object}
+   */
+  function profileCard(member, opts) {
+    const o = opts || {};
+    const name = [member.mem_title, member.mem_fname, member.mem_lname].filter(Boolean).join(' ') || '-';
+    const position = `${member.mem_position || '-'}${member.mem_position_score ? ' (คะแนน ' + member.mem_position_score + ')' : ''}`;
+
+    const rows = [
+      labelValueRow('บทบาท', ROLE_LABELS[member.mem_role] || member.mem_role || '-'),
+      labelValueRow('ตำแหน่ง', position),
+      labelValueRow('คะแนนสมาชิก', member.mem_rank_score || '-')
+    ];
+    if (hasValue(member.mem_kk)) rows.push(labelValueRow('คะแนนความดี', member.mem_kk));
+    if (hasValue(member.mem_bk)) rows.push(labelValueRow('เงินกู้คงค้าง', money(member.mem_bk)));
+    if (hasValue(member.mem_bh)) rows.push(labelValueRow('เงินหุ้น', money(member.mem_bh)));
+    if (member.mem_eff_dt && member.mem_exp_dt) {
+      rows.push(labelValueRow('สิทธิ์ใช้งาน', `${member.mem_eff_dt} → ${member.mem_exp_dt}`));
+    } else if (member.mem_eff_dt) {
+      rows.push(labelValueRow('วันที่มีผล', member.mem_eff_dt));
+    }
+
+    const body = [
+      text(name, { weight: 'bold', size: 'xl', wrap: true, color: FlexTheme().brandColor, align: 'center' }),
+      text(`รหัสสมาชิก: ${member.mem_code || '-'}`, { size: 'sm', color: FlexTheme().textMuted, align: 'center', margin: 'md' }),
+      {
+        type: 'box',
+        layout: 'vertical',
+        alignItems: 'center',
+        contents: [statusBadge(member.mem_status)],
+        margin: 'md'
+      },
+      infoBox(rows)
+    ];
+    if (o.warning) body.push(warningBox(o.warning));
+
+    return {
+      type: 'flex',
+      altText: `ข้อมูลส่วนตัว — ${name}`,
+      contents: bubbleFrame({
+        header: header('👤 ข้อมูลส่วนตัว', { align: 'center' }),
+        body: bodyBox(body),
+        footer: footerButton('ตกลง', 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
+   * สร้าง Flex Card แสดงข้อมูลการเงิน (การ์ด MT-34 — แทนข้อความ text)
+   * รับข้อมูลจาก MemberDataService.buildFinanceCardData:
+   *   { title, icon, memberCode, rows: [{label, value}], total: {label, value} | null,
+   *     noData: { message } | null, warning, footerData }
+   * @param {Object} o
+   * @returns {Object}
+   */
+  function financeCard(o) {
+    const body = [];
+    if (o.memberCode) {
+      body.push(text(`รหัสสมาชิก: ${o.memberCode}`, { size: 'sm', color: FlexTheme().textMuted, align: 'center', margin: 'md' }));
+    }
+    if (o.noData) {
+      body.push(infoBox([
+        text(o.noData.message || 'ไม่พบข้อมูล', { weight: 'bold', size: 'sm', wrap: true, color: FlexTheme().textPrimary }),
+        text('— หากเป็นสมาชิก กรุณาติดต่อสหกรณ์เพื่อตรวจสอบข้อมูล', { size: 'xs', wrap: true, color: FlexTheme().textSecondary, margin: 'sm' })
+      ]));
+    } else {
+      (o.rows || []).forEach(r => body.push(labelValueRow(String(r.label), String(r.value))));
+      if (o.total) {
+        body.push(separator('lg'));
+        body.push(infoBox([labelValueRow(o.total.label, o.total.value)]));
+      }
+    }
+    if (o.warning) body.push(warningBox(o.warning));
+
+    return {
+      type: 'flex',
+      altText: o.title,
+      contents: bubbleFrame({
+        header: header(`${o.icon ? o.icon + ' ' : ''}${o.title}`.trim(), { align: 'center' }),
+        body: bodyBox(body),
+        footer: footerButton('ตกลง', o.footerData || 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
    * สร้าง Flex Bubble แสดงข้อความ "คุณเลือกเมนู {{menuCaption}}"
    * @param {string} menuCaption
    * @returns {Object}
@@ -357,6 +484,8 @@ LineBot.FlexBuilder = (() => {
     menuClicked,
     welcomeMember,
     messageBox,
+    profileCard,
+    financeCard,
     // Atoms
     text,
     button,
