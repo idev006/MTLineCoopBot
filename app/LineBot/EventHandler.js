@@ -141,6 +141,24 @@ LineBot.EventHandler = (() => {
   }
 
   /**
+   * ตอบ alertCard ตามระดับ (การ์ด MT-35) — fallback: ข้อความ text ถ้าการ์ดส่งไม่ได้
+   * @param {string} replyToken
+   * @param {string} token
+   * @param {string} level - success | warning | error
+   * @param {string} title
+   * @param {string} message
+   */
+  function replyAlert(replyToken, token, level, title, message) {
+    const deps = getDependencies();
+    const card = deps.FlexBuilder.alertCard({ level: level, title: title, message: message });
+    const res = deps.MessageService.replyFlex(replyToken, card, token);
+    if (!res.ok) {
+      Logger.log(`[Alert] replyFlex failed (${res.statusCode}) — fallback ข้อความเดิม`);
+      deps.MessageService.reply(replyToken, message, token);
+    }
+  }
+
+  /**
    * ตอบข้อความปฏิเสธเมื่อผู้ใช้ไม่มีสิทธิ์ใช้งานเมนู/คำสั่งของสมาชิก
    * ถ้าเคยเป็นสมาชิกแต่ไม่ valid (หมดอายุ/ถูกเพิกถอน) → ยกเลิกเมนูสมาชิก
    * ให้กลับไปเห็น Welcome Menu (Per-User Gating — บทที่ 3.3.6)
@@ -213,6 +231,21 @@ LineBot.EventHandler = (() => {
     }
 
     if (params.action === 'stay_tab') {
+      return;
+    }
+
+    // การ์ด MT-35: ยืนยัน/ยกเลิกการต่ออายุ (ขั้น 2 ของ flow renew — หลังกดปุ่มใน confirmCard)
+    if (params.action === 'cancel_renew') {
+      deps.MessageService.reply(replyToken, 'ยกเลิกการต่ออายุสมาชิกแล้ว', token);
+      return;
+    }
+    if (params.action === 'confirm_renew') {
+      try {
+        LineBot.RenewalService.handleConfirmRenew(params.code || '', event.source.userId, replyToken, token);
+      } catch (e) {
+        Logger.log('[EventHandler] Error calling RenewalService.handleConfirmRenew: ' + e);
+        deps.MessageService.reply(replyToken, 'เกิดข้อผิดพลาดในการต่ออายุสมาชิก', token);
+      }
       return;
     }
 
@@ -328,7 +361,7 @@ LineBot.EventHandler = (() => {
       const activateCode = text.substring('activate:'.length).trim();
       Logger.log('[EventHandler] Activate code: ' + activateCode);
       if (!activateCode) {
-        deps.MessageService.reply(event.replyToken, 'กรุณาระบุรหัส activate เช่น activate:ABC123', token);
+        replyAlert(event.replyToken, token, 'warning', 'กรุณาระบุรหัส', 'กรุณาระบุรหัส activate เช่น activate:ABC123');
         return;
       }
       try {
@@ -348,7 +381,7 @@ LineBot.EventHandler = (() => {
         ? text.split(':')[1].trim()
         : '';
       if (text.indexOf(':') !== -1 && !activateCode) {
-        deps.MessageService.reply(event.replyToken, 'กรุณาระบุรหัสต่ออายุ เช่น renew:ABC123', token);
+        replyAlert(event.replyToken, token, 'warning', 'กรุณาระบุรหัสต่ออายุ', 'กรุณาระบุรหัสต่ออายุ เช่น renew:ABC123');
         return;
       }
       try {

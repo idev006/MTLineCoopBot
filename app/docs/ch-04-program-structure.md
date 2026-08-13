@@ -222,11 +222,13 @@ Entry point ของ LINE webhook
 **`ActivationService.js`** — Activate สมาชิก (การ์ด MT-17: ตรรกะอยู่ที่ API)
 - `performActivate(activateCode, lineUserId, opts?)` — เรียก **`POST /api/member/activate`** (find/check/เขียนชีท อยู่ใน API handler) → `{ success, reason, memberCode?, data? }` (DI: api — ทดสอบใน node ได้)
 - `handleActivate(activateCode, lineUserId, replyToken, token)` — เรียก performActivate → สร้าง/ส่ง Flex ต้อนรับ (ข้อมูลชื่อจาก API response) + fallback text + ผูกเมนูสมาชิก
+- การ์ด MT-35: error states → **`alertCard`** (warning: รหัสถูกใช้แล้ว/กรอกไม่ครบ · error: ไม่พบรหัส) — fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้ (`sendAlertCard`)
 - คืนค่า `{ success, reason, ... }` เพื่อให้ผู้เรียกตรวจสอบผลลัพธ์
 
 **`RenewalService.js`** — ต่ออายุสมาชิก (การ์ด MT-12 + MT-17: ตรรกะอยู่ที่ API)
 - `performRenew(activateCode, lineUserId, opts?)` — เรียก **`POST /api/member/renew`** (find → `computeRenewal` → เขียนชีท อยู่ใน API handler · `ctx.internal.now` = seam สำหรับ deterministic test) → log `renewed` ใน t_activation_log → `Gating.linkMemberMenu` (ผูกเมนูกลับ) · error `detail` แยก code_not_found/member_not_found (DI: api/gater/logger/now)
-- `handleRenew(activateCode, lineUserId, replyToken, token)` — เรียก performRenew + ตอบกลับสำเร็จ/ไม่พบรหัส
+- `handleRenew(activateCode, lineUserId, replyToken, token)` — **ขั้น 1 (การ์ด MT-35): ส่ง `confirmCard` ขอยืนยัน** (ปุ่ม [ยกเลิก `action=cancel_renew`] [ยืนยันต่ออายุ `action=confirm_renew&code=...`]) — ยังไม่ต่ออายุ
+- `handleConfirmRenew(activateCode, lineUserId, replyToken, token)` — **ขั้น 2: หลังกดยืนยัน** (postback `action=confirm_renew`) → เรียก performRenew → **`alertCard`** (success: ต่ออายุสำเร็จ + วันใหม่ · error: ไม่พบรหัส/สมาชิก) — fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้
 
 **`ExpiryService.js`** — ตรวจวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11/MT-32)
 - `runExpiryCheck(token, opts?)` — scan สมาชิกทั้งหมดผ่าน repository (`listMembers`):
@@ -264,9 +266,9 @@ Entry point ของ LINE webhook
 - 🚫 **ห้าม hardcode สี hex ในโค้ดอื่น** — อ่านจากที่นี่ (กันด้วย CI `flex-theme-scan` + `testFlexComponents`)
 
 **`FlexBuilder.js`** — Flex Component Library (การ์ด MT-33/MT-34) — สร้าง Flex Message ด้วยมาตรฐานเดียวกัน ไม่ duplicate code
-- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม)
+- **Templates:** `menuClicked(caption)` / `welcomeMember(member)` / `messageBox(options)` — payload เหมือนเดิมหลัง refactor (ไม่เปลี่ยนพฤติกรรมผู้ใช้) · **`profileCard(member, {warning})`** / **`financeCard(data)`** — การ์ดข้อมูลสมาชิก/การเงิน (การ์ด MT-34 — ข้อมูลเหมือน text เดิม) · **`alertCard({level, title, message})`** (success/warning/error — การ์ด MT-35) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก — การ์ด MT-35)
 - **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
-- **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)`
+- **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)` / `buttonRow(buttons, opts?)` (ปุ่มแนวนอนหลายปุ่ม)
 - **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ
 - กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`
 

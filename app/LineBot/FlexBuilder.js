@@ -48,7 +48,7 @@ LineBot.FlexBuilder = (() => {
    * สร้าง button component (default: postback action)
    * @param {string} label
    * @param {Object} [action] - { type, data, uri, datetime } (type default 'postback')
-   * @param {Object} [opts] - { style, color }
+   * @param {Object} [opts] - { style, color, height, flex }
    * @returns {Object}
    */
   function button(label, action, opts) {
@@ -57,6 +57,8 @@ LineBot.FlexBuilder = (() => {
     const b = { type: 'button' };
     if (o.style) b.style = o.style;
     if (o.color) b.color = o.color;
+    if (o.height) b.height = o.height;
+    if (o.flex !== undefined) b.flex = o.flex;
     const act = { type: a.type || 'postback', label: label };
     if (a.data) act.data = a.data;
     if (a.uri) act.uri = a.uri;
@@ -235,6 +237,25 @@ LineBot.FlexBuilder = (() => {
     };
   }
 
+  /**
+   * แถวปุ่มหลายปุ่ม (layout horizontal — ปุ่มแบ่งความกว้างเท่า ๆ กันด้วย flex:1)
+   * @param {Array<Object>} buttons - [{ label, action, style, color }]
+   * @param {Object} [opts] - { spacing, paddingAll }
+   * @returns {Object}
+   */
+  function buttonRow(buttons, opts) {
+    const o = opts || {};
+    return {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: o.spacing || 'sm',
+      paddingAll: o.paddingAll || FlexTheme().paddingLg,
+      contents: (buttons || []).map(b => button(b.label, b.action, {
+        style: b.style, color: b.color, height: 'sm', flex: 1
+      }))
+    };
+  }
+
   // ══════════════════════════════════════════════════════════════
   // ชั้น 3: Frame — ประกอบ bubble
   // ══════════════════════════════════════════════════════════════
@@ -256,6 +277,66 @@ LineBot.FlexBuilder = (() => {
   // ══════════════════════════════════════════════════════════════
   // ชั้น 4: Templates — การ์ดสำเร็จรูปตาม use case
   // ══════════════════════════════════════════════════════════════
+
+  // ระดับของ alertCard → ไอคอน + คีย์สีใน FlexTheme.statusColors (ไม่มี hex hardcode)
+  const ALERT_LEVELS = {
+    success: { icon: '✅', colorKey: 'active' },
+    warning: { icon: '⚠️', colorKey: 'expiring' },
+    error: { icon: '❌', colorKey: 'expired' }
+  };
+
+  /**
+   * สร้าง Flex Card แจ้งเตือนตามระดับ (การ์ด MT-35):
+   * success (เขียว ✅) / warning (เหลือง ⚠️) / error (แดง ❌) — สีจาก FlexTheme.statusColors
+   * @param {Object} o - { level, title, message, footerData }
+   * @returns {Object}
+   */
+  function alertCard(o) {
+    const level = ALERT_LEVELS[o.level] || ALERT_LEVELS.success;
+    const title = o.title || 'แจ้งเตือน';
+    return {
+      type: 'flex',
+      altText: title,
+      contents: bubbleFrame({
+        header: header(`${level.icon} ${title}`.trim(), {
+          backgroundColor: FlexTheme().statusColors[level.colorKey],
+          align: 'center'
+        }),
+        body: bodyBox([
+          text(o.message || '', { size: 'lg', wrap: true, color: FlexTheme().textPrimary, align: 'center' })
+        ]),
+        footer: footerButton('ตกลง', o.footerData || 'action=ack_menu')
+      })
+    };
+  }
+
+  /**
+   * สร้าง Flex Card ยืนยันการกระทำ (การ์ด MT-35) — ปุ่ม [ยกเลิก] [ยืนยัน]
+   * ใช้ก่อนการกระทำที่สำคัญ เช่น ต่ออายุสมาชิก (renew)
+   * @param {Object} o - { title, message, info, okLabel, okData, cancelLabel, cancelData }
+   * @returns {Object}
+   */
+  function confirmCard(o) {
+    const title = o.title || 'ยืนยันการดำเนินการ';
+    const body = [
+      text(o.message || 'ยืนยันการดำเนินการนี้หรือไม่?', { size: 'lg', wrap: true, color: FlexTheme().textPrimary, align: 'center' })
+    ];
+    if (o.info) {
+      body.push(infoBox([text(o.info, { size: 'sm', color: FlexTheme().textSecondary, wrap: true })]));
+    }
+    return {
+      type: 'flex',
+      altText: title,
+      contents: bubbleFrame({
+        header: header(`❓ ${title}`.trim(), { align: 'center' }),
+        body: bodyBox(body),
+        footer: buttonRow([
+          { label: o.cancelLabel || 'ยกเลิก', action: { data: o.cancelData || 'action=cancel' }, style: 'secondary' },
+          { label: o.okLabel || 'ยืนยัน', action: { data: o.okData || 'action=confirm' }, style: 'primary', color: FlexTheme().brandColor }
+        ])
+      })
+    };
+  }
 
   /**
    * กล่องคำเตือน (พื้นหลัง amber/แดง + ตัวอักษรขาว) — ใช้ท้ายการ์ดเมื่อมีคำเตือน
@@ -486,6 +567,8 @@ LineBot.FlexBuilder = (() => {
     messageBox,
     profileCard,
     financeCard,
+    alertCard,
+    confirmCard,
     // Atoms
     text,
     button,
@@ -497,6 +580,7 @@ LineBot.FlexBuilder = (() => {
     bodyBox,
     infoBox,
     footerButton,
+    buttonRow,
     // Frame
     bubbleFrame
   };

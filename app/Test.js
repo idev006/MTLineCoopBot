@@ -1300,12 +1300,18 @@ function testActivateViaApi() {
     RichMenu.Gating.linkMemberMenu = origLink;
   }
 
-  // 6) ข้อความตอบผู้ใช้เหมือนเดิม
-  const texts = replies.map(r => r.text);
-  if (!texts.some(t => t.indexOf('ไม่พบรหัส activate') !== -1)) throw new Error('testActivateViaApi: ควรรายงาน "ไม่พบรหัส activate" เมื่อรหัสผิด');
-  if (!texts.some(t => t.indexOf('ถูกใช้ไปแล้ว') !== -1)) throw new Error('testActivateViaApi: ควรรายงาน "รหัสนี้ถูกใช้ไปแล้ว" เมื่อ activate ซ้ำ');
+  // 6) ข้อความตอบผู้ใช้เหมือนเดิม (แต่เป็น alertCard — การ์ด MT-35):
+  //    welcome (flexSent[0]) + error alert (รหัสผิด — ❌) + warning alert (ซ้ำ — ⚠️)
+  if (flexSent.length !== 3) throw new Error('testActivateViaApi: ควรส่ง 3 การ์ด (welcome + 2 alert) — ได้ ' + flexSent.length);
+  const flexJson = flexSent.map(f => JSON.stringify(f)).join('\n');
+  if (!flexJson.includes('ไม่พบรหัส activate')) throw new Error('testActivateViaApi: ควรรายงาน "ไม่พบรหัส activate" เมื่อรหัสผิด');
+  if (!flexJson.includes('ถูกใช้ไปแล้ว')) throw new Error('testActivateViaApi: ควรรายงาน "รหัสนี้ถูกใช้ไปแล้ว" เมื่อ activate ซ้ำ');
+  const errCard = JSON.stringify(flexSent[1]);
+  const warnCard = JSON.stringify(flexSent[2]);
+  if (!errCard.includes('❌') || errCard.includes('⚠️')) throw new Error('testActivateViaApi: รหัสผิดควรเป็น alert ระดับ error (❌)');
+  if (!warnCard.includes('⚠️') || warnCard.includes('❌')) throw new Error('testActivateViaApi: activate ซ้ำควรเป็น alert ระดับ warning (⚠️)');
 
-  Logger.log('testActivateViaApi OK — activate ผ่าน POST /api/member/activate (Bot = UI adapter, ข้อความเดิม)');
+  Logger.log('testActivateViaApi OK — activate ผ่าน POST /api/member/activate (Bot = UI adapter, alertCard ข้อความเดิม)');
   return true;
 }
 
@@ -1561,6 +1567,122 @@ function verifyThaiCaptions() {
 }
 
 /**
+ * ทดสอบ alertCard/confirmCard + การใช้ใน activation/renewal flow (การ์ด MT-35):
+ * alertCard 3 ระดับ (success/warning/error — สี/ไอคอนจาก FlexTheme) · confirmCard (ปุ่มยกเลิก/ยืนยัน) ·
+ * flow renew: handleRenew → confirmCard (ยังไม่ต่ออายุ) → postback confirm_renew →
+ * ต่ออายุจริง + alertCard สำเร็จ/ผิดพลาด · cancel_renew → ข้อความยกเลิก
+ * @returns {boolean}
+ */
+function testAlertConfirmCards() {
+  const FB = LineBot.FlexBuilder;
+  const T = LineBot.FlexTheme;
+
+  // 1) alertCard — 3 ระดับ (สีจาก FlexTheme.statusColors + ไอคอน + altText ไทย)
+  const ok = FB.alertCard({ level: 'success', title: 'สำเร็จ', message: 'ดำเนินการเรียบร้อย' });
+  const okJson = JSON.stringify(ok);
+  if (ok.altText !== 'สำเร็จ') throw new Error('testAlertConfirmCards: alertCard altText ผิด');
+  if (ok.contents.header.backgroundColor !== T.statusColors.active) throw new Error('testAlertConfirmCards: success ควรสีเขียว');
+  if (!okJson.includes('✅ สำเร็จ')) throw new Error('testAlertConfirmCards: success ต้องมี ✅');
+  const warnJson = JSON.stringify(FB.alertCard({ level: 'warning', title: 'เตือน', message: 'ตรวจสอบอีกครั้ง' }));
+  if (!warnJson.includes('⚠️') || !warnJson.includes(T.statusColors.expiring)) throw new Error('testAlertConfirmCards: warning ผิด');
+  const errJson = JSON.stringify(FB.alertCard({ level: 'error', title: 'ผิดพลาด', message: 'ไม่พบข้อมูล' }));
+  if (!errJson.includes('❌') || !errJson.includes(T.statusColors.expired)) throw new Error('testAlertConfirmCards: error ผิด');
+  if (FB.alertCard({ title: 'x', message: 'y' }).contents.header.backgroundColor !== T.statusColors.active) {
+    throw new Error('testAlertConfirmCards: default level ควร success');
+  }
+
+  // 2) confirmCard — ปุ่ม [ยกเลิก] [ยืนยัน] + data ถูกต้อง
+  const cc = FB.confirmCard({
+    title: 'ยืนยันการต่ออายุสมาชิก', message: 'ต่ออายุหรือไม่?', info: 'สิทธิ์ใหม่ +1 ปี',
+    okLabel: 'ยืนยันต่ออายุ', okData: 'action=confirm_renew&code=ACT001',
+    cancelLabel: 'ยกเลิก', cancelData: 'action=cancel_renew'
+  });
+  const ccJson = JSON.stringify(cc);
+  if (cc.altText !== 'ยืนยันการต่ออายุสมาชิก') throw new Error('testAlertConfirmCards: confirmCard altText ผิด');
+  if (!ccJson.includes('ต่ออายุหรือไม่?') || !ccJson.includes('สิทธิ์ใหม่ +1 ปี')) throw new Error('testAlertConfirmCards: confirmCard body ผิด');
+  if (!ccJson.includes('ยกเลิก') || !ccJson.includes('action=cancel_renew')) throw new Error('testAlertConfirmCards: ปุ่มยกเลิกผิด');
+  if (!ccJson.includes('ยืนยันต่ออายุ') || !ccJson.includes('action=confirm_renew&code=ACT001')) throw new Error('testAlertConfirmCards: ปุ่มยืนยันผิด');
+  if (cc.contents.footer.layout !== 'horizontal' || cc.contents.footer.contents.length !== 2) {
+    throw new Error('testAlertConfirmCards: footer ต้องเป็น 2 ปุ่มแนวนอน');
+  }
+
+  // 3) seed fake sheets: M001 active (ยัง valid — exp 2026-12-31)
+  delete __fakeSheets['t_member_mast'];
+  delete __fakeSheets['t_activation_log'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
+  ];
+
+  const flexSent = [];
+  const origReplyFlex = LineBot.MessageService.replyFlex;
+  LineBot.MessageService.replyFlex = function (rt, flex) { flexSent.push(flex); return { ok: true }; };
+  // gater (ผูกเมนูกลับหลังต่ออายุ) — mock ไม่ให้แตะ LINE API จริง
+  const gated = [];
+  const origLink = RichMenu.Gating.linkMemberMenu;
+  RichMenu.Gating.linkMemberMenu = function (uid) { gated.push(uid); return { ok: true }; };
+
+  try {
+    const S = LineBot.RenewalService;
+    const user = { source: { userId: 'U11111111111111111111111111111111' } };
+
+    // 4) handleRenew (ขั้น 1) → confirmCard — ยังไม่ต่ออายุ
+    const req = S.handleRenew('', 'U11111111111111111111111111111111', 'RT1', 'TOKEN');
+    if (!req.confirmRequested) throw new Error('testAlertConfirmCards: handleRenew ควรขอ confirm');
+    const confirmJson = JSON.stringify(flexSent[0]);
+    if (!confirmJson.includes('action=confirm_renew') || !confirmJson.includes('ยืนยันการต่ออายุสมาชิก')) {
+      throw new Error('testAlertConfirmCards: ควรส่ง confirmCard ก่อนต่ออายุ');
+    }
+    if (__fakeSheets['t_member_mast'][1][8] !== '2026-12-31') {
+      throw new Error('testAlertConfirmCards: ยังไม่ควรต่ออายุก่อนยืนยัน');
+    }
+
+    // 5) postback confirm_renew (ขั้น 2) → ต่ออายุจริง + alertCard สำเร็จ
+    LineBot.EventHandler.handlePostback({ ...user, replyToken: 'RT2', postback: { data: 'action=confirm_renew' } }, 'TOKEN');
+    const okCardJson = JSON.stringify(flexSent[1]);
+    if (!okCardJson.includes('ต่ออายุสำเร็จ') || !okCardJson.includes('สิทธิ์ใหม่ถึงวันที่: 2027-12-31')) {
+      throw new Error('testAlertConfirmCards: ควรตอบ alertCard สำเร็จพร้อมวันใหม่');
+    }
+    if (!okCardJson.includes(T.statusColors.active)) throw new Error('testAlertConfirmCards: สำเร็จควรสีเขียว');
+    if (__fakeSheets['t_member_mast'][1][8] !== '2027-12-31') {
+      throw new Error('testAlertConfirmCards: mem_exp_dt ควรขยายเป็น 2027-12-31');
+    }
+    if (!gated.includes('U11111111111111111111111111111111')) {
+      throw new Error('testAlertConfirmCards: ควรผูกเมนูสมาชิกกลับ (gater) หลังต่ออายุ');
+    }
+
+    // 6) renew:WRONG → confirmCard (พกรหัส) → confirm → alertCard error
+    S.handleRenew('WRONG', 'U11111111111111111111111111111111', 'RT3', 'TOKEN');
+    const confirmBadJson = JSON.stringify(flexSent[2]);
+    if (!confirmBadJson.includes('action=confirm_renew&code=WRONG')) throw new Error('testAlertConfirmCards: confirm ต้องพกรหัส WRONG');
+    LineBot.EventHandler.handlePostback({ ...user, replyToken: 'RT4', postback: { data: 'action=confirm_renew&code=WRONG' } }, 'TOKEN');
+    const errCardJson = JSON.stringify(flexSent[3]);
+    if (!errCardJson.includes('ไม่พบรหัสต่ออายุนี้ในระบบ') || !errCardJson.includes(T.statusColors.expired)) {
+      throw new Error('testAlertConfirmCards: ควรตอบ alertCard error เมื่อรหัสผิด');
+    }
+
+    // 7) cancel_renew → ข้อความยกเลิก (text reply)
+    const textReplies = [];
+    const origReply = LineBot.MessageService.reply;
+    LineBot.MessageService.reply = function (rt, text) { textReplies.push(text); return { ok: true }; };
+    try {
+      LineBot.EventHandler.handlePostback({ ...user, replyToken: 'RT5', postback: { data: 'action=cancel_renew' } }, 'TOKEN');
+    } finally {
+      LineBot.MessageService.reply = origReply;
+    }
+    if (textReplies.length !== 1 || !textReplies[0].includes('ยกเลิกการต่ออายุ')) {
+      throw new Error('testAlertConfirmCards: cancel_renew ควรตอบข้อความยกเลิก');
+    }
+  } finally {
+    LineBot.MessageService.replyFlex = origReplyFlex;
+    RichMenu.Gating.linkMemberMenu = origLink;
+  }
+
+  Logger.log('testAlertConfirmCards OK — alertCard 3 ระดับ + confirmCard + flow renew (confirm → alert)');
+  return true;
+}
+
+/**
  * ทดสอบ Flex Component Library (การ์ด MT-33):
  * FlexTheme design tokens (SSOT) · atoms (text/button/labelValueRow/statusBadge/separator) ·
  * molecules (header/bodyBox/infoBox/footerButton) · bubbleFrame ·
@@ -1685,8 +1807,9 @@ function testFlexComponents() {
 
   // 5) ไม่มี hex color hardcode ใน component/ฟังก์ชัน (สีมาจาก FlexTheme เท่านั้น)
   const src = [FB.text, FB.button, FB.separator, FB.labelValueRow, FB.statusBadge,
-    FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.bubbleFrame,
-    FB.menuClicked, FB.welcomeMember, FB.messageBox, FB.profileCard, FB.financeCard]
+    FB.header, FB.bodyBox, FB.infoBox, FB.footerButton, FB.buttonRow, FB.bubbleFrame,
+    FB.menuClicked, FB.welcomeMember, FB.messageBox, FB.profileCard, FB.financeCard,
+    FB.alertCard, FB.confirmCard]
     .map(f => f.toString()).join('\n');
   if (/#[0-9A-Fa-f]{6}/.test(src)) {
     throw new Error('testFlexComponents: ฟังก์ชัน component ต้องไม่ hardcode สี hex (ใช้ FlexTheme)');

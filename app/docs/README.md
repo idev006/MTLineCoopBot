@@ -74,6 +74,7 @@
 | Flex Message ตอบกลับเมนู (item-id ตรงกันทั้ง 26 เมนู) | ✅ ทำแล้ว | บทที่ 3.4, 4.2.6 |
 | Flex Component Library — `FlexTheme` (design tokens SSOT) + atoms/molecules/`bubbleFrame` + refactor `menuClicked`/`welcomeMember`/`messageBox` (payload เหมือนเดิม — พฤติกรรมผู้ใช้ไม่เปลี่ยน) | ✅ ทำแล้ว | บทที่ 3.4, KANBAN MT-33 |
 | Flex Card ข้อมูลสมาชิก/การเงิน — `profileCard`/`financeCard` (สถานะ badge + แถวข้อมูล + รวมยอด + noData) ตอบผ่าน API เดียวกัน · fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้ · คำเตือนหมดอายุเป็นกล่องใน card | ✅ ทำแล้ว | บทที่ 3.4, KANBAN MT-34 |
+| Alert/Confirm Card + ต่ออายุ 2 ขั้น — `alertCard` (success/warning/error) ใช้กับผลลัพธ์ activate/renew · `confirmCard` (ปุ่มยืนยัน/ยกเลิก) — `renew` ต้องกดยืนยันก่อน (`action=confirm_renew`) แล้วตอบ `alertCard` ผลลัพธ์ | ✅ ทำแล้ว | บทที่ 3.4, KANBAN MT-35 |
 | Welcome Menu (4 ปุ่ม) + ตอบกลับเมนูสาธารณะ (`welcome_*`) | ✅ ทำแล้ว | บทที่ 3.3.6, 4.2.8 |
 | ระบบ Activate สมาชิก (`activate:CODE`) | ✅ ทำแล้ว | บทที่ 2.3.3 |
 | DataDict SSOT (16 คอลัมน์ — รวม `mem_kk` คะแนนความดี / `mem_bk` เงินกู้คงค้าง / `mem_bh` เงินหุ้น) | ✅ ทำแล้ว | บทที่ 3.2, 4.2.7 |

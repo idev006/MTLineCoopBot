@@ -184,7 +184,8 @@ const runner = `
     ['testCoreMemberRules', testCoreMemberRules],
     ['testLoanCalculator', testLoanCalculator],
     ['testFlexComponents', testFlexComponents],
-    ['testFinanceCards', testFinanceCards]
+    ['testFinanceCards', testFinanceCards],
+    ['testAlertConfirmCards', testAlertConfirmCards]
   ];
   const failed = [];
   for (const [name, fn] of tests) {

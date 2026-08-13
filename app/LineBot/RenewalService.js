@@ -10,7 +10,8 @@
  *
  * - performRenew(activateCode, lineUserId, opts?) — เรียก API (DI: api/gater/logger/now)
  *   → ทดสอบใน node ได้โดยไม่ต้องแตะ LINE API
- * - handleRenew(activateCode, lineUserId, replyToken, token) — เรียก performRenew + ตอบกลับ
+ * - handleRenew(...) — ขั้น 1: ส่ง confirmCard ขอ**ยืนยัน**ก่อน (การ์ด MT-35)
+ * - handleConfirmRenew(...) — ขั้น 2: หลังกด "ยืนยันต่ออายุ" → performRenew + alertCard (success/error)
  */
 
 var LineBot = LineBot || {};
@@ -78,31 +79,78 @@ LineBot.RenewalService = (() => {
   }
 
   /**
-   * จัดการคำสั่งต่ออายุในแชท (ส่งข้อความตอบกลับ)
+   * ส่ง alertCard ตามระดับ (fallback: ข้อความ text เดิมถ้าการ์ดส่งไม่ได้)
+   * @param {string} replyToken
+   * @param {string} token
+   * @param {string} level - success | warning | error
+   * @param {string} title
+   * @param {string} message
+   */
+  function sendAlertCard(replyToken, token, level, title, message) {
+    const card = LineBot.FlexBuilder.alertCard({ level: level, title: title, message: message });
+    const res = LineBot.MessageService.replyFlex(replyToken, card, token);
+    if (!res.ok) {
+      Logger.log(`[Alert] replyFlex failed (${res.statusCode}) — fallback ข้อความเดิม`);
+      LineBot.MessageService.reply(replyToken, message, token);
+    }
+  }
+
+  /**
+   * จัดการคำสั่งต่ออายุในแชท (การ์ด MT-35) — ขั้น 1: ขอ**ยืนยัน**ก่อนดำเนินการ
+   * (เดิมต่ออายุทันที — ตอนนี้ผู้ใช้ต้องกด "ยืนยันต่ออายุ" ใน confirmCard)
    * @param {string} activateCode - ว่าง = ต่ออายุตัวเอง
    * @param {string} lineUserId
    * @param {string} replyToken
    * @param {string} token - CHANNEL_ACCESS_TOKEN (ใช้สำหรับผูกเมนู)
-   * @returns {Object} ผลลัพธ์
+   * @returns {Object} { confirmRequested: true, activateCode }
    */
   function handleRenew(activateCode, lineUserId, replyToken, token) {
+    const codeQuery = activateCode ? `&code=${encodeURIComponent(activateCode)}` : '';
+    const card = LineBot.FlexBuilder.confirmCard({
+      title: 'ยืนยันการต่ออายุสมาชิก',
+      message: 'คุณต้องการต่ออายุสมาชิกหรือไม่?',
+      info: 'สิทธิ์ใหม่ = วันที่ปัจจุบัน + 1 ปี (คำนวณจากวันหมดอายุเดิม)' + (activateCode ? `\nรหัสที่ใช้: ${activateCode}` : ''),
+      okLabel: 'ยืนยันต่ออายุ',
+      okData: `action=confirm_renew${codeQuery}`,
+      cancelLabel: 'ยกเลิก',
+      cancelData: 'action=cancel_renew'
+    });
+    const res = LineBot.MessageService.replyFlex(replyToken, card, token);
+    if (!res.ok) {
+      Logger.log(`[Renewal] confirmCard replyFlex failed (${res.statusCode}) — fallback ข้อความเดิม`);
+      LineBot.MessageService.reply(replyToken,
+        'คุณต้องการต่ออายุสมาชิกหรือไม่? ส่ง renew อีกครั้งเพื่อยืนยัน (สิทธิ์ใหม่ = วันที่ปัจจุบัน + 1 ปี)', token);
+    }
+    Logger.log(`[Renewal] Confirm requested for code: '${activateCode}' (user ${lineUserId})`);
+    return { confirmRequested: true, activateCode: activateCode };
+  }
+
+  /**
+   * ขั้น 2: หลังผู้ใช้กด "ยืนยันต่ออายุ" (postback action=confirm_renew) — ต่ออายุจริง + ตอบกลับ
+   * @param {string} activateCode - จาก postback (ว่าง = ต่ออายุตัวเอง)
+   * @param {string} lineUserId
+   * @param {string} replyToken
+   * @param {string} token
+   * @returns {Object} ผลลัพธ์จาก performRenew
+   */
+  function handleConfirmRenew(activateCode, lineUserId, replyToken, token) {
     const result = performRenew(activateCode, lineUserId, { gater: function (userId) { return RichMenu.Gating.linkMemberMenu(userId, token); } });
     if (!result.success) {
       const msg = result.reason === 'code_not_found'
         ? 'ไม่พบรหัสต่ออายุนี้ในระบบ กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง'
         : 'ไม่พบข้อมูลสมาชิกของคุณ กรุณา activate ก่อนใช้งาน (activate:CODE)';
-      LineBot.MessageService.reply(replyToken, msg, token);
+      sendAlertCard(replyToken, token, 'error', 'ไม่สามารถต่ออายุได้', msg);
       return result;
     }
-    LineBot.MessageService.reply(replyToken,
-      `✅ ต่ออายุสมาชิกสำเร็จ (รหัส ${result.memCode})\n━━━━━━━━━━━━━━━━━\nสิทธิ์ใหม่ถึงวันที่: ${result.newExpDt}\nขอบคุณที่ใช้บริการสหกรณ์ครับ`,
-      token);
+    sendAlertCard(replyToken, token, 'success', 'ต่ออายุสำเร็จ',
+      `ต่ออายุสมาชิกสำเร็จ (รหัส ${result.memCode})\nสิทธิ์ใหม่ถึงวันที่: ${result.newExpDt}\nขอบคุณที่ใช้บริการสหกรณ์ครับ`);
     Logger.log(`[Renewal] ${result.memCode} renewed — new exp ${result.newExpDt}`);
     return result;
   }
 
   return {
     performRenew,
-    handleRenew
+    handleRenew,
+    handleConfirmRenew
   };
 })();

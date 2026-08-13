@@ -51,6 +51,24 @@ LineBot.ActivationService = (() => {
   }
 
   /**
+   * ส่ง alertCard ตามระดับ (fallback: ข้อความ text เดิมถ้าการ์ดส่งไม่ได้)
+   * @param {Object} deps - dependencies { FlexBuilder, MessageService }
+   * @param {string} replyToken
+   * @param {string} token
+   * @param {string} level - success | warning | error
+   * @param {string} title
+   * @param {string} message
+   */
+  function sendAlertCard(deps, replyToken, token, level, title, message) {
+    const card = deps.FlexBuilder.alertCard({ level: level, title: title, message: message });
+    const res = deps.MessageService.replyFlex(replyToken, card, token);
+    if (!res.ok) {
+      Logger.log(`[Alert] replyFlex failed (${res.statusCode}) — fallback ข้อความเดิม`);
+      deps.MessageService.reply(replyToken, message, token);
+    }
+  }
+
+  /**
    * จัดการคำสั่ง activate (ส่งข้อความตอบกลับ + ผูกเมนู)
    * @param {string} activateCode
    * @param {string} lineUserId
@@ -65,17 +83,21 @@ LineBot.ActivationService = (() => {
     // ตรรกะผ่าน API (endpoint เดียวกันกับ UI อื่น — การ์ด MT-17)
     const result = performActivate(activateCode, lineUserId, {});
     if (!result.success) {
-      let msg;
+      // การ์ด MT-35: error/warning แสดงเป็น alertCard (fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้)
+      let level, title, msg;
       if (result.reason === 'already_activated') {
         Logger.log('[Activation] Activate code already used: ' + activateCode);
+        level = 'warning'; title = 'รหัสถูกใช้ไปแล้ว';
         msg = 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้';
       } else if (result.reason === 'validation') {
+        level = 'warning'; title = 'กรุณาระบุรหัส';
         msg = 'กรุณาระบุรหัส activate เช่น activate:ABC123';
       } else {
         Logger.log('[Activation] Activate code not found: ' + activateCode);
+        level = 'error'; title = 'ไม่พบรหัส activate';
         msg = 'ไม่พบรหัส activate นี้ในระบบ กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง';
       }
-      deps.MessageService.reply(replyToken, msg, token);
+      sendAlertCard(deps, replyToken, token, level, title, msg);
       return result;
     }
 

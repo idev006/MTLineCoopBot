@@ -69,7 +69,7 @@
 { "ok": false, "error": { "code": "MEMBER_INVALID", "message": "..." } }
 ```
 
-> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (31/31) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
+> ✅ **API Layer เริ่ม implement แล้ว (การ์ด MT-16)** — `app/Api/`: `ApiService` (จุดเข้า) → `ApiRegistry` (ตาราง route) → `ApiHandlers` (ใช้ Core + Repository เท่านั้น) → `ApiResponse` (envelope `{ok, data}` / `{ok, error:{code,message}}`) · endpoint 8 ตัว: health · profile · savings · loans · dividends · validity · activate · renew (ต่ออายุ — การ์ด MT-12) · error codes: `VALIDATION` / `MEMBER_NOT_FOUND` / `ALREADY_ACTIVATED` / `NOT_FOUND` / `METHOD_NOT_ALLOWED` / `INTERNAL` · ทดสอบ `testApiLayer` (32/32) · ✅ **Bot เรียกผ่าน API แล้ว (การ์ด MT-17 — ครบ reads + commands)** — EventHandler ใช้ `Api.ApiService.handleRequest` สำหรับข้อมูลสมาชิก (profile/savings/loans/dividends) · `ActivationService`/`RenewalService` เรียก `POST /api/member/activate`/`renew` (ตรรกะอยู่ที่ API handler — UI work อยู่ที่ Bot) · ✅ **Mount ใน WebApp แล้ว** — `doGet`/`doPost` แยก `/api/*` → `Api.ApiService` + ตรวจ API key (`?api_key=`/body, `/api/health` เปิดสาธารณะ — บทที่ 5.10) · **เหลือ:** Auth per-channel (X-Line-Signature / ID Token JWT — เฟส 3) + LIFF/Admin เรียกผ่าน API (การ์ด MT-18–19, MT-21)
 
 **การยืนยันตัวตนรายช่องทาง (Per-Request Auth):**
 
@@ -448,8 +448,8 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 | ชั้น | หน้าที่ | Component | ใช้สร้าง |
 |-----|--------|-----------|---------|
 | **1. Atoms** — องค์ประกอบย่อยที่สุดของ LINE Flex | `text()` · `button()` · `separator()` · `labelValueRow(label, value)` · `statusBadge(status)` | ทุกข้อความ / ปุ่ม / เส้นคั่น / แถวข้อมูล / ป้ายสถานะ |
-| **2. Molecules** — กล่อง/ส่วนประกอบที่รวม atoms | `header(title, opts?)` · `bodyBox(contents, opts?)` · `infoBox(rows, opts?)` · `footerButton(label, data, opts?)` · **`bubbleFrame({header, body, footer, size})`** (ประกอบส่วนต่าง ๆ เป็น bubble) | โครงสร้าง header/body/footer ของการ์ดทุกใบ |
-| **3. Templates** — การ์ดสำเร็จรูปตาม use case | `menuClicked(caption)` · `welcomeMember(member)` · `messageBox(options)` · `profileCard(member, {warning})` · `financeCard(data)` | ตอบเมนู · ต้อนรับ activate · กล่องข้อความ · โปรไฟล์ · การเงิน (เงินฝาก/หนี้/ปันผล/หุ้น) |
+| **2. Molecules** — กล่อง/ส่วนประกอบที่รวม atoms | `header(title, opts?)` · `bodyBox(contents, opts?)` · `infoBox(rows, opts?)` · `footerButton(label, data, opts?)` · `buttonRow(buttons, opts?)` (ปุ่มแนวนอนหลายปุ่ม) · **`bubbleFrame({header, body, footer, size})`** (ประกอบส่วนต่าง ๆ เป็น bubble) | โครงสร้าง header/body/footer ของการ์ดทุกใบ |
+| **3. Templates** — การ์ดสำเร็จรูปตาม use case | `menuClicked(caption)` · `welcomeMember(member)` · `messageBox(options)` · `profileCard(member, {warning})` · `financeCard(data)` · **`alertCard({level, title, message})`** (success ✅ / warning ⚠️ / error ❌) · **`confirmCard({message, okLabel, okData, cancelData})`** (ปุ่มยืนยัน/ยกเลิก) | ตอบเมนู · ต้อนรับ activate · กล่องข้อความ · โปรไฟล์ · การเงิน · แจ้งเตือน/ผลลัพธ์ · ยืนยันการกระทำ (ต่ออายุ) |
 
 **หลักการจัดชั้น:** ชั้นต่ำ (atoms) ไม่รู้จักชั้นบน · ชั้นสูง (templates) ประกอบจากชั้นล่างเท่านั้น — เพิ่มการ์ดใหม่ = ประกอบจาก atoms/molecules ที่มี (ไม่สร้างโครงสร้างซ้ำ)
 
@@ -515,6 +515,28 @@ LineBot.FlexBuilder.messageBox({
 ```
 
 > **หมายเหตุ:** ทั้ง 3 template refactor มาใช้ component library เดียวกัน (การ์ด MT-33) — payload ที่ผู้ใช้เห็น**เหมือนเดิมทุกประการ** (ยืนยันด้วย `testFlexComponents`)
+
+### 3.4.4 `alertCard({level, title, message, footerData?})` — แจ้งเตือนตามระดับ (การ์ด MT-35)
+
+- **level:** `success` (เขียว ✅) · `warning` (เหลือง ⚠️) · `error` (แดง ❌) — สี/ไอคอนมาจาก `FlexTheme.statusColors` + `ALERT_LEVELS` (ไม่ hardcode)
+- **ใช้กับ:** ผลลัพธ์การกระทำ — activate/renew สำเร็จ (success) · รหัสถูกใช้ไปแล้ว/กรอกไม่ครบ (warning) · ไม่พบรหัส/ผิดพลาด (error)
+- โครงสร้าง: Header สีตามระดับ + Body (ข้อความ) + Footer (ปุ่ม "ตกลง")
+- ตัวอย่าง:
+
+```javascript
+LineBot.FlexBuilder.alertCard({
+  level: 'success',
+  title: 'ต่ออายุสำเร็จ',
+  message: 'ต่ออายุสมาชิกสำเร็จ (รหัส M001)\nสิทธิ์ใหม่ถึงวันที่: 2027-12-31'
+});
+```
+
+### 3.4.5 `confirmCard({title?, message, info?, okLabel?, okData, cancelLabel?, cancelData?})` — ยืนยันการกระทำ (การ์ด MT-35)
+
+- **ใช้ก่อนการกระทำสำคัญ** เช่น ต่ออายุสมาชิก (`renew`) — ผู้ใช้ต้องกด "ยืนยัน" ก่อนระบบดำเนินการ
+- โครงสร้าง: Header "❓ ..." + Body (ข้อความ + กล่องข้อมูล `info`) + Footer **ปุ่ม 2 ปุ่มแนวนอน** (`buttonRow`): [ยกเลิก (secondary)] [ยืนยัน (primary)]
+- `okData`/`cancelData` เป็น postback data — เช่น `action=confirm_renew&code=ACT001` / `action=cancel_renew`
+- **Flow ต่ออายุ (2 ขั้น):** ① ผู้ใช้ส่ง `renew`/`renew:CODE` → `confirmCard` ② กด "ยืนยันต่ออายุ" → postback `action=confirm_renew` → `RenewalService.handleConfirmRenew` → `alertCard` (สำเร็จ/ผิดพลาด) · กด "ยกเลิก" → `action=cancel_renew` → ข้อความยกเลิก
 
 ## 3.5 การออกแบบ Webhook และ Event Handling
 
