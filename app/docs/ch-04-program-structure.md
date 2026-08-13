@@ -268,7 +268,7 @@ Entry point ของ LINE webhook
 - **Atoms:** `text()` / `button()` / `separator()` / `labelValueRow(label, value)` / `statusBadge(status)`
 - **Molecules:** `header(title, opts?)` / `bodyBox(contents, opts?)` / `infoBox(rows, opts?)` / `footerButton(label, data, opts?)`
 - **Frame:** `bubbleFrame({header, body, footer, size})` — ประกอบ bubble จากส่วนประกอบ
-- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · เทสต์ `testFlexComponents`
+- กฎ: ฟังก์ชันเป็น pure + สีจาก `FlexTheme` เท่านั้น · **ห้ามสร้าง raw flex object (`type:'flex'`/`'bubble'`) นอกไฟล์นี้** (กันด้วย CI `flex-usage-scan`) · เทสต์ `testFlexComponents`/`testFinanceCards`
 
 **`MessageService.js`** — ส่งข้อความผ่าน LINE Messaging API
 - `reply()` / `replyFlex()` / `send()` — ตอบกลับ (ต้องมี replyToken)
@@ -342,6 +342,7 @@ Entry point ของ LINE webhook
 | 6 | ห้าม hardcode secret/token ลงในซอร์สโค้ด ใช้ Script Properties |
 | 7 | ชื่อไฟล์/ฟังก์ชันใช้ camelCase; ชื่อตาราง/คอลัมน์ใช้ snake_case |
 | 8 | หลีกเลี่ยง dependency ที่ top-level ข้ามไฟล์ — resolve ตอน runtime |
+| 9 | ทุก Flex Message ประกอบจาก `FlexBuilder` components เท่านั้น — 🚫 **ห้ามสร้าง raw flex object นอก `FlexBuilder.js`** · สีจาก `FlexTheme` (บทที่ 3.4 — กันด้วย CI `flex-usage-scan` + `flex-theme-scan`) |
 
 ## 4.4 การตั้งค่า Configuration
 

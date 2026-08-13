@@ -48,6 +48,18 @@ if (HEX_COLOR_PATTERN.test(flexBuilderSrc)) {
   console.error('      สีทุกสีต้องอ่านจาก LineBot.FlexTheme (FlexTheme.js) — เปลี่ยนธีมที่ไฟล์เดียว');
 }
 
+// ── 1.6) Flex usage scan: ห้ามสร้าง raw flex object (type:'flex'/'bubble') นอก FlexBuilder.js ──
+// การ์ดทุกใบต้องประกอบจาก component ใน FlexBuilder — กันการสร้างโครงสร้างซ้ำ/นอกมาตรฐาน (บทที่ 3.4)
+const FLEX_OBJECT_PATTERN = /type\s*:\s*['"](?:flex|bubble)['"]/;
+const flexUsageHits = [];
+for (const file of fs.readdirSync(APP_DIR, { recursive: true })) {
+  const rel = String(file);
+  if (!rel.endsWith('.js')) continue;
+  if (rel.replace(/\\/g, '/') === 'LineBot/FlexBuilder.js') continue; // อนุญาตเฉพาะ FlexBuilder
+  const content = fs.readFileSync(path.join(APP_DIR, rel), 'utf8');
+  if (FLEX_OBJECT_PATTERN.test(content)) flexUsageHits.push(rel);
+}
+
 // ── 2) จำลอง Apps Script services ──
 const props = {};
 const sandbox = {
@@ -205,6 +217,15 @@ if (scanHits.length > 0) {
 // Flex theme scan
 if (!flexThemeOk) ok = false;
 else console.log('PASS  flex-theme-scan');
+
+// Flex usage scan
+if (flexUsageHits.length > 0) {
+  ok = false;
+  console.error('FAIL  flex-usage-scan — พบ raw flex object (type:"flex"/"bubble") นอก FlexBuilder.js ใน: ' + flexUsageHits.join(', '));
+  console.error('      ประกอบการ์ดจาก component ใน LineBot.FlexBuilder เท่านั้น (บทที่ 3.4)');
+} else {
+  console.log('PASS  flex-usage-scan');
+}
 
 // Contract tests
 try {

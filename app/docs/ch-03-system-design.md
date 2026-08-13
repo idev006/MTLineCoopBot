@@ -418,25 +418,76 @@ postback('saving_acct', 'บัญชีเงินฝาก')  ←───▶
 
 ## 3.4 การออกแบบ Flex Message (Message Design)
 
-### 3.4.0 Flex Component Library (มาตรฐานกลาง — การ์ด MT-33)
+### 3.4.0 Flex Component Standard (มาตรฐานกลาง — การ์ด MT-33/MT-34)
 
-ระบบมี **Flex Component Library** ใน `FlexBuilder.js` + `FlexTheme.js` เพื่อให้ทุกการ์ด Flex มีมาตรฐานเดียวกัน (ไม่ duplicate code) ประกอบด้วย 4 ชั้น:
+ระบบมี **Flex Component Library** ใน `FlexBuilder.js` + `FlexTheme.js` เป็น **มาตรฐานเดียวในการสร้าง Flex Message ทั้งหมด** — การ์ดทุกใบประกอบจาก component เดียวกัน ไม่มีใครสร้างโครงสร้าง flex ซ้ำเอง
 
-| ชั้น | องค์ประกอบ | ไฟล์ |
-|-----|-----------|------|
-| 0. Design Tokens | `FlexTheme` — สี/ขนาด/รัศมี/สถานะ ทั้งหมด (SSOT) | `FlexTheme.js` |
-| 1. Atoms | `text()` · `button()` · `separator()` · `labelValueRow()` · `statusBadge()` | `FlexBuilder.js` |
-| 2. Molecules | `header()` · `bodyBox()` · `infoBox()` · `footerButton()` | `FlexBuilder.js` |
-| 3. Frame | `bubbleFrame({header, body, footer, size})` | `FlexBuilder.js` |
-| 4. Templates | `menuClicked()` · `welcomeMember()` · `messageBox()` | `FlexBuilder.js` |
+#### ก. Design Tokens (`FlexTheme.js` — SSOT)
 
-**กฎการใช้ (มาตรฐานร่วม):**
+ค่าสี/ขนาด/รัศมี/สถานะทั้งหมดกำหนดไว้ที่เดียว `LineBot.FlexTheme` — เปลี่ยนธีม = แก้ไฟล์นี้ไฟล์เดียว:
 
-- 🚫 **ห้าม hardcode สี hex ในโค้ด** — สีทุกสีอ่านจาก `LineBot.FlexTheme` (เปลี่ยนธีม = แก้ `FlexTheme.js` ไฟล์เดียว) · กันด้วย CI: `flex-theme-scan` (scan `FlexBuilder.js` ไม่ให้มี hex color) + `testFlexComponents` ตรวจฟังก์ชัน component
-- Component เป็น **pure function** — รับ props → คืน Flex object → เทสต์ใน node ได้ (`testFlexComponents`)
-- สร้างการ์ดใหม่ = ประกอบจาก component ที่มี (เช่น ใช้ `header` + `infoBox` + `footerButton` + `bubbleFrame`) ไม่ใช่สร้างโครงสร้างซ้ำ
-- ✅ ใช้แล้ว: `profileCard` (ข้อมูลส่วนตัว) · `financeCard` (เงินฝาก/หนี้/ปันผล/หุ้น) — การ์ด MT-34 · `statusBadge` (สถานะสมาชิก) · `labelValueRow` (แถวข้อมูล) · `messageBox` (แจ้งเตือน/ยืนยัน)
-- เตรียมใช้ต่อ: `noticeCard` (ประกาศจาก `t_notice`) · `loanReminderCard` (เตือนชำระ) — ใช้ component ชุดเดียวกัน
+| Token | ค่า | ใช้กับ |
+|-------|-----|-------|
+| `brandColor` | `#1DB446` | header / ปุ่มหลัก (สีสหกรณ์) |
+| `white` | `#FFFFFF` | ตัวอักษรบนสีเข้ม / พื้นหลัง body มาตรฐาน |
+| `textPrimary` | `#333333` | ตัวอักษรหลัก |
+| `textMuted` | `#666666` | ตัวอักษรรอง (เช่น รหัสสมาชิก) |
+| `textSecondary` | `#888888` | ตัวอักษรอธิบาย / เชิงอรรถ |
+| `boxBg` | `#F0F8F0` | พื้นหลังกล่องข้อมูล (เขียวอ่อน) |
+| `statusColors.active/paid/sent` | `#1DB446` | สถานะใช้งานอยู่ / ชำระแล้ว / ส่งแล้ว |
+| `statusColors.inactive` | `#95A5A6` | สถานะยังไม่เปิดใช้งาน |
+| `statusColors.expiring` | `#E6A23C` | ใกล้หมดอายุ / เตือน |
+| `statusColors.expired` | `#E74C3C` | หมดอายุ / ผิดพลาด |
+| `statusColors.draft` | `#888888` | ร่าง / ยังไม่เผยแพร่ |
+| `bubbleSize` | `'kilo'` | ขนาด bubble มาตรฐาน |
+| `paddingMd` / `paddingLg` | `'md'` / `'lg'` | ระยะห่างมาตรฐาน |
+| `radiusMd` | `'md'` | รัศมีมุมกล่องข้อมูล |
+
+#### ข. แคตตาล็อก 3 ชั้น (Catalog)
+
+| ชั้น | หน้าที่ | Component | ใช้สร้าง |
+|-----|--------|-----------|---------|
+| **1. Atoms** — องค์ประกอบย่อยที่สุดของ LINE Flex | `text()` · `button()` · `separator()` · `labelValueRow(label, value)` · `statusBadge(status)` | ทุกข้อความ / ปุ่ม / เส้นคั่น / แถวข้อมูล / ป้ายสถานะ |
+| **2. Molecules** — กล่อง/ส่วนประกอบที่รวม atoms | `header(title, opts?)` · `bodyBox(contents, opts?)` · `infoBox(rows, opts?)` · `footerButton(label, data, opts?)` · **`bubbleFrame({header, body, footer, size})`** (ประกอบส่วนต่าง ๆ เป็น bubble) | โครงสร้าง header/body/footer ของการ์ดทุกใบ |
+| **3. Templates** — การ์ดสำเร็จรูปตาม use case | `menuClicked(caption)` · `welcomeMember(member)` · `messageBox(options)` · `profileCard(member, {warning})` · `financeCard(data)` | ตอบเมนู · ต้อนรับ activate · กล่องข้อความ · โปรไฟล์ · การเงิน (เงินฝาก/หนี้/ปันผล/หุ้น) |
+
+**หลักการจัดชั้น:** ชั้นต่ำ (atoms) ไม่รู้จักชั้นบน · ชั้นสูง (templates) ประกอบจากชั้นล่างเท่านั้น — เพิ่มการ์ดใหม่ = ประกอบจาก atoms/molecules ที่มี (ไม่สร้างโครงสร้างซ้ำ)
+
+#### ค. กฎการตั้งชื่อ (Naming Rules)
+
+| ประเภท | กฎ | ตัวอย่าง |
+|--------|-----|---------|
+| Atom / Molecule | ตั้งตาม**สิ่งที่สร้าง** (camelCase) — ไม่ลงท้ายด้วยอะไรพิเศษ | `text` / `button` / `infoBox` / `header` |
+| Template | ตั้งตาม**การใช้งาน** · การ์ดข้อมูลลงท้ายด้วย `Card` | `profileCard` / `financeCard` (อนาคต: `noticeCard` / `loanReminderCard`) |
+| Opts | ใช้ชื่อไทย-อังกฤษผสมตามฟิลด์ข้อมูลจริง · `opts?` ระบุว่าไม่บังคับ | `profileCard(member, { warning })` |
+
+#### ง. กฎการใช้งาน (Usage Rules)
+
+1. **ทุก Flex Message ต้องมาจาก `LineBot.FlexBuilder`** — 🚫 **ห้ามสร้าง raw flex object (`type:'flex'`/`type:'bubble'`) นอก `FlexBuilder.js`** · กันด้วย CI: `flex-usage-scan` (scan ทุกไฟล์ `.js` ยกเว้น FlexBuilder)
+2. 🚫 **ห้าม hardcode สี hex** — สีทุกสีอ่านจาก `LineBot.FlexTheme` · กันด้วย CI: `flex-theme-scan` + `testFlexComponents`
+3. Component เป็น **pure function** — รับ props → คืน Flex object ธรรมดา → เทสต์ใน node ได้ · ไม่เรียก API/ไม่แตะ SpreadsheetApp
+4. **ทุก Template ต้องมี `altText` ภาษาไทย** (แสดงเมื่อ LINE ไม่รองรับ Flex)
+5. สร้างการ์ดใหม่ = ประกอบจาก atoms/molecules ที่มี (เช่น `header` + `infoBox` + `footerButton` + `bubbleFrame`) — ไม่เขียนโครงสร้าง bubble ซ้ำเอง
+6. ข้อมูล (ตัวเลข/วันที่/ชื่อ) จัดรูปแบบที่ **`MemberDataService`** (UI layer) แล้วส่งเข้าตัวการ์ด — FlexBuilder ไม่คำนวณเอง
+
+#### จ. Checklist ก่อนเพิ่ม/แก้การ์ด Flex
+
+- [ ] เพิ่ม template ใน `FlexBuilder.js` (ชั้น 3) — ประกอบจาก atoms/molecules เท่านั้น ไม่มี `type:'flex'` ซ้ำกันเอง
+- [ ] สีทั้งหมดอ่านจาก `LineBot.FlexTheme` — ไม่มี hex hardcode
+- [ ] มี `altText` ภาษาไทย · รับข้อมูลที่จัดรูปแบบแล้ว (ไม่คำนวณเอง)
+- [ ] เพิ่มกรณีตรวจใน `testFlexComponents` (โครงสร้าง + ไม่มี hex) / `testFinanceCards` (ข้อมูลครบ ไม่ปลอมตัวเลข) — ตามประเภทการ์ด
+- [ ] ใช้ template ที่ `EventHandler` (หรือ service) ผ่าน `replyFlex` — **ไม่สร้าง flex object ตรง ๆ ใน EventHandler/service**
+- [ ] รัน `node scripts/ci-test.js` — ต้องผ่าน `flex-theme-scan` + `flex-usage-scan` + `ALL TESTS PASS`
+- [ ] อัปเดตแคตตาล็อก 3 ชั้นในหัวข้อ ข. นี้ (ถ้าเพิ่ม component ใหม่)
+
+#### ฉ. การบังคับด้วย CI (บทที่ 6 TC-19)
+
+| กลไก | ตรวจอะไร | ไฟล์ |
+|------|---------|------|
+| `flex-theme-scan` | ไม่มี hex color ใน `FlexBuilder.js` (สีมาจาก FlexTheme) | `scripts/ci-test.js` |
+| `flex-usage-scan` | ไม่มี `type:'flex'`/`type:'bubble'` นอก `FlexBuilder.js` | `scripts/ci-test.js` |
+| `testFlexComponents` | tokens/atoms/molecules/frame + templates + ไม่มี hex ในฟังก์ชัน | `Test.js` |
+| `testFinanceCards` | profileCard/financeCard ข้อมูลครบเหมือน text · noData ไม่ปลอมตัวเลข | `Test.js` |
 
 ### 3.4.1 `menuClicked(menuCaption)` — ตอบเมื่อคลิกเมนู
 

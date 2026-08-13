@@ -195,8 +195,8 @@
 |--------|-----------|
 | วัตถุประสงค์ | ยืนยันว่า Flex Message ทั้งหมดสร้างจาก **Component Library มาตรฐานเดียวกัน** (`FlexTheme` design tokens + atoms + molecules + `bubbleFrame`) · สีไม่ hardcode ในโค้ด · refactor แล้ว **payload เหมือนเดิม** (พฤติกรรมผู้ใช้ไม่เปลี่ยน) |
 | ข้อมูลตั้งต้น | รหัสปัจจุบัน (หลังการ์ด MT-33) · สมาชิก activate แล้ว |
-| ขั้นตอน | 1. (CI) รัน `testFlexComponents` — ตรวจ FlexTheme/atoms/molecules/bubbleFrame + template ครบโครงสร้าง 2. (CI) `flex-theme-scan` — scan `FlexBuilder.js` ไม่ให้มี hex color 3. (มือ) คลิกเมนู → เห็น Flex "คุณเลือกเมนู..." เหมือนเดิม 4. (มือ) activate สมาชิกใหม่ → เห็น Flex ต้อนรับเหมือนเดิม |
-| ผลที่คาดหวัง | 1. CI: `testFlexComponents OK` — component ทั้งหมด + `menuClicked`/`welcomeMember`/`messageBox` ครบโครงสร้างเดิม 2. CI: `PASS flex-theme-scan` 3–4. หน้าจอผู้ใช้ไม่เปลี่ยน (มีแต่โครงสร้างโค้ดที่รวมมาตรฐาน) |
+| ขั้นตอน | 1. (CI) รัน `testFlexComponents` — ตรวจ FlexTheme/atoms/molecules/bubbleFrame + template ครบโครงสร้าง 2. (CI) `flex-theme-scan` — scan `FlexBuilder.js` ไม่ให้มี hex color · `flex-usage-scan` — ไม่ให้มี raw flex object (`type:'flex'`/`'bubble'`) นอก `FlexBuilder.js` 3. (มือ) คลิกเมนู → เห็น Flex "คุณเลือกเมนู..." เหมือนเดิม 4. (มือ) activate สมาชิกใหม่ → เห็น Flex ต้อนรับเหมือนเดิม |
+| ผลที่คาดหวัง | 1. CI: `testFlexComponents OK` — component ทั้งหมด + `menuClicked`/`welcomeMember`/`messageBox` ครบโครงสร้างเดิม 2. CI: `PASS flex-theme-scan` + `PASS flex-usage-scan` 3–4. หน้าจอผู้ใช้ไม่เปลี่ยน (มีแต่โครงสร้างโค้ดที่รวมมาตรฐาน) |
 | ผ่าน/ไม่ผ่าน | ☐ |
 
 ### 6.2.20 TC-20: Flex Card ข้อมูลสมาชิก/การเงิน (การ์ด MT-34)
