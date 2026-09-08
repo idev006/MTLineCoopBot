@@ -11,7 +11,8 @@ Adapters.Audit.SheetsAuditQueryAdapter = (() => {
   const TABLES = Object.freeze({
     activation:'ACTIVATION_LOG',
     expiry:'EXPIRY_LOG',
-    reminder:'REMINDER_LOG'
+    reminder:'REMINDER_LOG',
+    admin:'ADMIN_AUDIT_LOG'
   });
 
   function list(options) {
@@ -34,7 +35,7 @@ Adapters.Audit.SheetsAuditQueryAdapter = (() => {
     });
 
     function ts(r) {
-      return String(r.activated_dt || r.checked_dt || r.reminded_dt || '');
+      return String(r.activated_dt || r.checked_dt || r.reminded_dt || r.created_dt || '');
     }
 
     rows.sort((a,b) => ts(b).localeCompare(ts(a)));
