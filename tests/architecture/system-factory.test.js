@@ -34,6 +34,26 @@ const denyIdentitySrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Security', 'DenyAllIdentityAdapter.js'),
   'utf8'
 );
+const lineIdTokenVerifierPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'IdTokenVerifierPort.js'),
+  'utf8'
+);
+const httpClientPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'HttpClientPort.js'),
+  'utf8'
+);
+const appsScriptHttpSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Http', 'AppsScriptHttpClientAdapter.js'),
+  'utf8'
+);
+const lineVerifierSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Security', 'LineIdTokenVerifier.js'),
+  'utf8'
+);
+const lineIdentitySrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Security', 'LineIdentityAdapter.js'),
+  'utf8'
+);
 const memberRepoPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'MemberRepositoryPort.js'),
   'utf8'
@@ -74,6 +94,8 @@ const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeApi = { handleRequest: () => ({ ok: true }) };
 const fakeIdentity = { authenticate: () => ({ subject: 'test', channel: 'test', roles: [], memberCode: null, claims: {}, authenticated: true }) };
 const fakeAuthorization = { requireAuthenticated: () => ({ allowed: true }) };
+const fakeLineVerifier = { verify: () => ({ ok: false, error: { code: 'TEST' } }) };
+const fakeLineIdentity = { authenticate: () => ({ subject: 'anonymous', channel: 'line', roles: [], memberCode: null, claims: {}, authenticated: false }) };
 
 const sandbox = {
   Composition: {},
@@ -86,6 +108,10 @@ const sandbox = {
   Data: { MemberRepository: { getRepository: () => makeRepo('prod-repo') } },
   Config: { get: () => ({ mode: 'prod' }) },
   Api: { ApiService: { handleRequest: () => ({ ok: true, source: 'prod' }) } },
+  UrlFetchApp: { fetch: () => ({ getResponseCode: () => 401, getContentText: () => '{}' }) },
+  encodeURIComponent,
+  JSON,
+  String,
   Date,
   Object
 };
@@ -96,9 +122,14 @@ vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
 vm.runInContext(principalSrc, sandbox, { filename: 'Principal.js' });
 vm.runInContext(identityPortSrc, sandbox, { filename: 'IdentityPort.js' });
+vm.runInContext(httpClientPortSrc, sandbox, { filename: 'HttpClientPort.js' });
+vm.runInContext(lineIdTokenVerifierPortSrc, sandbox, { filename: 'IdTokenVerifierPort.js' });
 vm.runInContext(memberRepoPortSrc, sandbox, { filename: 'MemberRepositoryPort.js' });
 vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' });
+vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
 vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js' });
+vm.runInContext(lineVerifierSrc, sandbox, { filename: 'LineIdTokenVerifier.js' });
+vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' });
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
@@ -110,7 +141,9 @@ const injected = createSystem({
   config: fakeConfig,
   api: fakeApi,
   identity: fakeIdentity,
-  authorization: fakeAuthorization
+  authorization: fakeAuthorization,
+  lineIdTokenVerifier: fakeLineVerifier,
+  lineIdentity: fakeLineIdentity
 });
 
 if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository injection failed');
@@ -119,6 +152,8 @@ if (injected.config !== fakeConfig) throw new Error('config injection failed');
 if (injected.api !== fakeApi) throw new Error('api injection failed');
 if (injected.identity !== fakeIdentity) throw new Error('identity injection failed');
 if (injected.authorization !== fakeAuthorization) throw new Error('authorization injection failed');
+if (injected.lineIdTokenVerifier !== fakeLineVerifier) throw new Error('line verifier injection failed');
+if (injected.lineIdentity !== fakeLineIdentity) throw new Error('line identity injection failed');
 if (!Object.isFrozen(injected)) throw new Error('system bundle must be immutable');
 
 const defaults = createSystem();
@@ -128,6 +163,8 @@ if (!defaults.clock.now()) throw new Error('default clock wiring failed');
 if (!defaults.api.handleRequest().ok) throw new Error('default api wiring failed');
 if (defaults.identity.authenticate({ channel: 'line' }).authenticated) throw new Error('default identity must fail closed');
 if (!defaults.authorization.requireAuthenticated) throw new Error('default authorization wiring failed');
+if (!defaults.lineIdentity || typeof defaults.lineIdentity.authenticate !== 'function') throw new Error('default LINE identity wiring failed');
+if (!defaults.lineIdTokenVerifier || typeof defaults.lineIdTokenVerifier.verify !== 'function') throw new Error('default LINE verifier wiring failed');
 if (!defaults.getCurrentMemberProfile || typeof defaults.getCurrentMemberProfile.execute !== 'function') {
   throw new Error('default application use case wiring failed');
 }
