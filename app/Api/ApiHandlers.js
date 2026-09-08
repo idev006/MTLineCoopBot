@@ -213,8 +213,27 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  /**
+   * POST /api/loan/calculate
+   * Public/read-only canonical loan calculation.
+   */
+  function calculateLoan(ctx) {
+    const system = getSystem();
+    const result = system.calculateLoan.execute({ params: (ctx && ctx.body) || {} });
+    if (!result.ok) {
+      throw Api.ApiError.create(
+        result.error.code || 'VALIDATION',
+        result.error.message || 'ข้อมูลคำนวณสินเชื่อไม่ถูกต้อง',
+        400,
+        result.error.period ? { period: result.error.period } : undefined
+      );
+    }
+    return result.data;
+  }
+
   return {
     health,
+    calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
     getCurrentLoans,
