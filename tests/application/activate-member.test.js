@@ -38,9 +38,25 @@ if(dup.ok || dup.error.code!=='ALREADY_ACTIVATED') throw new Error('duplicate ac
 if(uc.execute({activateCode:'BAD',lineUserId:'U123'}).error.code!=='MEMBER_NOT_FOUND') throw new Error('bad code must fail');
 if(uc.execute({activateCode:'',lineUserId:'U123'}).error.code!=='VALIDATION') throw new Error('validation must fail');
 
-const failingRepo=sandbox.Adapters.Test.InMemoryMemberRepository.create(seed);
-failingRepo.saveActivation = undefined;
+const methods=sandbox.Ports.MemberRepositoryPort.listMethods();
+const failingRepo={};
+for(const m of methods) failingRepo[m]=()=>null;
+failingRepo.findByActivateCode=()=>({_rowIndex:2,mem_code:'M001',mem_eff_dt:''});
+failingRepo.saveActivation=()=>{ throw new Error('storage failed'); };
+
+const failingUc=sandbox.Application.Member.ActivateMemberUseCase.create({
+  memberRepository:failingRepo,
+  clock
+});
+let storageFailed=false;
+try {
+  failingUc.execute({activateCode:'ABC123',lineUserId:'U123'});
+} catch(e) {
+  storageFailed=String(e.message).includes('storage failed');
+}
+if(!storageFailed) throw new Error('repository failure must propagate for delivery mapping');
 
 console.log('PASS  ActivateMemberUseCase success + persistence + audit');
 console.log('PASS  duplicate / invalid code / validation negatives');
-console.log('=== ACTIVATE MEMBER USE CASE TESTS PASS (2/2) ===');
+console.log('PASS  repository failure propagates');
+console.log('=== ACTIVATE MEMBER USE CASE TESTS PASS (3/3) ===');
