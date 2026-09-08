@@ -27,6 +27,12 @@ LineBot.NoticeService = (() => {
    * @returns {{notices: number, pending: number, sent: number, targets: number, pushed: number}}
    */
   function runNoticeBroadcast(token, opts) {
+    // Production/default path: delegate to the headless Application Layer.
+    // opts path remains temporarily for legacy characterization/DI tests.
+    if (!opts) {
+      return Composition.SystemFactory.createSystem().noticeBroadcast.execute();
+    }
+
     const o = opts || {};
     const repo = o.repo || Data.MemberRepository.getRepository();
     const now = o.now || new Date();

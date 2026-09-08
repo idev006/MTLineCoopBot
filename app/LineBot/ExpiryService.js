@@ -24,6 +24,12 @@ LineBot.ExpiryService = (() => {
    * @returns {{checked: number, logged: number, expiring: number, expired: number, pushed: number}}
    */
   function runExpiryCheck(token, opts) {
+    // Production/default path: delegate to the headless Application Layer.
+    // opts path remains temporarily for legacy characterization/DI tests.
+    if (!opts) {
+      return Composition.SystemFactory.createSystem().expiryScan.execute();
+    }
+
     const o = opts || {};
     const repo = o.repo || Data.MemberRepository.getRepository();
     const warningDays = o.warningDays !== undefined ? o.warningDays : Config.get().EXPIRY_WARNING_DAYS;
