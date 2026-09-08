@@ -128,6 +128,10 @@ Composition.SystemFactory = (() => {
         messaging,
         audit
       });
+    const calculateLoan = o.calculateLoan ||
+      Application.Finance.CalculateLoanUseCase.create({
+        calculator: o.loanCalculator || Core.LoanCalculator
+      });
 
     return Object.freeze({
       clock,
@@ -148,6 +152,7 @@ Composition.SystemFactory = (() => {
       expiryScan,
       noticeBroadcast,
       loanReminder,
+      calculateLoan,
       api: o.api || defaultApi()
     });
   }
