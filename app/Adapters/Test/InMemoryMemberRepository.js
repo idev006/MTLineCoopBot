@@ -79,6 +79,24 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       return clone(rows.filter(r => String(r.mem_code || '') === String(memCode || '')));
     }
 
+    function saveActivation(rowIndex, activation) {
+      const i = Number(rowIndex) - 2;
+      if (i < 0 || i >= state.members.length) {
+        throw new Error('Member row not found: ' + rowIndex);
+      }
+      const a = clone(activation || {});
+      state.members[i].mem_eff_dt = a.memEffDt;
+      state.members[i].mem_exp_dt = a.memExpDt;
+      state.members[i].mem_status = a.memStatus;
+      state.members[i].line_user_id = a.lineUserId;
+      return {
+        memEffDt: state.members[i].mem_eff_dt,
+        memExpDt: state.members[i].mem_exp_dt,
+        memStatus: state.members[i].mem_status,
+        lineUserId: state.members[i].line_user_id
+      };
+    }
+
     function findSavingsByMember(memCode) {
       return byMember(state.savings, memCode);
     }
@@ -164,6 +182,7 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       findByMemberCode,
       findByActivateCode,
       activateMember,
+      saveActivation,
       findSavingsByMember,
       findLoansByMember,
       findDividendsByMember,
