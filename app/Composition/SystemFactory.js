@@ -48,6 +48,12 @@ Composition.SystemFactory = (() => {
     const memberAccess = o.memberAccess || Engine.MemberAccessEngine.create({ clock });
     const identity = Ports.IdentityPort.assertImplemented(o.identity || defaultIdentity());
     const authorization = o.authorization || Engine.AuthorizationEngine.create();
+    const getCurrentMemberProfile = o.getCurrentMemberProfile ||
+      Application.Member.GetCurrentMemberProfileUseCase.create({
+        memberRepository: o.memberRepository || defaultMemberRepository(),
+        memberAccess,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -56,6 +62,7 @@ Composition.SystemFactory = (() => {
       memberAccess,
       identity,
       authorization,
+      getCurrentMemberProfile,
       api: o.api || defaultApi()
     });
   }
