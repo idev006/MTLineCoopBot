@@ -25,6 +25,7 @@ Api.ApiRegistry = (() => {
     const h = Api.ApiHandlers;
     ROUTES = [
       { method: 'GET', path: '/api/health', handler: h.health, auth: 'none' },
+      { method: 'POST', path: '/api/loan/calculate', handler: h.calculateLoan, auth: 'none' },
       { method: 'POST', path: '/api/member/me/profile', handler: h.getCurrentProfile, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/savings', handler: h.getCurrentSavings, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/loans', handler: h.getCurrentLoans, auth: 'line-id-token' },
