@@ -304,6 +304,13 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function getWebAdminSettings(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const result = system.getAdminSettings.execute({ principal });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -329,6 +336,7 @@ Api.ApiHandlers = (() => {
     revokeWebSession,
     listWebMembers,
     getWebMemberDetail,
+    getWebAdminSettings,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
