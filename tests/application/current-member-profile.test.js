@@ -54,6 +54,15 @@ if(usecase.execute({principal:unlinked}).error.code!=='MEMBER_NOT_LINKED') throw
 const missing=Principal.create({subject:'line:U3',channel:'line',roles:['member'],memberCode:'M404',authenticated:true});
 if(usecase.execute({principal:missing}).error.code!=='MEMBER_NOT_FOUND') throw new Error('missing member must be explicit');
 
+const managerMember={...member,mem_code:'M002',mem_role:'manager'};
+const managerRepo={...repo,findByMemberCode:(code)=>code==='M002'?managerMember:null};
+const managerUsecase=sandbox.Application.Member.GetCurrentMemberProfileUseCase.create({
+  memberRepository:managerRepo, memberAccess, authorization
+});
+const managerPrincipal=Principal.create({subject:'line:UM',channel:'line',roles:['manager'],memberCode:'M002',authenticated:true});
+const managerResult=managerUsecase.execute({principal:managerPrincipal});
+if(!managerResult.ok || managerResult.data.mem_role!=='manager') throw new Error('manager profile should be allowed');
+
 const inactiveRepo={...repo,findByMemberCode:()=>({...member,mem_status:'inactive'})};
 const inactiveUsecase=sandbox.Application.Member.GetCurrentMemberProfileUseCase.create({
   memberRepository:inactiveRepo, memberAccess, authorization
@@ -61,6 +70,7 @@ const inactiveUsecase=sandbox.Application.Member.GetCurrentMemberProfileUseCase.
 if(inactiveUsecase.execute({principal:good}).error.code!=='MEMBER_INACTIVE_OR_ROLE_INVALID') throw new Error('inactive member must be denied');
 
 console.log('PASS  current member profile use case headless success');
+console.log('PASS  manager role is valid for current member profile');
 console.log('PASS  unauthenticated principal denied');
 console.log('PASS  unlinked principal denied');
 console.log('PASS  missing/inactive member explicit errors');
