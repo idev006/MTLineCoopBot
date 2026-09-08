@@ -10,7 +10,7 @@ var Engine = Engine || {};
 Engine.MemberAccessEngine = (() => {
   'use strict';
 
-  const KNOWN_ROLES = Object.freeze(['member', 'staff', 'admin']);
+  const KNOWN_ROLES = Object.freeze(['member', 'staff', 'manager', 'admin']);
 
   function create(deps) {
     const d = deps || {};
