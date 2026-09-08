@@ -396,49 +396,54 @@ LineBot.SheetService = (() => {
   }
 
   /**
-   * อัปเดตข้อมูลการ activate สมาชิก
-   * @param {number} rowIndex - 1-based row index
-   * @param {string} lineUserId
-   * @returns {Object} ข้อมูลที่อัปเดต
+   * Persist precomputed activation values.
+   * @param {number} rowIndex
+   * @param {{memEffDt:string,memExpDt:string,memStatus:string,lineUserId:string}} activation
+   * @returns {Object}
    */
-  function activateMember(rowIndex, lineUserId) {
+  function saveActivation(rowIndex, activation) {
     const tableKey = 'MEMBER_MASTER';
     const sheet = getSheet(tableKey);
-    const now = new Date();
-    const expDate = new Date(now);
-    expDate.setDate(expDate.getDate() + 365);
+    const a = activation || {};
 
-    // ใช้ header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์ — ไม่พึ่ง DataDict order)
     const headerMap = getHeaderMap(sheet);
     const col = (name) => {
       const idx = headerMap[name];
       if (idx === undefined) {
         throw new Error(`ไม่พบคอลัมน์ ${name} ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
       }
-      return idx + 1; // 1-based
+      return idx + 1;
     };
-    const effDtIndex = col('mem_eff_dt');
-    const expDtIndex = col('mem_exp_dt');
-    const statusIndex = col('mem_status');
-    const lineIdIndex = col('line_user_id');
 
-    // แปลง Date เป็น string รูปแบบ yyyy-mm-dd HH:mm:ss ตามที่ต้องการ
-    const effDtStr = DataDict.formatDateTime(now);
-    const expDtStr = DataDict.formatDateTime(expDate);
+    sheet.getRange(rowIndex, col('mem_eff_dt')).setValue(a.memEffDt);
+    sheet.getRange(rowIndex, col('mem_exp_dt')).setValue(a.memExpDt);
+    sheet.getRange(rowIndex, col('mem_status')).setValue(a.memStatus);
+    sheet.getRange(rowIndex, col('line_user_id')).setValue(a.lineUserId);
 
-    sheet.getRange(rowIndex, effDtIndex).setValue(effDtStr);
-    sheet.getRange(rowIndex, expDtIndex).setValue(expDtStr);
-    sheet.getRange(rowIndex, statusIndex).setValue('active');
-    sheet.getRange(rowIndex, lineIdIndex).setValue(lineUserId);
-
-    Logger.log('Activated member at row ' + rowIndex + ' for LINE user ' + lineUserId);
+    Logger.log('Saved activation at row ' + rowIndex + ' for LINE user ' + a.lineUserId);
 
     return {
-      memEffDt: effDtStr,
-      memExpDt: expDtStr,
+      memEffDt: a.memEffDt,
+      memExpDt: a.memExpDt,
+      memStatus: a.memStatus,
+      lineUserId: a.lineUserId
+    };
+  }
+
+  /**
+   * Legacy compatibility activation operation.
+   * New application code must compute policy before persistence and call saveActivation().
+   */
+  function activateMember(rowIndex, lineUserId) {
+    const now = new Date();
+    const expDate = new Date(now);
+    expDate.setDate(expDate.getDate() + 365);
+    return saveActivation(rowIndex, {
+      memEffDt: DataDict.formatDateTime(now),
+      memExpDt: DataDict.formatDateTime(expDate),
       memStatus: 'active',
       lineUserId: lineUserId
-    };
+    });
   }
 
   /**
