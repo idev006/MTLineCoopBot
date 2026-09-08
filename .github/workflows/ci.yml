@@ -40,7 +40,9 @@ jobs:
         run: node tests/contracts/member-repository.contract.test.js
 
       - name: Engine tests (headless deterministic business engines)
-        run: node tests/engine/member-access-engine.test.js
+        run: |
+          node tests/engine/member-access-engine.test.js
+          node tests/engine/identity-authorization.test.js
 
       - name: Upload test log on failure
         if: failure()
