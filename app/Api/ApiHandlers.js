@@ -258,6 +258,52 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function requireWebPrincipal(ctx) {
+    const sessionToken = ctx && ctx.body ? ctx.body.sessionToken : null;
+    if (!sessionToken) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'ไม่พบ Web session', 401);
+    }
+    const system = getSystem();
+    const principal = system.webIdentity.authenticate({ sessionToken });
+    if (!Security.Principal.isAuthenticated(principal)) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'Web session ไม่ถูกต้องหรือหมดอายุ', 401);
+    }
+    return { system, principal };
+  }
+
+  function throwWebApplicationError(result) {
+    const code = result && result.error && result.error.code ? result.error.code : 'FORBIDDEN';
+    const status = code === 'UNAUTHENTICATED' ? 401 :
+      code === 'VALIDATION' ? 400 :
+      code === 'MEMBER_NOT_FOUND' ? 404 : 403;
+    throw Api.ApiError.create(code, 'ไม่สามารถเข้าถึงข้อมูลเจ้าหน้าที่ได้', status);
+  }
+
+  function listWebMembers(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const body = (ctx && ctx.body) || {};
+    const result = system.listWebMembers.execute({
+      principal,
+      search:body.search,
+      status:body.status,
+      page:body.page,
+      limit:body.limit
+    });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
+  function getWebMemberDetail(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const body = (ctx && ctx.body) || {};
+    const result = system.getWebMemberDetail.execute({
+      principal,
+      memberCode:body.memberCode
+    });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -281,6 +327,8 @@ Api.ApiHandlers = (() => {
     webSessionFromLine,
     verifyWebSession,
     revokeWebSession,
+    listWebMembers,
+    getWebMemberDetail,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
