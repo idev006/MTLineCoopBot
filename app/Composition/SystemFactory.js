@@ -78,6 +78,12 @@ Composition.SystemFactory = (() => {
         memberAccess,
         authorization
       });
+    const activateMember = o.activateMember ||
+      Application.Member.ActivateMemberUseCase.create({
+        memberRepository,
+        clock,
+        activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine
+      });
 
     return Object.freeze({
       clock,
@@ -90,6 +96,7 @@ Composition.SystemFactory = (() => {
       authorization,
       getCurrentMemberProfile,
       getCurrentMemberFinance,
+      activateMember,
       api: o.api || defaultApi()
     });
   }
