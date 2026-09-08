@@ -45,6 +45,7 @@ jobs:
           node tests/contracts/audit-config-ports.test.js
           node tests/contracts/scheduled-ports.test.js
           node tests/contracts/web-session-ports.test.js
+          node tests/contracts/web-session-production-adapters.test.js
 
       - name: Engine tests (headless deterministic business engines)
         run: |
