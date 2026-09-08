@@ -127,6 +127,7 @@ const FILE_ORDER = [
   'Adapters/Security/DenyAllIdentityAdapter.js',
   'Data/MemberRepository.js',
   'Data/SheetsMemberRepository.js',
+  'Application/Member/GetCurrentMemberProfileUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
