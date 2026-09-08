@@ -47,7 +47,28 @@ const src = fs.readFileSync(
   'utf8'
 );
 
-const fakeRepo = { name: 'fake-repo' };
+function makeRepo(name) {
+  return {
+    name,
+    findByLineUserId: () => null,
+    findByMemberCode: () => null,
+    findByActivateCode: () => null,
+    activateMember: () => null,
+    findSavingsByMember: () => [],
+    findLoansByMember: () => [],
+    findDividendsByMember: () => [],
+    logActivation: () => null,
+    listMembers: () => [],
+    logExpiry: () => null,
+    renewMember: () => null,
+    listNotices: () => [],
+    markNoticeSent: () => false,
+    listLoans: () => [],
+    logReminder: () => null,
+    getContent: () => null
+  };
+}
+const fakeRepo = makeRepo('fake-repo');
 const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeApi = { handleRequest: () => ({ ok: true }) };
@@ -62,7 +83,7 @@ const sandbox = {
   Security: {},
   Adapters: {},
   Application: {},
-  Data: { MemberRepository: { getRepository: () => ({ name: 'prod-repo' }) } },
+  Data: { MemberRepository: { getRepository: () => makeRepo('prod-repo') } },
   Config: { get: () => ({ mode: 'prod' }) },
   Api: { ApiService: { handleRequest: () => ({ ok: true, source: 'prod' }) } },
   Date,
