@@ -13,7 +13,7 @@ Composition.SystemFactory = (() => {
   'use strict';
 
   function defaultClock() {
-    return { now: () => new Date() };
+    return Ports.ClockPort.systemClock();
   }
 
   function defaultConfig() {
@@ -41,7 +41,7 @@ Composition.SystemFactory = (() => {
   function createSystem(overrides) {
     const o = overrides || {};
     return Object.freeze({
-      clock: o.clock || defaultClock(),
+      clock: Ports.ClockPort.assertImplemented(o.clock || defaultClock()),
       config: o.config || defaultConfig(),
       memberRepository: o.memberRepository || defaultMemberRepository(),
       api: o.api || defaultApi()
