@@ -355,6 +355,27 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function assignWebStaffRole(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const body = (ctx && ctx.body) || {};
+    const result = system.assignStaffRole.execute({
+      principal,
+      memberCode:body.memberCode,
+      role:body.role
+    });
+    if (!result.ok) {
+      const code = result.error && result.error.code ? result.error.code : 'FORBIDDEN';
+      const status = code === 'UNAUTHENTICATED' ? 401 :
+        code === 'VALIDATION' ? 400 :
+        code === 'MEMBER_NOT_FOUND' ? 404 :
+        code === 'SELF_ROLE_CHANGE_FORBIDDEN' ? 409 :
+        code === 'AUDIT_UNAVAILABLE' ? 503 :
+        code === 'PERSISTENCE_ERROR' ? 500 : 403;
+      throw Api.ApiError.create(code, 'ไม่สามารถเปลี่ยนบทบาทเจ้าหน้าที่ได้', status);
+    }
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -386,6 +407,7 @@ Api.ApiHandlers = (() => {
     renewWebMember,
     listWebStaffAccounts,
     getWebRoleCatalog,
+    assignWebStaffRole,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
