@@ -49,7 +49,7 @@ if(issued.data.expiresAt!=='2026-09-08T08:00:00.000Z') throw new Error('session 
 const snapshot=store.snapshot();
 if(snapshot.length!==1) throw new Error('session not stored');
 if(JSON.stringify(snapshot).includes('opaque-1')) throw new Error('raw token must never be persisted');
-if(snapshot[0].tokenHash!=='hash:opaque-1') throw new Error('hashed token not persisted');
+if(snapshot[0].tokenHash!==tokens.hash('opaque-1')) throw new Error('hashed token not persisted');
 
 const verified=verifySession.execute({token:'opaque-1'});
 if(!verified.ok||!verified.data.principal.roles.includes('admin')) throw new Error('session verify failed');
