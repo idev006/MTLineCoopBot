@@ -12,9 +12,11 @@ for(const rel of [
   'app/Core/MemberRules.js',
   'app/Security/Principal.js',
   'app/Ports/ClockPort.js',
+  'app/Ports/AuditPort.js',
   'app/Ports/MemberRepositoryPort.js',
   'app/Engine/AuthorizationEngine.js',
   'app/Adapters/Test/InMemoryMemberRepository.js',
+  'app/Adapters/Test/InMemoryAuditAdapter.js',
   'app/Application/Member/RenewMemberUseCase.js'
 ]){
   vm.runInContext(fs.readFileSync(path.join(root,rel),'utf8'),sandbox,{filename:rel});
@@ -25,10 +27,11 @@ const seed={members:[{
   mem_eff_dt:'2025-01-01',mem_exp_dt:'2026-01-01',line_user_id:'U1'
 }]};
 const repo=sandbox.Adapters.Test.InMemoryMemberRepository.create(seed);
+const audit=sandbox.Adapters.Test.InMemoryAuditAdapter.create();
 const clock={now:()=>new Date(2026,8,8,9,0,0)};
 const authz=sandbox.Engine.AuthorizationEngine.create();
 const uc=sandbox.Application.Member.RenewMemberUseCase.create({
-  memberRepository:repo,clock,authorization:authz
+  memberRepository:repo,clock,authorization:authz,audit
 });
 const Principal=sandbox.Security.Principal;
 const p=Principal.create({
@@ -40,14 +43,17 @@ const ok=uc.execute({principal:p});
 if(!ok.ok) throw new Error('self renewal should succeed');
 if(ok.data.mem_exp_dt!=='2027-09-08') throw new Error('expired member should renew from current date');
 if(ok.data.mem_status!=='active') throw new Error('renewal should persist active status');
-if(repo.snapshot().activationLogs.length!==1) throw new Error('renewal audit log missing');
+if(audit.snapshot().length!==1 || audit.snapshot()[0].type!=='member.renewal') {
+  throw new Error('renewal AuditPort event missing');
+}
 
 const futureRepo=sandbox.Adapters.Test.InMemoryMemberRepository.create({members:[{
   mem_code:'M002',mem_role:'member',mem_status:'active',
   mem_eff_dt:'2026-01-01',mem_exp_dt:'2027-01-15',line_user_id:'U2'
 }]});
+const futureAudit=sandbox.Adapters.Test.InMemoryAuditAdapter.create();
 const futureUc=sandbox.Application.Member.RenewMemberUseCase.create({
-  memberRepository:futureRepo,clock,authorization:authz
+  memberRepository:futureRepo,clock,authorization:authz,audit:futureAudit
 });
 const p2=Principal.create({
   subject:'line:U2',channel:'line',roles:['member'],memberCode:'M002',
