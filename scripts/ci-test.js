@@ -148,6 +148,7 @@ const FILE_ORDER = [
   'Application/Scheduled/ExpiryScanUseCase.js',
   'Application/Scheduled/NoticeBroadcastUseCase.js',
   'Application/Scheduled/LoanReminderUseCase.js',
+  'Application/Finance/CalculateLoanUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
