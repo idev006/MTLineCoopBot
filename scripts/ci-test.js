@@ -168,6 +168,7 @@ const FILE_ORDER = [
   'Application/Web/GetAdminSettingsUseCase.js',
   'Application/Web/GetAuditLogUseCase.js',
   'Application/Web/GetSummaryReportUseCase.js',
+  'Application/Web/RenewMemberByStaffUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',

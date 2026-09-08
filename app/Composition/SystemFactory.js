@@ -203,6 +203,13 @@ Composition.SystemFactory = (() => {
         config,
         clock
       });
+    const renewWebMember = o.renewWebMember ||
+      Application.Web.RenewMemberByStaffUseCase.create({
+        memberRepository,
+        clock,
+        audit,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -239,6 +246,7 @@ Composition.SystemFactory = (() => {
       getAdminSettings,
       getAuditLog,
       getSummaryReport,
+      renewWebMember,
       api: o.api || defaultApi()
     });
   }

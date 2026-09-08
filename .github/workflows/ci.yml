@@ -72,6 +72,7 @@ jobs:
           node tests/application/web-admin-settings.test.js
           node tests/application/web-audit-query.test.js
           node tests/application/web-summary-report.test.js
+          node tests/application/web-member-renew-write.test.js
 
       - name: Scheduled runtime delegation tests
         run: node tests/application/scheduled-runtime-delegation.test.js
@@ -87,6 +88,7 @@ jobs:
           node tests/application/web-admin-settings-api.test.js
           node tests/application/web-audit-api.test.js
           node tests/application/web-summary-report-api.test.js
+          node tests/application/web-member-renew-write-api.test.js
 
       - name: Upload test log on failure
         if: failure()
