@@ -92,6 +92,7 @@ jobs:
           node tests/application/web-staff-accounts-api.test.js
           node tests/application/web-role-catalog-api.test.js
           node tests/application/web-role-assignment-api.test.js
+          node tests/application/legacy-member-route-retirement.test.js
           node tests/application/web-audit-api.test.js
           node tests/application/web-summary-report-api.test.js
           node tests/application/web-member-renew-write-api.test.js

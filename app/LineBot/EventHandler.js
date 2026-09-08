@@ -29,24 +29,10 @@ LineBot.EventHandler = (() => {
   }
 
   /**
-   * เรียก API Layer สำหรับข้อมูลสมาชิก (Bot เป็น UI Adapter — การ์ด MT-17)
-   * Bot ใช้ endpoint เดียวกันกับ UI อื่น (LIFF/Admin — เฟส 3):
-   *   GET /api/member/profile · /api/member/savings · /api/member/loans · /api/member/dividends
-   * ผ่าน Api.ApiService.handleRequest → envelope { ok, data } | { ok, error }
-   * (Auth = ฝั่ง Gate: getAuthorizedMember ตรวจสิทธิ์ก่อน — ข้อมูลผ่าน API เดียวกัน)
-   * @param {string} path - เส้นทาง API เช่น '/api/member/profile'
-   * @param {string} lineUserId
-   * @returns {Object} envelope จาก Api.ApiService
-   */
-  function apiGet(path, lineUserId) {
-    return Api.ApiService.handleRequest('GET', path, { auth: { lineUserId } });
-  }
-
-  /**
    * map item id ของเมนูการเงิน → คีย์ endpoint API (ตารางที่เกี่ยวข้อง)
    * (saving_acct/chk_balance → savings · loan_balance → loans · dividends/share_capital → dividends)
    */
-  const FINANCIAL_API = {
+  const FINANCIAL_KIND = {
     saving_acct: 'savings',
     chk_balance: 'savings',
     loan_balance: 'loans',
@@ -127,6 +113,17 @@ LineBot.EventHandler = (() => {
     if (!member) return null;
     if (!system.memberAccess.hasKnownRole(member)) return null;
     return member;
+  }
+
+  function principalFromAuthorizedMember(member, lineUserId) {
+    return Security.Principal.create({
+      subject:'line-webhook:' + String(lineUserId || ''),
+      channel:'line',
+      roles:[member.mem_role],
+      memberCode:member.mem_code,
+      claims:{ lineUserId:String(lineUserId || ''), source:'line-webhook' },
+      authenticated:true
+    });
   }
 
   /**
@@ -275,11 +272,11 @@ LineBot.EventHandler = (() => {
         replyUnauthorized(replyToken, token, event.source.userId);
         return;
       }
-      // MT-17 (Bot เป็น UI Adapter): ข้อมูลสมาชิกเรียกผ่าน Api.ApiService —
-      // endpoint เดียวกับ UI อื่น ๆ · จัดรูปแบบการ์ดที่ MemberDataService + FlexBuilder (UI layer)
-      // MT-34: profile/การเงินตอบเป็น Flex Card (ข้อมูลเหมือนเดิม) — fallback ข้อความเดิมถ้าการ์ดส่งไม่ได้
+      // Member data uses the headless application boundary directly.
+      // The LINE user has already passed getAuthorizedMember() using server-owned webhook context.
+      const principal = principalFromAuthorizedMember(member, event.source.userId);
       if (params.item === 'profile') {
-        const env = apiGet('/api/member/profile', event.source.userId);
+        const env = getSystem().getCurrentMemberProfile.execute({ principal });
         if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
         const memberData = env.data;
         const card = deps.FlexBuilder.profileCard(memberData, { warning: getExpiryWarningText(memberData) });
@@ -289,16 +286,15 @@ LineBot.EventHandler = (() => {
           const profileText = deps.MemberData.buildProfileText(memberData);
           deps.MessageService.reply(replyToken, withExpiryWarning(profileText, member), token);
         }
-        Logger.log(`Profile replied via API for ${member.mem_code}`);
+        Logger.log(`Profile replied via application use case for ${member.mem_code}`);
         return;
       }
       if (deps.MemberData.isFinancialItem(params.item)) {
-        // ดึงเฉพาะตารางของเมนูนั้น ๆ ผ่าน API (savings/loans/dividends)
-        const key = FINANCIAL_API[params.item];
-        const env = apiGet('/api/member/' + key, event.source.userId);
+        const key = FINANCIAL_KIND[params.item];
+        const env = getSystem().getCurrentMemberFinance.execute({ principal, kind:key });
         if (!env.ok) { replyApiDataError(replyToken, token, env); return; }
         const financeData = { savings: [], loans: [], dividends: [] };
-        financeData[key] = (env.data && env.data[key]) || [];
+        financeData[key] = (env.data && env.data.rows) || [];
         const card = deps.FlexBuilder.financeCard({
           ...deps.MemberData.buildFinanceCardData(params.item, member, financeData),
           warning: getExpiryWarningText(member)
@@ -309,7 +305,7 @@ LineBot.EventHandler = (() => {
           const financeText = deps.MemberData.buildFinanceText(params.item, member, financeData);
           deps.MessageService.reply(replyToken, withExpiryWarning(financeText, member), token);
         }
-        Logger.log(`Financial menu replied via API: ${params.item}`);
+        Logger.log(`Financial menu replied via application use case: ${params.item}`);
         return;
       }
       // MT-14: เมนูข้อมูล/เอกสาร/ติดต่อ — ตอบเนื้อหาจริง (t_content → ReplyStore) ก่อน flex
