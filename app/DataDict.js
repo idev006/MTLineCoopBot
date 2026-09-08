@@ -157,6 +157,23 @@ const DataDict = (() => {
       ]
     },
 
+    ADMIN_AUDIT_LOG: {
+      name: 't_admin_audit_log',
+      description: 'บันทึกเหตุการณ์ privileged admin operations',
+      primaryKey: 'log_id',
+      columns: [
+        { name: 'log_id', type: 'string', required: true, label: 'รหัสบันทึก', unique: true },
+        { name: 'actor_subject', type: 'string', required: false, label: 'ผู้กระทำ (subject)' },
+        { name: 'actor_mem_code', type: 'string', required: false, label: 'รหัสสมาชิกผู้กระทำ' },
+        { name: 'action', type: 'string', required: true, label: 'การกระทำ' },
+        { name: 'mem_code', type: 'string', required: true, label: 'รหัสสมาชิกเป้าหมาย' },
+        { name: 'old_value', type: 'string', required: false, label: 'ค่าก่อนหน้า' },
+        { name: 'new_value', type: 'string', required: false, label: 'ค่าใหม่' },
+        { name: 'status', type: 'string', required: false, label: 'สถานะ', default: 'attempt' },
+        { name: 'created_dt', type: 'datetime', required: false, label: 'เวลาที่บันทึก' }
+      ]
+    },
+
     /**
      * เนื้อหาเมนูข้อมูล/เอกสาร/ติดต่อ (การ์ด MT-14)
      * Sheet: t_content
