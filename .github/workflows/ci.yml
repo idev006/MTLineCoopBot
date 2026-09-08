@@ -39,6 +39,9 @@ jobs:
       - name: Port contract tests (plug-compatible adapters)
         run: node tests/contracts/member-repository.contract.test.js
 
+      - name: Engine tests (headless deterministic business engines)
+        run: node tests/engine/member-access-engine.test.js
+
       - name: Upload test log on failure
         if: failure()
         uses: actions/upload-artifact@v4
