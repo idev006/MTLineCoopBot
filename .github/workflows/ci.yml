@@ -46,10 +46,14 @@ jobs:
           node tests/engine/line-identity.test.js
 
       - name: Application use-case tests (headless orchestration)
-        run: node tests/application/current-member-profile.test.js
+        run: |
+          node tests/application/current-member-profile.test.js
+          node tests/application/current-member-finance.test.js
 
       - name: Protected delivery contract tests
-        run: node tests/application/protected-profile-api.test.js
+        run: |
+          node tests/application/protected-profile-api.test.js
+          node tests/application/protected-finance-api.test.js
 
       - name: Upload test log on failure
         if: failure()
