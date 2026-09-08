@@ -57,6 +57,13 @@ Composition.SystemFactory = (() => {
     const lineIdTokenVerifier = Ports.IdTokenVerifierPort.assertImplemented(
       o.lineIdTokenVerifier || defaultLineIdTokenVerifier()
     );
+    const sessionStore = Ports.SessionStorePort.assertImplemented(
+      o.sessionStore || Adapters.Security.AppsScriptPropertiesSessionStore
+    );
+    const sessionTokens = Ports.SessionTokenPort.assertImplemented(
+      o.sessionTokens || Adapters.Security.AppsScriptSessionTokenAdapter
+    );
+    const webSessionEngine = o.webSessionEngine || Engine.WebSessionEngine.create({ clock });
     const memberRepository = o.memberRepository || defaultMemberRepository();
     const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
     const audit = Ports.AuditPort.assertImplemented(
@@ -132,6 +139,30 @@ Composition.SystemFactory = (() => {
       Application.Finance.CalculateLoanUseCase.create({
         calculator: o.loanCalculator || Core.LoanCalculator
       });
+    const createWebSession = o.createWebSession ||
+      Application.Security.CreateWebSessionUseCase.create({
+        sessionStore,
+        sessionTokens,
+        config,
+        sessionEngine:webSessionEngine
+      });
+    const verifyWebSession = o.verifyWebSession ||
+      Application.Security.VerifyWebSessionUseCase.create({
+        sessionStore,
+        sessionTokens,
+        sessionEngine:webSessionEngine
+      });
+    const revokeWebSession = o.revokeWebSession ||
+      Application.Security.RevokeWebSessionUseCase.create({
+        sessionStore,
+        sessionTokens,
+        clock
+      });
+    const webIdentity = Ports.IdentityPort.assertImplemented(
+      o.webIdentity || Adapters.Security.WebSessionIdentityAdapter.create({
+        verifySession:verifyWebSession
+      })
+    );
 
     return Object.freeze({
       clock,
@@ -144,6 +175,10 @@ Composition.SystemFactory = (() => {
       identity,
       lineIdentity,
       lineIdTokenVerifier,
+      webIdentity,
+      sessionStore,
+      sessionTokens,
+      webSessionEngine,
       authorization,
       getCurrentMemberProfile,
       getCurrentMemberFinance,
@@ -153,6 +188,9 @@ Composition.SystemFactory = (() => {
       noticeBroadcast,
       loanReminder,
       calculateLoan,
+      createWebSession,
+      verifyWebSession,
+      revokeWebSession,
       api: o.api || defaultApi()
     });
   }

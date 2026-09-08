@@ -130,6 +130,42 @@ const renewUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'RenewMemberUseCase.js'),
   'utf8'
 );
+const sessionStorePortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'SessionStorePort.js'),
+  'utf8'
+);
+const sessionTokenPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'SessionTokenPort.js'),
+  'utf8'
+);
+const webSessionEngineSrc = fs.readFileSync(
+  path.join(root, 'app', 'Engine', 'WebSessionEngine.js'),
+  'utf8'
+);
+const appsScriptSessionTokenSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Security', 'AppsScriptSessionTokenAdapter.js'),
+  'utf8'
+);
+const appsScriptSessionStoreSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Security', 'AppsScriptPropertiesSessionStore.js'),
+  'utf8'
+);
+const createWebSessionSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Security', 'CreateWebSessionUseCase.js'),
+  'utf8'
+);
+const verifyWebSessionSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Security', 'VerifyWebSessionUseCase.js'),
+  'utf8'
+);
+const revokeWebSessionSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Security', 'RevokeWebSessionUseCase.js'),
+  'utf8'
+);
+const webSessionIdentitySrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Security', 'WebSessionIdentityAdapter.js'),
+  'utf8'
+);
 const loanCalculatorSrc = fs.readFileSync(
   path.join(root, 'app', 'Core', 'LoanCalculator.js'),
   'utf8'
@@ -177,6 +213,16 @@ const fakeIdentity = { authenticate: () => ({ subject: 'test', channel: 'test', 
 const fakeAuthorization = { requireAuthenticated: () => ({ allowed: true }) };
 const fakeLineVerifier = { verify: () => ({ ok: false, error: { code: 'TEST' } }) };
 const fakeLineIdentity = { authenticate: () => ({ subject: 'anonymous', channel: 'line', roles: [], memberCode: null, claims: {}, authenticated: false }) };
+const fakeSessionStore = {
+  save: r => r,
+  findByTokenHash: () => null,
+  revokeByTokenHash: () => false
+};
+const fakeSessionTokens = {
+  generate: () => 'raw-test-token',
+  hash: raw => 'hash:' + String(raw || '')
+};
+const fakeWebIdentity = { authenticate: () => ({ subject: 'anonymous', channel: 'web', roles: [], memberCode: null, claims: {}, authenticated: false }) };
 
 const sandbox = {
   Composition: {},
@@ -204,6 +250,8 @@ vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
 vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
 vm.runInContext(messagingPortSrc, sandbox, { filename: 'MessagingPort.js' });
 vm.runInContext(memberMenuPortSrc, sandbox, { filename: 'MemberMenuPort.js' });
+vm.runInContext(sessionStorePortSrc, sandbox, { filename: 'SessionStorePort.js' });
+vm.runInContext(sessionTokenPortSrc, sandbox, { filename: 'SessionTokenPort.js' });
 vm.runInContext(noticeRulesSrc, sandbox, { filename: 'NoticeRules.js' });
 vm.runInContext(loanRulesSrc, sandbox, { filename: 'LoanRules.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
@@ -214,6 +262,7 @@ vm.runInContext(httpClientPortSrc, sandbox, { filename: 'HttpClientPort.js' });
 vm.runInContext(lineIdTokenVerifierPortSrc, sandbox, { filename: 'IdTokenVerifierPort.js' });
 vm.runInContext(memberRepoPortSrc, sandbox, { filename: 'MemberRepositoryPort.js' });
 vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' });
+vm.runInContext(webSessionEngineSrc, sandbox, { filename: 'WebSessionEngine.js' });
 vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
 vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
 vm.runInContext(repositoryAuditSrc, sandbox, { filename: 'MemberRepositoryAuditAdapter.js' });
@@ -222,6 +271,8 @@ vm.runInContext(lineMemberMenuSrc, sandbox, { filename: 'LineMemberMenuAdapter.j
 vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js' });
 vm.runInContext(lineVerifierSrc, sandbox, { filename: 'LineIdTokenVerifier.js' });
 vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' });
+vm.runInContext(appsScriptSessionTokenSrc, sandbox, { filename: 'AppsScriptSessionTokenAdapter.js' });
+vm.runInContext(appsScriptSessionStoreSrc, sandbox, { filename: 'AppsScriptPropertiesSessionStore.js' });
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
 vm.runInContext(activateUseCaseSrc, sandbox, { filename: 'ActivateMemberUseCase.js' });
@@ -231,6 +282,10 @@ vm.runInContext(noticeUseCaseSrc, sandbox, { filename: 'NoticeBroadcastUseCase.j
 vm.runInContext(reminderUseCaseSrc, sandbox, { filename: 'LoanReminderUseCase.js' });
 vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
+vm.runInContext(createWebSessionSrc, sandbox, { filename: 'CreateWebSessionUseCase.js' });
+vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
+vm.runInContext(revokeWebSessionSrc, sandbox, { filename: 'RevokeWebSessionUseCase.js' });
+vm.runInContext(webSessionIdentitySrc, sandbox, { filename: 'WebSessionIdentityAdapter.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -246,7 +301,10 @@ const injected = createSystem({
   identity: fakeIdentity,
   authorization: fakeAuthorization,
   lineIdTokenVerifier: fakeLineVerifier,
-  lineIdentity: fakeLineIdentity
+  lineIdentity: fakeLineIdentity,
+  sessionStore: fakeSessionStore,
+  sessionTokens: fakeSessionTokens,
+  webIdentity: fakeWebIdentity
 });
 
 if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository injection failed');
@@ -260,6 +318,9 @@ if (injected.identity !== fakeIdentity) throw new Error('identity injection fail
 if (injected.authorization !== fakeAuthorization) throw new Error('authorization injection failed');
 if (injected.lineIdTokenVerifier !== fakeLineVerifier) throw new Error('line verifier injection failed');
 if (injected.lineIdentity !== fakeLineIdentity) throw new Error('line identity injection failed');
+if (injected.sessionStore !== fakeSessionStore) throw new Error('session store injection failed');
+if (injected.sessionTokens !== fakeSessionTokens) throw new Error('session token injection failed');
+if (injected.webIdentity !== fakeWebIdentity) throw new Error('web identity injection failed');
 if (!Object.isFrozen(injected)) throw new Error('system bundle must be immutable');
 
 const defaults = createSystem();
@@ -274,6 +335,9 @@ if (defaults.identity.authenticate({ channel: 'line' }).authenticated) throw new
 if (!defaults.authorization.requireAuthenticated) throw new Error('default authorization wiring failed');
 if (!defaults.lineIdentity || typeof defaults.lineIdentity.authenticate !== 'function') throw new Error('default LINE identity wiring failed');
 if (!defaults.lineIdTokenVerifier || typeof defaults.lineIdTokenVerifier.verify !== 'function') throw new Error('default LINE verifier wiring failed');
+if (!defaults.sessionStore || typeof defaults.sessionStore.findByTokenHash !== 'function') throw new Error('default session store wiring failed');
+if (!defaults.sessionTokens || typeof defaults.sessionTokens.hash !== 'function') throw new Error('default session token wiring failed');
+if (!defaults.webIdentity || typeof defaults.webIdentity.authenticate !== 'function') throw new Error('default web identity wiring failed');
 if (!defaults.getCurrentMemberProfile || typeof defaults.getCurrentMemberProfile.execute !== 'function') {
   throw new Error('default profile use case wiring failed');
 }
@@ -297,6 +361,15 @@ if (!defaults.loanReminder || typeof defaults.loanReminder.execute !== 'function
 }
 if (!defaults.calculateLoan || typeof defaults.calculateLoan.execute !== 'function') {
   throw new Error('default loan calculation wiring failed');
+}
+if (!defaults.createWebSession || typeof defaults.createWebSession.execute !== 'function') {
+  throw new Error('default create web session wiring failed');
+}
+if (!defaults.verifyWebSession || typeof defaults.verifyWebSession.execute !== 'function') {
+  throw new Error('default verify web session wiring failed');
+}
+if (!defaults.revokeWebSession || typeof defaults.revokeWebSession.execute !== 'function') {
+  throw new Error('default revoke web session wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
