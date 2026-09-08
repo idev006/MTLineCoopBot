@@ -46,11 +46,13 @@ jobs:
           node tests/engine/member-access-engine.test.js
           node tests/engine/identity-authorization.test.js
           node tests/engine/line-identity.test.js
+          node tests/engine/member-activation-engine.test.js
 
       - name: Application use-case tests (headless orchestration)
         run: |
           node tests/application/current-member-profile.test.js
           node tests/application/current-member-finance.test.js
+          node tests/application/activate-member.test.js
 
       - name: Protected delivery contract tests
         run: |
