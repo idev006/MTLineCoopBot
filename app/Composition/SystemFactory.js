@@ -31,6 +31,10 @@ Composition.SystemFactory = (() => {
     };
   }
 
+  function defaultIdentity() {
+    return Adapters.Security.DenyAllIdentityAdapter;
+  }
+
   /**
    * Create a dependency bundle.
    * Callers may replace any dependency explicitly.
@@ -42,12 +46,16 @@ Composition.SystemFactory = (() => {
     const o = overrides || {};
     const clock = Ports.ClockPort.assertImplemented(o.clock || defaultClock());
     const memberAccess = o.memberAccess || Engine.MemberAccessEngine.create({ clock });
+    const identity = Ports.IdentityPort.assertImplemented(o.identity || defaultIdentity());
+    const authorization = o.authorization || Engine.AuthorizationEngine.create();
 
     return Object.freeze({
       clock,
       config: o.config || defaultConfig(),
       memberRepository: o.memberRepository || defaultMemberRepository(),
       memberAccess,
+      identity,
+      authorization,
       api: o.api || defaultApi()
     });
   }
