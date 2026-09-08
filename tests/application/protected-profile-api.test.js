@@ -34,6 +34,7 @@ const fakeSystem = {
 };
 
 const sandbox = {
+  Security:{ Principal:{ isAuthenticated:p=>!!(p&&p.authenticated) } },
   Api:{},
   Composition:{ SystemFactory:{ createSystem: () => fakeSystem } },
   Logger:{ log:()=>{} },
