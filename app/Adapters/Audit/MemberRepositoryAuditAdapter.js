@@ -30,6 +30,26 @@ Adapters.Audit.MemberRepositoryAuditAdapter = (() => {
           status: e.status || 'renewed'
         });
       }
+      if (e.type === 'member.expiry.checked') {
+        return repo.logExpiry({
+          memCode: e.memberCode || '',
+          lineUserId: e.lineUserId || '',
+          status: e.status || 'valid',
+          daysLeft: e.daysLeft,
+          memExpDt: e.memExpDt || '',
+          checkedDt: e.checkedDt
+        });
+      }
+      if (e.type === 'loan.reminder') {
+        return repo.logReminder({
+          memCode: e.memberCode || '',
+          loanNo: e.loanNo || '',
+          dueDt: e.dueDt || '',
+          daysLeft: e.daysLeft,
+          status: e.status || 'reminded',
+          remindedDt: e.remindedDt
+        });
+      }
       throw new Error('Unsupported audit event type: ' + String(e.type || ''));
     }
 

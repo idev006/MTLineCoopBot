@@ -41,6 +41,7 @@ jobs:
           node tests/contracts/member-repository.contract.test.js
           node tests/contracts/inmemory-member-repository.test.js
           node tests/contracts/audit-config-ports.test.js
+          node tests/contracts/scheduled-ports.test.js
 
       - name: Engine tests (headless deterministic business engines)
         run: |
@@ -55,6 +56,7 @@ jobs:
           node tests/application/current-member-finance.test.js
           node tests/application/activate-member.test.js
           node tests/application/renew-member.test.js
+          node tests/application/scheduled-use-cases.test.js
 
       - name: Protected delivery contract tests
         run: |
