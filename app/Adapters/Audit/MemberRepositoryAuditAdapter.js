@@ -30,6 +30,16 @@ Adapters.Audit.MemberRepositoryAuditAdapter = (() => {
           status: e.status || 'renewed'
         });
       }
+      if (e.type === 'member.expiry_checked') {
+        return repo.logExpiry({
+          memCode: e.memberCode || '',
+          lineUserId: e.lineUserId || '',
+          status: e.status || 'valid',
+          daysLeft: e.daysLeft,
+          memExpDt: e.memExpDt || '',
+          checkedDt: e.checkedAt
+        });
+      }
       throw new Error('Unsupported audit event type: ' + String(e.type || ''));
     }
 
