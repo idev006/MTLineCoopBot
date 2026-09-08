@@ -37,7 +37,9 @@ jobs:
         run: node tests/architecture/system-factory.test.js
 
       - name: Port contract tests (plug-compatible adapters)
-        run: node tests/contracts/member-repository.contract.test.js
+        run: |
+          node tests/contracts/member-repository.contract.test.js
+          node tests/contracts/inmemory-member-repository.test.js
 
       - name: Engine tests (headless deterministic business engines)
         run: |
