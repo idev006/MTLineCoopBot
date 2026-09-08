@@ -84,6 +84,9 @@ jobs:
       - name: Activation chat handoff security test
         run: node tests/application/chat-activation-handoff.test.js
 
+      - name: Legacy activation retirement security test
+        run: node tests/application/legacy-activation-retirement.test.js
+
       - name: Protected delivery contract tests
         run: |
           node tests/application/protected-profile-api.test.js
