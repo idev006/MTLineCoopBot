@@ -163,6 +163,12 @@ Composition.SystemFactory = (() => {
         verifySession:verifyWebSession
       })
     );
+    const exchangeLineForWebSession = o.exchangeLineForWebSession ||
+      Application.Security.ExchangeLineForWebSessionUseCase.create({
+        lineIdentity,
+        authorization,
+        createWebSession
+      });
 
     return Object.freeze({
       clock,
@@ -191,6 +197,7 @@ Composition.SystemFactory = (() => {
       createWebSession,
       verifyWebSession,
       revokeWebSession,
+      exchangeLineForWebSession,
       api: o.api || defaultApi()
     });
   }
