@@ -34,6 +34,14 @@ const denyIdentitySrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Security', 'DenyAllIdentityAdapter.js'),
   'utf8'
 );
+const memberRepoPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'MemberRepositoryPort.js'),
+  'utf8'
+);
+const profileUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Member', 'GetCurrentMemberProfileUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -53,6 +61,7 @@ const sandbox = {
   Engine: {},
   Security: {},
   Adapters: {},
+  Application: {},
   Data: { MemberRepository: { getRepository: () => ({ name: 'prod-repo' }) } },
   Config: { get: () => ({ mode: 'prod' }) },
   Api: { ApiService: { handleRequest: () => ({ ok: true, source: 'prod' }) } },
@@ -66,8 +75,10 @@ vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
 vm.runInContext(principalSrc, sandbox, { filename: 'Principal.js' });
 vm.runInContext(identityPortSrc, sandbox, { filename: 'IdentityPort.js' });
+vm.runInContext(memberRepoPortSrc, sandbox, { filename: 'MemberRepositoryPort.js' });
 vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' });
 vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js' });
+vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -96,6 +107,9 @@ if (!defaults.clock.now()) throw new Error('default clock wiring failed');
 if (!defaults.api.handleRequest().ok) throw new Error('default api wiring failed');
 if (defaults.identity.authenticate({ channel: 'line' }).authenticated) throw new Error('default identity must fail closed');
 if (!defaults.authorization.requireAuthenticated) throw new Error('default authorization wiring failed');
+if (!defaults.getCurrentMemberProfile || typeof defaults.getCurrentMemberProfile.execute !== 'function') {
+  throw new Error('default application use case wiring failed');
+}
 
 console.log('PASS  SystemFactory explicit dependency wiring');
 console.log('PASS  SystemFactory production defaults');
