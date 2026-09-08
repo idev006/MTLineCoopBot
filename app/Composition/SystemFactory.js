@@ -17,7 +17,7 @@ Composition.SystemFactory = (() => {
   }
 
   function defaultConfig() {
-    return { get: () => Config.get() };
+    return Adapters.Config.AppsScriptConfigAdapter;
   }
 
   function defaultMemberRepository() {
@@ -58,7 +58,10 @@ Composition.SystemFactory = (() => {
       o.lineIdTokenVerifier || defaultLineIdTokenVerifier()
     );
     const memberRepository = o.memberRepository || defaultMemberRepository();
-    const config = o.config || defaultConfig();
+    const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
+    const audit = Ports.AuditPort.assertImplemented(
+      o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({ memberRepository })
+    );
     const lineIdentity = Ports.IdentityPort.assertImplemented(
       o.lineIdentity || Adapters.Security.LineIdentityAdapter.create({
         verifier: lineIdTokenVerifier,
@@ -82,18 +85,21 @@ Composition.SystemFactory = (() => {
       Application.Member.ActivateMemberUseCase.create({
         memberRepository,
         clock,
-        activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine
+        activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine,
+        audit
       });
     const renewMember = o.renewMember ||
       Application.Member.RenewMemberUseCase.create({
         memberRepository,
         clock,
-        authorization
+        authorization,
+        audit
       });
 
     return Object.freeze({
       clock,
       config,
+      audit,
       memberRepository,
       memberAccess,
       identity,

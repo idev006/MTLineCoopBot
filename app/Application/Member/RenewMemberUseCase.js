@@ -12,6 +12,7 @@ Application.Member.RenewMemberUseCase = (() => {
     const d = deps || {};
     const repo = Ports.MemberRepositoryPort.assertImplemented(d.memberRepository);
     const clock = Ports.ClockPort.assertImplemented(d.clock);
+    const audit = Ports.AuditPort.assertImplemented(d.audit);
     const authorization = d.authorization;
 
     if (!authorization || typeof authorization.requireAuthenticated !== 'function') {
@@ -50,10 +51,10 @@ Application.Member.RenewMemberUseCase = (() => {
         memStatus: 'active'
       });
 
-      repo.logActivation({
-        memCode: member.mem_code,
+      audit.record({
+        type: 'member.renewal',
+        memberCode: member.mem_code,
         lineUserId: principal.claims && principal.claims.lineUserId ? principal.claims.lineUserId : '',
-        activateCode: '',
         status: 'renewed'
       });
 

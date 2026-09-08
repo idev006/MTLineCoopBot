@@ -14,6 +14,14 @@ const clockSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'ClockPort.js'),
   'utf8'
 );
+const configPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'ConfigPort.js'),
+  'utf8'
+);
+const auditPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'AuditPort.js'),
+  'utf8'
+);
 const memberAccessSrc = fs.readFileSync(
   path.join(root, 'app', 'Engine', 'MemberAccessEngine.js'),
   'utf8'
@@ -44,6 +52,14 @@ const httpClientPortSrc = fs.readFileSync(
 );
 const appsScriptHttpSrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Http', 'AppsScriptHttpClientAdapter.js'),
+  'utf8'
+);
+const appsScriptConfigSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Config', 'AppsScriptConfigAdapter.js'),
+  'utf8'
+);
+const repositoryAuditSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Audit', 'MemberRepositoryAuditAdapter.js'),
   'utf8'
 );
 const lineVerifierSrc = fs.readFileSync(
@@ -109,6 +125,7 @@ function makeRepo(name) {
 const fakeRepo = makeRepo('fake-repo');
 const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
+const fakeAudit = { record: () => ({ ok: true }) };
 const fakeApi = { handleRequest: () => ({ ok: true }) };
 const fakeIdentity = { authenticate: () => ({ subject: 'test', channel: 'test', roles: [], memberCode: null, claims: {}, authenticated: true }) };
 const fakeAuthorization = { requireAuthenticated: () => ({ allowed: true }) };
@@ -137,6 +154,8 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
+vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
+vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
 vm.runInContext(activationEngineSrc, sandbox, { filename: 'MemberActivationEngine.js' });
 vm.runInContext(principalSrc, sandbox, { filename: 'Principal.js' });
@@ -146,6 +165,8 @@ vm.runInContext(lineIdTokenVerifierPortSrc, sandbox, { filename: 'IdTokenVerifie
 vm.runInContext(memberRepoPortSrc, sandbox, { filename: 'MemberRepositoryPort.js' });
 vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' });
 vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
+vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
+vm.runInContext(repositoryAuditSrc, sandbox, { filename: 'MemberRepositoryAuditAdapter.js' });
 vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js' });
 vm.runInContext(lineVerifierSrc, sandbox, { filename: 'LineIdTokenVerifier.js' });
 vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' });
@@ -161,6 +182,7 @@ const injected = createSystem({
   memberRepository: fakeRepo,
   clock: fakeClock,
   config: fakeConfig,
+  audit: fakeAudit,
   api: fakeApi,
   identity: fakeIdentity,
   authorization: fakeAuthorization,
@@ -171,6 +193,7 @@ const injected = createSystem({
 if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository injection failed');
 if (injected.clock !== fakeClock) throw new Error('clock injection failed');
 if (injected.config !== fakeConfig) throw new Error('config injection failed');
+if (injected.audit !== fakeAudit) throw new Error('audit injection failed');
 if (injected.api !== fakeApi) throw new Error('api injection failed');
 if (injected.identity !== fakeIdentity) throw new Error('identity injection failed');
 if (injected.authorization !== fakeAuthorization) throw new Error('authorization injection failed');
@@ -181,6 +204,7 @@ if (!Object.isFrozen(injected)) throw new Error('system bundle must be immutable
 const defaults = createSystem();
 if (defaults.memberRepository.name !== 'prod-repo') throw new Error('default repository wiring failed');
 if (defaults.config.get().mode !== 'prod') throw new Error('default config wiring failed');
+if (!defaults.audit || typeof defaults.audit.record !== 'function') throw new Error('default audit wiring failed');
 if (!defaults.clock.now()) throw new Error('default clock wiring failed');
 if (!defaults.api.handleRequest().ok) throw new Error('default api wiring failed');
 if (defaults.identity.authenticate({ channel: 'line' }).authenticated) throw new Error('default identity must fail closed');
