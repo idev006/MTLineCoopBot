@@ -66,7 +66,23 @@ if(uc.execute({principal:Principal.anonymous('line')}).error.code!=='UNAUTHENTIC
 const unlinked=Principal.create({subject:'line:U3',channel:'line',roles:['member'],authenticated:true});
 if(uc.execute({principal:unlinked}).error.code!=='MEMBER_NOT_LINKED') throw new Error('unlinked principal must fail');
 
+const managerRepo=sandbox.Adapters.Test.InMemoryMemberRepository.create({members:[{
+  mem_code:'M003',mem_role:'manager',mem_status:'active',
+  mem_eff_dt:'2026-01-01',mem_exp_dt:'2026-12-31',line_user_id:'UM'
+}]});
+const managerAudit=sandbox.Adapters.Test.InMemoryAuditAdapter.create();
+const managerUc=sandbox.Application.Member.RenewMemberUseCase.create({
+  memberRepository:managerRepo,clock,authorization:authz,audit:managerAudit
+});
+const managerPrincipal=Principal.create({
+  subject:'line:UM',channel:'line',roles:['manager'],memberCode:'M003',
+  claims:{lineUserId:'UM'},authenticated:true
+});
+const managerResult=managerUc.execute({principal:managerPrincipal});
+if(!managerResult.ok) throw new Error('manager self-renewal should succeed');
+
 console.log('PASS  expired self-renewal uses server clock');
 console.log('PASS  active self-renewal preserves remaining entitlement');
 console.log('PASS  anonymous/unlinked principals fail closed');
+console.log('PASS  manager self-renewal uses the same verified Principal contract');
 console.log('=== RENEW MEMBER USE CASE TESTS PASS (3/3) ===');

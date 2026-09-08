@@ -40,7 +40,7 @@ Application.Member.RenewMemberUseCase = (() => {
         return { ok:false, error:{ code:'MEMBER_NOT_FOUND' } };
       }
 
-      const role = authorization.requireAnyRole(principal, ['member', 'staff', 'admin']);
+      const role = authorization.requireAnyRole(principal, ['member', 'staff', 'manager', 'admin']);
       if (!role.allowed) {
         return { ok:false, error:{ code:'FORBIDDEN' } };
       }
