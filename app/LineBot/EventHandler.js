@@ -365,24 +365,30 @@ LineBot.EventHandler = (() => {
 
     Logger.log('[EventHandler] Received text: ' + text);
 
-    // จัดการคำสั่ง activate
-    // หมายเหตุ: คำสั่ง activate: ไม่ต้องผ่าน Gate (เป็นขั้นตอนลงทะเบียนเปิดสิทธิ์)
-    if (text.startsWith('activate:')) {
-      Logger.log('[EventHandler] Processing activate command');
-      const activateCode = text.substring('activate:'.length).trim();
-      Logger.log('[EventHandler] Activate code: ' + activateCode);
-      if (!activateCode) {
-        replyAlert(event.replyToken, token, 'warning', 'กรุณาระบุรหัส', 'กรุณาระบุรหัส activate เช่น activate:ABC123');
+    // Secure activation handoff (ADR-0004):
+    // Chat intent MUST NOT perform identity binding directly.
+    // The user completes activation in LIFF where raw LINE ID token is verified server-side.
+    if (text.startsWith('activate:') || text === 'activate' || text === 'เปิดใช้งาน') {
+      const activateCode = text.startsWith('activate:')
+        ? text.substring('activate:'.length).trim()
+        : '';
+
+      if (text.startsWith('activate:') && !activateCode) {
+        replyAlert(event.replyToken, token, 'warning', 'กรุณาระบุรหัส', 'กรุณาระบุรหัส activate แล้วเปิดหน้าลงทะเบียนที่ปลอดภัย');
         return;
       }
-      try {
-        Logger.log('[EventHandler] Calling ActivationService.handleActivate...');
-        LineBot.ActivationService.handleActivate(activateCode, event.source.userId, event.replyToken, token);
-        Logger.log('[EventHandler] ActivationService.handleActivate called successfully');
-      } catch (e) {
-        Logger.log('[EventHandler] Error calling ActivationService: ' + e);
-        deps.MessageService.reply(event.replyToken, 'เกิดข้อผิดพลาดในการเรียก ActivationService', token);
-      }
+
+      const activationUrl = getSystem().config.get().LIFF_ACTIVATION_URL;
+      const message = [
+        'เพื่อความปลอดภัย การเปิดสิทธิ์สมาชิกต้องยืนยันตัวตนผ่าน LINE Login',
+        activationUrl
+          ? 'กรุณาเปิดลิงก์นี้ แล้วกรอกรหัส activate ในหน้า LIFF:\n' + activationUrl
+          : 'กรุณาเปิดเมนู “เปิดใช้งานสมาชิก” ใน LINE แล้วกรอกรหัส activate ในหน้า LIFF',
+        'ระบบจะไม่ผูกบัญชีจาก LINE User ID ที่ส่งมากับข้อความแชท'
+      ].join('\n\n');
+
+      deps.MessageService.reply(event.replyToken, message, token);
+      Logger.log('[Activation] Secure LIFF handoff sent');
       return;
     }
 
