@@ -145,6 +145,33 @@ LineBot.SheetService = (() => {
   }
 
   /**
+   * ค้นหาสมาชิกโดยรหัสสมาชิก mem_code
+   * @param {string} memberCode
+   * @returns {Object|null}
+   */
+  function findByMemberCode(memberCode) {
+    const tableKey = 'MEMBER_MASTER';
+    if (!memberCode) return null;
+    const sheet = getSheet(tableKey);
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return null;
+    const headers = data[0].map(h => String(h).trim());
+    const colIndex = headers.indexOf('mem_code');
+    if (colIndex === -1) {
+      throw new Error(`ไม่พบคอลัมน์ mem_code ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+    }
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][colIndex]).trim() === String(memberCode).trim()) {
+        return {
+          ...DataDict.rowToObjectByHeaders(tableKey, headers, data[i]),
+          _rowIndex: i + 1
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
    * ค้นหาสมาชิกโดย LINE User ID
    * @param {string} lineUserId
    * @returns {Object|null} ข้อมูลสมาชิกหรือ null ถ้าไม่พบ
@@ -493,6 +520,7 @@ LineBot.SheetService = (() => {
   return {
     findByActivateCode,
     findByLineUserId,
+    findByMemberCode,
     findAllMembers,
     findAllByColumn,
     findSavingsByMember,
