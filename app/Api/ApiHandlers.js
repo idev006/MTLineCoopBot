@@ -323,6 +323,13 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function getWebSummaryReport(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const result = system.getSummaryReport.execute({ principal });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -350,6 +357,7 @@ Api.ApiHandlers = (() => {
     getWebMemberDetail,
     getWebAdminSettings,
     getWebAuditLog,
+    getWebSummaryReport,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
