@@ -154,6 +154,10 @@ const createWebSessionSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Security', 'CreateWebSessionUseCase.js'),
   'utf8'
 );
+const exchangeLineForWebSessionSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Security', 'ExchangeLineForWebSessionUseCase.js'),
+  'utf8'
+);
 const verifyWebSessionSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Security', 'VerifyWebSessionUseCase.js'),
   'utf8'
@@ -283,6 +287,7 @@ vm.runInContext(reminderUseCaseSrc, sandbox, { filename: 'LoanReminderUseCase.js
 vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
 vm.runInContext(createWebSessionSrc, sandbox, { filename: 'CreateWebSessionUseCase.js' });
+vm.runInContext(exchangeLineForWebSessionSrc, sandbox, { filename: 'ExchangeLineForWebSessionUseCase.js' });
 vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
 vm.runInContext(revokeWebSessionSrc, sandbox, { filename: 'RevokeWebSessionUseCase.js' });
 vm.runInContext(webSessionIdentitySrc, sandbox, { filename: 'WebSessionIdentityAdapter.js' });
@@ -370,6 +375,9 @@ if (!defaults.verifyWebSession || typeof defaults.verifyWebSession.execute !== '
 }
 if (!defaults.revokeWebSession || typeof defaults.revokeWebSession.execute !== 'function') {
   throw new Error('default revoke web session wiring failed');
+}
+if (!defaults.exchangeLineForWebSession || typeof defaults.exchangeLineForWebSession.execute !== 'function') {
+  throw new Error('default LINE-to-Web session exchange wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
