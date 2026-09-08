@@ -95,6 +95,13 @@ Composition.SystemFactory = (() => {
         authorization,
         audit
       });
+    const expiryScan = o.expiryScan ||
+      Application.Scheduled.ExpiryScanUseCase.create({
+        memberRepository,
+        clock,
+        config,
+        audit
+      });
 
     return Object.freeze({
       clock,
@@ -110,6 +117,7 @@ Composition.SystemFactory = (() => {
       getCurrentMemberFinance,
       activateMember,
       renewMember,
+      expiryScan,
       api: o.api || defaultApi()
     });
   }
