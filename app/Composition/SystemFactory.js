@@ -69,6 +69,9 @@ Composition.SystemFactory = (() => {
     const audit = Ports.AuditPort.assertImplemented(
       o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({ memberRepository })
     );
+    const auditQuery = Ports.AuditQueryPort.assertImplemented(
+      o.auditQuery || Adapters.Audit.SheetsAuditQueryAdapter
+    );
     const messaging = Ports.MessagingPort.assertImplemented(
       o.messaging || Adapters.Line.LineMessagingAdapter.create({
         tokenProvider: () => config.get().CHANNEL_ACCESS_TOKEN
@@ -184,11 +187,17 @@ Composition.SystemFactory = (() => {
         config,
         authorization
       });
+    const getAuditLog = o.getAuditLog ||
+      Application.Web.GetAuditLogUseCase.create({
+        auditQuery,
+        authorization
+      });
 
     return Object.freeze({
       clock,
       config,
       audit,
+      auditQuery,
       messaging,
       memberMenu,
       memberRepository,
@@ -216,6 +225,7 @@ Composition.SystemFactory = (() => {
       listWebMembers,
       getWebMemberDetail,
       getAdminSettings,
+      getAuditLog,
       api: o.api || defaultApi()
     });
   }
