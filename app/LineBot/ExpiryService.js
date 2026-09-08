@@ -1,15 +1,9 @@
 /**
  * @fileoverview LineBot.ExpiryService
- * ตรวจสอบวันหมดอายุสมาชิกอัตโนมัติ (การ์ด MT-11 — บทที่ 7 ระยะ 2)
+ * Thin scheduled delivery adapter over Application.Scheduled.ExpiryScanUseCase.
  *
- * - runExpiryCheck()  — scan สมาชิกทั้งหมด → push คำเตือนก่อนหมดอายุ (expiring)
- *                       / แจ้งหมดอายุ + unlink เมนูสมาชิก (expired)
- * - setupExpiryTrigger() — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor)
- *
- * DI สำหรับทดสอบ (node): opts.sender / opts.unlinker / opts.now / opts.warningDays / opts.repo
- * ค่า default = MessageService.push / Gating.unlinkMemberMenu / เวลาจริง / Config / repository จริง
- *
- * ⚠️ ใช้ Push API (ต่างจาก Reply) — ต้องใช้ userId ไม่ใช่ replyToken และไม่มีข้อจำกัด 60 วินาที
+ * Business scan/policy is headless. This adapter owns LINE message formatting,
+ * push delivery, Rich Menu unlinking, trigger setup and compatibility DI.
  */
 
 var LineBot = LineBot || {};
@@ -17,68 +11,116 @@ var LineBot = LineBot || {};
 LineBot.ExpiryService = (() => {
   'use strict';
 
-  /**
-   * รันรอบตรวจวันหมดอายุ (entry point ของ scheduled trigger)
-   * @param {string} token - CHANNEL_ACCESS_TOKEN
-   * @param {Object} [opts] - { warningDays, now, sender, unlinker, logger, repo }
-   * @returns {{checked: number, logged: number, expiring: number, expired: number, pushed: number}}
-   */
-  function runExpiryCheck(token, opts) {
-    const o = opts || {};
-    const repo = o.repo || Data.MemberRepository.getRepository();
-    const warningDays = o.warningDays !== undefined ? o.warningDays : Config.get().EXPIRY_WARNING_DAYS;
-    const now = o.now || new Date();
-    const sender = o.sender || function (to, text, tk) { return LineBot.MessageService.push(to, text, tk); };
-    const unlinker = o.unlinker || function (lineUserId, tk) {
-      try { return RichMenu.Gating.unlinkMemberMenu(lineUserId, tk); } catch (e) { return { ok: false }; }
-    };
-    // audit trail: ทุกสมาชิกที่ถูกตรวจ (active + มี userId) จะถูกบันทึกลง t_expiry_log (การ์ด MT-32)
-    const logger = o.logger || function (member, expiry) {
-      return repo.logExpiry({
-        memCode: member.mem_code,
-        lineUserId: member.line_user_id,
-        status: expiry.status,
-        daysLeft: expiry.daysLeft,
-        memExpDt: member.mem_exp_dt,
-        checkedDt: now
-      });
-    };
+  function makeExecution(o) {
+    const system = Composition.SystemFactory.createSystem();
+    const hasOverrides = o.repo || o.now || o.warningDays !== undefined || o.logger;
 
-    const members = repo.listMembers();
-    const summary = { checked: members.length, logged: 0, expiring: 0, expired: 0, pushed: 0 };
+    if (!hasOverrides) return system.expiryScan;
 
-    for (const member of members) {
-      // ตรวจเฉพาะสมาชิก active และมี LINE userId (activated)
-      if (member.mem_status !== 'active') continue;
-      if (!member.line_user_id) continue;
-
-      const expiry = Core.MemberRules.getExpiryStatus(member, now, warningDays);
-      logger(member, expiry); // บันทึกผลการตรวจทุกราย (valid/expiring/expired)
-      summary.logged++;
-
-      if (expiry.status === 'expired') {
-        summary.expired++;
-        const text = LineBot.MemberDataService.buildExpiryWarning(member, expiry);
-        sender(member.line_user_id, text, token);
-        unlinker(member.line_user_id, token); // หมดอายุ → ยกเลิกเมนูสมาชิก (กลับไป Welcome)
-        summary.pushed++;
-      } else if (expiry.status === 'expiring') {
-        summary.expiring++;
-        const text = LineBot.MemberDataService.buildExpiryWarning(member, expiry);
-        sender(member.line_user_id, text, token);
-        summary.pushed++;
+    const repo = o.repo || system.memberRepository;
+    const fixedNow = o.now || system.clock.now();
+    const clock = { now: function () { return fixedNow; } };
+    const baseCfg = system.config.get();
+    const config = {
+      get: function () {
+        return Object.assign({}, baseCfg, {
+          EXPIRY_WARNING_DAYS: o.warningDays !== undefined
+            ? o.warningDays
+            : baseCfg.EXPIRY_WARNING_DAYS
+        });
       }
+    };
+
+    let audit;
+    if (o.logger) {
+      audit = {
+        record: function (event) {
+          return o.logger(
+            {
+              mem_code: event.memberCode,
+              line_user_id: event.lineUserId,
+              mem_exp_dt: event.memExpDt
+            },
+            {
+              status: event.status,
+              daysLeft: event.daysLeft
+            }
+          );
+        }
+      };
+    } else if (o.repo) {
+      audit = Adapters.Audit.MemberRepositoryAuditAdapter.create({
+        memberRepository: repo
+      });
+    } else {
+      audit = system.audit;
     }
 
-    Logger.log(`[ExpiryCheck] checked=${summary.checked} logged=${summary.logged} expiring=${summary.expiring} expired=${summary.expired} pushed=${summary.pushed}`);
-    return summary;
+    return Application.Scheduled.ExpiryScanUseCase.create({
+      memberRepository: repo,
+      clock,
+      config,
+      audit
+    });
   }
 
   /**
-   * สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Apps Script Editor)
-   * @param {number} [hourOfDay] - เวลารัน (ค่า default 9 = 09:00)
-   * @returns {Object} trigger ที่สร้าง
+   * Scheduled delivery entry.
+   * @param {string} token
+   * @param {Object} [opts] compatibility DI: repo/now/warningDays/logger/sender/unlinker
+   * @returns {{checked:number,logged:number,expiring:number,expired:number,pushed:number}}
    */
+  function runExpiryCheck(token, opts) {
+    const o = opts || {};
+    const sender = o.sender || function (to, text, tk) {
+      return LineBot.MessageService.push(to, text, tk);
+    };
+    const unlinker = o.unlinker || function (lineUserId, tk) {
+      try {
+        return RichMenu.Gating.unlinkMemberMenu(lineUserId, tk);
+      } catch (e) {
+        return { ok: false };
+      }
+    };
+
+    const result = makeExecution(o).execute();
+    if (!result || !result.ok) {
+      throw new Error('ExpiryScanUseCase failed');
+    }
+
+    const data = result.data;
+    let pushed = 0;
+
+    for (const action of data.actions) {
+      const member = action.member;
+      const expiry = action.expiry;
+      const text = LineBot.MemberDataService.buildExpiryWarning(member, expiry);
+      sender(member.line_user_id, text, token);
+      pushed++;
+
+      if (action.type === 'member.expired') {
+        unlinker(member.line_user_id, token);
+      }
+    }
+
+    const summary = {
+      checked: data.summary.checked,
+      logged: data.summary.logged,
+      expiring: data.summary.expiring,
+      expired: data.summary.expired,
+      pushed
+    };
+
+    Logger.log(
+      '[ExpiryCheck] checked=' + summary.checked +
+      ' logged=' + summary.logged +
+      ' expiring=' + summary.expiring +
+      ' expired=' + summary.expired +
+      ' pushed=' + summary.pushed
+    );
+    return summary;
+  }
+
   function setupExpiryTrigger(hourOfDay) {
     const h = typeof hourOfDay === 'number' ? hourOfDay : 9;
     const trigger = ScriptApp.newTrigger('runExpiryCheck')
@@ -86,7 +128,8 @@ LineBot.ExpiryService = (() => {
       .atHour(h)
       .everyDays(1)
       .create();
-    Logger.log(`สร้าง trigger รายวันเวลา ${h}:00 — ตรวจวันหมดอายุอัตโนมัติ (${trigger.getUniqueId()})`);
+    Logger.log('สร้าง trigger รายวันเวลา ' + h + ':00 — ตรวจวันหมดอายุอัตโนมัติ (' +
+      trigger.getUniqueId() + ')');
     return trigger;
   }
 
@@ -96,10 +139,6 @@ LineBot.ExpiryService = (() => {
   };
 })();
 
-/**
- * Entry point สำหรับ Time-driven Trigger — เลือกฟังก์ชันนี้ใน Apps Script Editor
- * (Apps Script เรียก function ระดับบนสุดได้เท่านั้น — ตัวนี้เป็นตัวส่งต่อให้ ExpiryService)
- */
 function runExpiryCheck() {
   const cfg = Config.validate();
   return LineBot.ExpiryService.runExpiryCheck(cfg.CHANNEL_ACCESS_TOKEN);
