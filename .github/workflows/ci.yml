@@ -66,6 +66,7 @@ jobs:
           node tests/application/calculate-loan.test.js
           node tests/application/web-session.test.js
           node tests/application/web-session-line-exchange.test.js
+          node tests/application/web-member-rbac.test.js
 
       - name: Scheduled runtime delegation tests
         run: node tests/application/scheduled-runtime-delegation.test.js
@@ -77,6 +78,7 @@ jobs:
           node tests/application/protected-renew-api.test.js
           node tests/application/loan-calculation-api.test.js
           node tests/application/web-session-api.test.js
+          node tests/application/web-member-api.test.js
 
       - name: Upload test log on failure
         if: failure()
