@@ -24,7 +24,7 @@ Engine.WebSessionEngine = (() => {
       if (!Security.Principal.isAuthenticated(principal)) {
         return { ok:false, error:{ code:'UNAUTHENTICATED' } };
       }
-      if (principal.channel !== 'web' && principal.channel !== 'system' && principal.channel !== 'test') {
+      if (principal.channel !== 'web') {
         return { ok:false, error:{ code:'WEB_PRINCIPAL_REQUIRED' } };
       }
       if (!tokenHash) return { ok:false, error:{ code:'TOKEN_HASH_REQUIRED' } };
