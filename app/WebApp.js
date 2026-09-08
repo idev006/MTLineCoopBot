@@ -36,7 +36,10 @@ function isApiRequest(e) {
  * @returns {boolean}
  */
 function isIdentityAuthenticatedApiPath(path) {
-  return path === '/api/member/me/profile';
+  return path === '/api/member/me/profile' ||
+    path === '/api/member/me/savings' ||
+    path === '/api/member/me/loans' ||
+    path === '/api/member/me/dividends';
 }
 
 function getProvidedApiKey(e) {

@@ -159,33 +159,62 @@ Api.ApiHandlers = (() => {
   }
 
 
+  function requireLinePrincipal(ctx) {
+    const idToken = ctx && ctx.body ? ctx.body.idToken : null;
+    if (!idToken) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'ไม่พบข้อมูลยืนยันตัวตน', 401);
+    }
+    const system = getSystem();
+    const principal = system.lineIdentity.authenticate({ idToken });
+    if (!Security.Principal.isAuthenticated(principal)) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'ข้อมูลยืนยันตัวตนไม่ถูกต้อง', 401);
+    }
+    return { system, principal };
+  }
+
+  function throwApplicationError(result) {
+    const code = result && result.error && result.error.code ? result.error.code : 'FORBIDDEN';
+    const status = code === 'UNAUTHENTICATED' ? 401 : 403;
+    throw Api.ApiError.create(code, 'ไม่สามารถเข้าถึงข้อมูลสมาชิกได้', status);
+  }
+
   /**
    * POST /api/member/me/profile { idToken }
    * Protected self-profile endpoint.
    * Identity proof comes only from the verified raw LINE ID token.
    */
   function getCurrentProfile(ctx) {
-    const idToken = ctx && ctx.body ? ctx.body.idToken : null;
-    if (!idToken) {
-      throw Api.ApiError.create('UNAUTHENTICATED', 'ไม่พบข้อมูลยืนยันตัวตน', 401);
-    }
-
-    const system = getSystem();
-    const principal = system.lineIdentity.authenticate({ idToken });
+    const { system, principal } = requireLinePrincipal(ctx);
     const result = system.getCurrentMemberProfile.execute({ principal });
-
-    if (!result.ok) {
-      const code = result.error && result.error.code ? result.error.code : 'FORBIDDEN';
-      const status = code === 'UNAUTHENTICATED' ? 401 : 403;
-      throw Api.ApiError.create(code, 'ไม่สามารถเข้าถึงข้อมูลสมาชิกได้', status);
-    }
-
+    if (!result.ok) throwApplicationError(result);
     return result.data;
+  }
+
+  function getCurrentFinance(ctx, kind) {
+    const { system, principal } = requireLinePrincipal(ctx);
+    const result = system.getCurrentMemberFinance.execute({ principal, kind });
+    if (!result.ok) throwApplicationError(result);
+    return { [kind]: result.data.rows };
+  }
+
+  function getCurrentSavings(ctx) {
+    return getCurrentFinance(ctx, 'savings');
+  }
+
+  function getCurrentLoans(ctx) {
+    return getCurrentFinance(ctx, 'loans');
+  }
+
+  function getCurrentDividends(ctx) {
+    return getCurrentFinance(ctx, 'dividends');
   }
 
   return {
     health,
     getCurrentProfile,
+    getCurrentSavings,
+    getCurrentLoans,
+    getCurrentDividends,
     getProfile,
     getSavings,
     getLoans,
