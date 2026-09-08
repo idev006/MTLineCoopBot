@@ -50,6 +50,21 @@ Adapters.Audit.MemberRepositoryAuditAdapter = (() => {
           remindedDt: e.remindedDt
         });
       }
+      if (e.type === 'admin.role.change') {
+        if (!d.adminAuditStore || typeof d.adminAuditStore.append !== 'function') {
+          throw new Error('adminAuditStore is required for admin.role.change');
+        }
+        return d.adminAuditStore.append({
+          actorSubject:e.actorSubject || '',
+          actorMemberCode:e.actorMemberCode || '',
+          action:'role_change',
+          memberCode:e.memberCode || '',
+          oldValue:e.oldRole || '',
+          newValue:e.newRole || '',
+          status:e.status || 'attempt',
+          createdDt:e.createdDt
+        });
+      }
       throw new Error('Unsupported audit event type: ' + String(e.type || ''));
     }
 
