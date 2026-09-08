@@ -133,6 +133,26 @@ Api.ApiHandlers = (() => {
     return getCurrentFinance(ctx, 'dividends');
   }
 
+  function activateCurrentMember(ctx) {
+    const { system, principal } = requireLinePrincipal(ctx);
+    const body = (ctx && ctx.body) || {};
+    const result = system.selfActivateMember.execute({
+      principal,
+      activateCode:body.activateCode
+    });
+
+    if (!result.ok) {
+      const code = result.error && result.error.code ? result.error.code : 'FORBIDDEN';
+      const status = code === 'UNAUTHENTICATED' ? 401 :
+        code === 'VALIDATION' ? 400 :
+        code === 'MEMBER_NOT_FOUND' ? 404 :
+        ['BINDING_CONFLICT','SUBJECT_ALREADY_BOUND','ALREADY_ACTIVATED'].includes(code) ? 409 : 403;
+      throw Api.ApiError.create(code, 'ไม่สามารถ activate สมาชิกได้', status);
+    }
+
+    return result.data;
+  }
+
   function renewCurrentMember(ctx) {
     const { system, principal } = requireLinePrincipal(ctx);
     const result = system.renewMember.execute({ principal });
@@ -340,6 +360,7 @@ Api.ApiHandlers = (() => {
     getCurrentSavings,
     getCurrentLoans,
     getCurrentDividends,
+    activateCurrentMember,
     renewCurrentMember,
     activate,
     renew
