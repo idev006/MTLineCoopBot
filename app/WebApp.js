@@ -39,7 +39,8 @@ function isIdentityAuthenticatedApiPath(path) {
   return path === '/api/member/me/profile' ||
     path === '/api/member/me/savings' ||
     path === '/api/member/me/loans' ||
-    path === '/api/member/me/dividends';
+    path === '/api/member/me/dividends' ||
+    path === '/api/member/me/renew';
 }
 
 function getProvidedApiKey(e) {

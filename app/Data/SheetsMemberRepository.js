@@ -146,6 +146,16 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
+   * Persist precomputed renewal values.
+   * @param {number} rowIndex
+   * @param {{memExpDt:string,memStatus:string}} renewal
+   * @returns {Object}
+   */
+  function saveRenewal(rowIndex, renewal) {
+    return LineBot.SheetService.saveRenewal(rowIndex, renewal);
+  }
+
+  /**
    * ดึงประกาศทั้งหมดจาก t_notice (MT-13)
    * @returns {Array<Object>}
    */
@@ -204,6 +214,7 @@ Data.SheetsMemberRepository = (() => {
     listMembers,
     logExpiry,
     renewMember,
+    saveRenewal,
     listNotices,
     markNoticeSent,
     listLoans,

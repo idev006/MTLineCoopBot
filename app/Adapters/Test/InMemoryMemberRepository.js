@@ -143,6 +143,20 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       };
     }
 
+    function saveRenewal(rowIndex, renewal) {
+      const i = Number(rowIndex) - 2;
+      if (i < 0 || i >= state.members.length) {
+        throw new Error('Member row not found: ' + rowIndex);
+      }
+      const r = clone(renewal || {});
+      state.members[i].mem_exp_dt = r.memExpDt;
+      state.members[i].mem_status = r.memStatus;
+      return {
+        memExpDt: state.members[i].mem_exp_dt,
+        memStatus: state.members[i].mem_status
+      };
+    }
+
     function listNotices() {
       return clone(state.notices);
     }
@@ -190,6 +204,7 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       listMembers,
       logExpiry,
       renewMember,
+      saveRenewal,
       listNotices,
       markNoticeSent,
       listLoans,

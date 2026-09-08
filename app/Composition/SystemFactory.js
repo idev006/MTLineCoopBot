@@ -84,6 +84,12 @@ Composition.SystemFactory = (() => {
         clock,
         activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine
       });
+    const renewMember = o.renewMember ||
+      Application.Member.RenewMemberUseCase.create({
+        memberRepository,
+        clock,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -97,6 +103,7 @@ Composition.SystemFactory = (() => {
       getCurrentMemberProfile,
       getCurrentMemberFinance,
       activateMember,
+      renewMember,
       api: o.api || defaultApi()
     });
   }
