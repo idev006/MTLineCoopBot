@@ -540,6 +540,7 @@ LineBot.SheetService = (() => {
     markNoticeSent,
     renewMember,
     activateMember,
+    saveActivation,
     isActiveMember,
     hasRole,
     isActivated,
