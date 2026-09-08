@@ -63,6 +63,7 @@ jobs:
           node tests/application/current-member-profile.test.js
           node tests/application/current-member-finance.test.js
           node tests/application/activate-member.test.js
+          node tests/application/secure-self-activation.test.js
           node tests/application/renew-member.test.js
           node tests/application/scheduled-use-cases.test.js
           node tests/application/calculate-loan.test.js
@@ -85,6 +86,7 @@ jobs:
           node tests/application/protected-profile-api.test.js
           node tests/application/protected-finance-api.test.js
           node tests/application/protected-renew-api.test.js
+          node tests/application/secure-self-activation-api.test.js
           node tests/application/loan-calculation-api.test.js
           node tests/application/web-session-api.test.js
           node tests/application/web-member-api.test.js

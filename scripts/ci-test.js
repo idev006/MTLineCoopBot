@@ -159,6 +159,7 @@ const FILE_ORDER = [
   'Application/Member/GetCurrentMemberProfileUseCase.js',
   'Application/Member/GetCurrentMemberFinanceUseCase.js',
   'Application/Member/ActivateMemberUseCase.js',
+  'Application/Member/SelfActivateMemberUseCase.js',
   'Application/Member/RenewMemberUseCase.js',
   'Application/Scheduled/ExpiryScanUseCase.js',
   'Application/Scheduled/NoticeBroadcastUseCase.js',

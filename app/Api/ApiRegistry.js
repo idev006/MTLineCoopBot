@@ -42,6 +42,7 @@ Api.ApiRegistry = (() => {
       { method: 'POST', path: '/api/member/me/savings', handler: h.getCurrentSavings, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/loans', handler: h.getCurrentLoans, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/dividends', handler: h.getCurrentDividends, auth: 'line-id-token' },
+      { method: 'POST', path: '/api/member/me/activate', handler: h.activateCurrentMember, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/renew', handler: h.renewCurrentMember, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/activate', handler: h.activate, auth: 'line' },
       { method: 'POST', path: '/api/member/renew', handler: h.renew, auth: 'line' }
