@@ -330,6 +330,17 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function renewWebMember(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const body = (ctx && ctx.body) || {};
+    const result = system.renewWebMember.execute({
+      principal,
+      memberCode:body.memberCode
+    });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -358,6 +369,7 @@ Api.ApiHandlers = (() => {
     getWebAdminSettings,
     getWebAuditLog,
     getWebSummaryReport,
+    renewWebMember,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
