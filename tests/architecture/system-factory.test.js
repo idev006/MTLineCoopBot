@@ -178,6 +178,10 @@ const getWebMemberDetailSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetMemberDetailUseCase.js'),
   'utf8'
 );
+const getAdminSettingsSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'GetAdminSettingsUseCase.js'),
+  'utf8'
+);
 const loanCalculatorSrc = fs.readFileSync(
   path.join(root, 'app', 'Core', 'LoanCalculator.js'),
   'utf8'
@@ -297,6 +301,7 @@ vm.runInContext(noticeUseCaseSrc, sandbox, { filename: 'NoticeBroadcastUseCase.j
 vm.runInContext(reminderUseCaseSrc, sandbox, { filename: 'LoanReminderUseCase.js' });
 vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
+vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
 vm.runInContext(createWebSessionSrc, sandbox, { filename: 'CreateWebSessionUseCase.js' });
 vm.runInContext(exchangeLineForWebSessionSrc, sandbox, { filename: 'ExchangeLineForWebSessionUseCase.js' });
 vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
@@ -379,6 +384,9 @@ if (!defaults.loanReminder || typeof defaults.loanReminder.execute !== 'function
 }
 if (!defaults.calculateLoan || typeof defaults.calculateLoan.execute !== 'function') {
   throw new Error('default loan calculation wiring failed');
+}
+if (!defaults.getAdminSettings || typeof defaults.getAdminSettings.execute !== 'function') {
+  throw new Error('default admin settings wiring failed');
 }
 if (!defaults.createWebSession || typeof defaults.createWebSession.execute !== 'function') {
   throw new Error('default create web session wiring failed');
