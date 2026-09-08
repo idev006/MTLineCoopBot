@@ -38,8 +38,7 @@ const retired=[
   '/api/member/savings',
   '/api/member/loans',
   '/api/member/dividends',
-  '/api/member/validity',
-  '/api/member/renew'
+  '/api/member/validity'
 ];
 for(const pathName of retired){
   if(routes.some(r=>r.path===pathName)) throw new Error('legacy route still registered: '+pathName);
@@ -54,15 +53,16 @@ for(const pathName of [
   const route=routes.find(r=>r.path===pathName);
   if(!route||route.method!=='POST'||route.auth!=='line-id-token') throw new Error('secure replacement missing: '+pathName);
 }
-const activation=routes.find(r=>r.path==='/api/member/activate');
-if(!activation) throw new Error('activation compatibility route must remain until SEC-WEB-004');
+for(const pathName of ['/api/member/activate','/api/member/renew']){
+  if(!routes.find(r=>r.path===pathName)) throw new Error('identity-binding compatibility route must remain until SEC-WEB-004: '+pathName);
+}
 
 const handlers=fs.readFileSync(path.join(root,'app','Api','ApiHandlers.js'),'utf8');
-for(const marker of ['function requireMember(','function getProfile(','function getSavings(','function getLoans(','function getDividends(','function getValidity(','function renew(ctx)']){
+for(const marker of ['function requireMember(','function getProfile(','function getSavings(','function getLoans(','function getDividends(','function getValidity(']){
   if(handlers.includes(marker)) throw new Error('retired legacy handler remains: '+marker);
 }
 
-console.log('PASS  legacy lineUserId read/renew routes retired');
+console.log('PASS  legacy lineUserId read/validity routes retired');
 console.log('PASS  verified ID-token self-service replacements retained');
-console.log('PASS  activation compatibility preserved for SEC-WEB-004');
+console.log('PASS  activation/renew compatibility preserved for SEC-WEB-004');
 console.log('=== LEGACY MEMBER ROUTE RETIREMENT TESTS PASS (3/3) ===');
