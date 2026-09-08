@@ -130,6 +130,14 @@ const renewUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'RenewMemberUseCase.js'),
   'utf8'
 );
+const loanCalculatorSrc = fs.readFileSync(
+  path.join(root, 'app', 'Core', 'LoanCalculator.js'),
+  'utf8'
+);
+const calculateLoanUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Finance', 'CalculateLoanUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -221,6 +229,8 @@ vm.runInContext(renewUseCaseSrc, sandbox, { filename: 'RenewMemberUseCase.js' })
 vm.runInContext(expiryUseCaseSrc, sandbox, { filename: 'ExpiryScanUseCase.js' });
 vm.runInContext(noticeUseCaseSrc, sandbox, { filename: 'NoticeBroadcastUseCase.js' });
 vm.runInContext(reminderUseCaseSrc, sandbox, { filename: 'LoanReminderUseCase.js' });
+vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
+vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -284,6 +294,9 @@ if (!defaults.noticeBroadcast || typeof defaults.noticeBroadcast.execute !== 'fu
 }
 if (!defaults.loanReminder || typeof defaults.loanReminder.execute !== 'function') {
   throw new Error('default loan reminder wiring failed');
+}
+if (!defaults.calculateLoan || typeof defaults.calculateLoan.execute !== 'function') {
+  throw new Error('default loan calculation wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
