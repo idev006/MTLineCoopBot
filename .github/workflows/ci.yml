@@ -58,6 +58,9 @@ jobs:
           node tests/application/renew-member.test.js
           node tests/application/scheduled-use-cases.test.js
 
+      - name: Scheduled runtime delegation tests
+        run: node tests/application/scheduled-runtime-delegation.test.js
+
       - name: Protected delivery contract tests
         run: |
           node tests/application/protected-profile-api.test.js
