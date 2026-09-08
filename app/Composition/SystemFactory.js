@@ -72,6 +72,12 @@ Composition.SystemFactory = (() => {
         memberAccess,
         authorization
       });
+    const getCurrentMemberFinance = o.getCurrentMemberFinance ||
+      Application.Member.GetCurrentMemberFinanceUseCase.create({
+        memberRepository,
+        memberAccess,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -83,6 +89,7 @@ Composition.SystemFactory = (() => {
       lineIdTokenVerifier,
       authorization,
       getCurrentMemberProfile,
+      getCurrentMemberFinance,
       api: o.api || defaultApi()
     });
   }
