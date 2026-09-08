@@ -55,6 +55,7 @@ jobs:
           node tests/application/current-member-finance.test.js
           node tests/application/activate-member.test.js
           node tests/application/renew-member.test.js
+          node tests/application/expiry-scan.test.js
 
       - name: Protected delivery contract tests
         run: |
