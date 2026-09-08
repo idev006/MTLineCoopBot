@@ -13,8 +13,12 @@ var Api = Api || {};
 Api.ApiHandlers = (() => {
   'use strict';
 
+  function getSystem() {
+    return Composition.SystemFactory.createSystem();
+  }
+
   function getRepo() {
-    return Data.MemberRepository.getRepository();
+    return getSystem().memberRepository;
   }
 
   /**
@@ -27,10 +31,11 @@ Api.ApiHandlers = (() => {
       (ctx.body && ctx.body.lineUserId) ||
       (ctx.auth && ctx.auth.lineUserId);
     if (!lineUserId) throw Api.ApiError.create('VALIDATION', 'ต้องระบุ lineUserId');
-    const repo = getRepo();
+    const system = getSystem();
+    const repo = system.memberRepository;
     const member = repo.findByLineUserId(lineUserId);
     if (!member) throw Api.ApiError.create('MEMBER_NOT_FOUND', 'ไม่พบสมาชิกสำหรับ lineUserId นี้', 404);
-    return { member, repo, lineUserId };
+    return { member, repo, system, lineUserId };
   }
 
   /** GET /api/health — ตรวจว่า API ทำงาน */
@@ -84,9 +89,9 @@ Api.ApiHandlers = (() => {
 
   /** GET /api/member/validity?lineUserId= — สถานะสิทธิ์ (Gate logic — Core.MemberRules) */
   function getValidity(ctx) {
-    const { member, repo } = requireMember(ctx);
-    const valid = repo.isActiveMember(member);
-    const expiry = Core.MemberRules.getExpiryStatus(member, undefined, Config.get().EXPIRY_WARNING_DAYS);
+    const { member, system } = requireMember(ctx);
+    const valid = system.memberAccess.isActive(member);
+    const expiry = system.memberAccess.expiryStatus(member, system.config.get().EXPIRY_WARNING_DAYS);
     return {
       valid,
       role: member.mem_role,

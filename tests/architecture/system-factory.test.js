@@ -5,12 +5,21 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const root = path.join(__dirname, '..', '..');
+const memberRulesSrc = fs.readFileSync(
+  path.join(root, 'app', 'Core', 'MemberRules.js'),
+  'utf8'
+);
 const clockSrc = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'app', 'Ports', 'ClockPort.js'),
+  path.join(root, 'app', 'Ports', 'ClockPort.js'),
+  'utf8'
+);
+const memberAccessSrc = fs.readFileSync(
+  path.join(root, 'app', 'Engine', 'MemberAccessEngine.js'),
   'utf8'
 );
 const src = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'app', 'Composition', 'SystemFactory.js'),
+  path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
 );
 
@@ -22,6 +31,8 @@ const fakeApi = { handleRequest: () => ({ ok: true }) };
 const sandbox = {
   Composition: {},
   Ports: {},
+  Core: {},
+  Engine: {},
   Data: { MemberRepository: { getRepository: () => ({ name: 'prod-repo' }) } },
   Config: { get: () => ({ mode: 'prod' }) },
   Api: { ApiService: { handleRequest: () => ({ ok: true, source: 'prod' }) } },
@@ -30,7 +41,9 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
+vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
+vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
