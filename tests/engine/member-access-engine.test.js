@@ -29,6 +29,7 @@ const active = {
   mem_exp_dt: '2026-12-31'
 };
 const expired = { ...active, mem_exp_dt: '2026-01-31' };
+const manager = { ...active, mem_role: 'manager' };
 const unknownRole = { ...active, mem_role: 'unknown' };
 
 if (!access.isActive(active)) throw new Error('active member should be active');
@@ -36,6 +37,7 @@ if (access.isActive(expired)) throw new Error('expired member should be inactive
 if (!access.hasRole(active, 'member')) throw new Error('member role should match');
 if (access.hasRole(active, 'admin')) throw new Error('wrong role must be denied');
 if (!access.hasKnownRole(active)) throw new Error('known active role should authorize');
+if (!access.hasKnownRole(manager)) throw new Error('manager must be a known role');
 if (access.hasKnownRole(unknownRole)) throw new Error('unknown role must be denied');
 
 const expiry = access.expiryStatus(active, 120);
