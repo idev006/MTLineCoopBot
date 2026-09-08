@@ -377,6 +377,7 @@ Api.ApiHandlers = (() => {
     getWebAuditLog,
     getWebSummaryReport,
     renewWebMember,
+    listWebStaffAccounts,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
