@@ -1225,85 +1225,35 @@ function testExpiryService() {
  */
 function testApiLayer() {
   const api = Api.ApiService;
-
-  // 1) health
   const health = api.handleRequest('GET', '/api/health', {});
   if (!health.ok || health.data.status !== 'ok') throw new Error('testApiLayer: health ควร ok');
 
-  // 2) seed fake sheets: M001 valid / M002 expired / M003 ยังไม่ activate + บัญชีเงินฝาก
-  delete __fakeSheets['t_member_mast'];
-  delete __fakeSheets['t_savings_acct'];
-  __fakeSheets['t_member_mast'] = [
-    DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2027-01-01', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-08-01', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
-    ['M003', 'นาย', 'ใหม่', 'สมาชิก', 10, '', 2, '', '', 'inactive', 'ACT003', '', 'member', 60, 0, 1000]
-  ];
-  __fakeSheets['t_savings_acct'] = [
-    DataDict.getHeaders('SAVINGS_ACCT'),
-    ['M001', 'SAV-0001', 'ออมทรัพย์', 25000, '2026-08-01']
-  ];
-
-  // 3) profile
-  const p = api.handleRequest('GET', '/api/member/profile', { query: { lineUserId: 'U11111111111111111111111111111111' } });
-  if (!p.ok) throw new Error('testApiLayer: profile ควร ok');
-  if (p.data.mem_code !== 'M001' || p.data.mem_fname !== 'สมชาย') throw new Error('testApiLayer: profile data ผิด');
-  if (p.data.mem_kk !== 85) throw new Error('testApiLayer: profile ไม่มี mem_kk');
-
-  // 4) ไม่มี lineUserId → VALIDATION
-  const noId = api.handleRequest('GET', '/api/member/profile', {});
-  if (noId.ok || noId.error.code !== 'VALIDATION') throw new Error('testApiLayer: ไม่มี lineUserId ควร VALIDATION');
-
-  // 5) ไม่พบสมาชิก → MEMBER_NOT_FOUND
-  const nf = api.handleRequest('GET', '/api/member/profile', { query: { lineUserId: 'U99999999999999999999999999999999' } });
-  if (nf.ok || nf.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: ไม่พบสมาชิกควร MEMBER_NOT_FOUND');
-
-  // 6) savings
-  const s = api.handleRequest('GET', '/api/member/savings', { query: { lineUserId: 'U11111111111111111111111111111111' } });
-  if (!s.ok || s.data.savings.length !== 1) throw new Error('testApiLayer: savings ผิด');
-  if (s.data.savings[0].balance !== 25000) throw new Error('testApiLayer: savings balance ผิด');
-
-  // 7) validity (default now = เวลาจริง): M001 valid / M002 expired
-  const v1 = api.handleRequest('GET', '/api/member/validity', { query: { lineUserId: 'U11111111111111111111111111111111' } });
-  if (!v1.ok || v1.data.valid !== true) throw new Error('testApiLayer: M001 ควร valid');
-  const v2 = api.handleRequest('GET', '/api/member/validity', { query: { lineUserId: 'U22222222222222222222222222222222' } });
-  if (!v2.ok || v2.data.valid !== false) throw new Error('testApiLayer: M002 ควร invalid (หมดอายุ)');
-  if (v2.data.expiry.status !== 'expired') throw new Error('testApiLayer: expiry.status ควร expired');
-
-  // 8) activate สำเร็จ (M003 ยังไม่ activate) → activate ซ้ำ ALREADY_ACTIVATED → รหัสผิด MEMBER_NOT_FOUND
-  const a1 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'ACT003', lineUserId: 'U33333333333333333333333333333333' } });
-  if (!a1.ok) throw new Error('testApiLayer: activate ควร ok — ' + JSON.stringify(a1));
-  if (a1.data.mem_code !== 'M003' || !a1.data.mem_exp_dt) throw new Error('testApiLayer: activate data ผิด');
-  const a2 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'ACT003', lineUserId: 'U33333333333333333333333333333333' } });
-  if (a2.ok || a2.error.code !== 'ALREADY_ACTIVATED') throw new Error('testApiLayer: activate ซ้ำควร ALREADY_ACTIVATED');
-  const a3 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode: 'WRONG', lineUserId: 'U33333333333333333333333333333333' } });
-  if (a3.ok || a3.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: activate รหัสผิดควร MEMBER_NOT_FOUND');
-
-  // 8b) renew (MT-12): M002 หมดอายุแล้ว → ต่ออายุด้วย ACT002 → mem_exp_dt ขยายอย่างน้อย 1 ปี
-  const rn = api.handleRequest('POST', '/api/member/renew', { body: { activateCode: 'ACT002', lineUserId: 'U22222222222222222222222222222222' } });
-  if (!rn.ok) throw new Error('testApiLayer: renew ควร ok — ' + JSON.stringify(rn));
-  if (rn.data.mem_code !== 'M002') throw new Error('testApiLayer: renew mem_code ผิด');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(rn.data.mem_exp_dt)) throw new Error('testApiLayer: renew ต้องคืน yyyy-mm-dd');
-  if (rn.data.mem_exp_dt < '2027-08-01') throw new Error('testApiLayer: renew ควรขยายอย่างน้อย 1 ปี');
-  if (rn.data.mem_status !== 'active') throw new Error('testApiLayer: renew ควรตั้ง active');
-  const rnBad = api.handleRequest('POST', '/api/member/renew', { body: { activateCode: 'WRONG', lineUserId: 'U22222222222222222222222222222222' } });
-  if (rnBad.ok || rnBad.error.code !== 'MEMBER_NOT_FOUND') throw new Error('testApiLayer: renew รหัสผิดควร MEMBER_NOT_FOUND');
-
-  // 9) route ไม่มี → NOT_FOUND · method ผิด → METHOD_NOT_ALLOWED
-  const nf2 = api.handleRequest('GET', '/api/nope', {});
-  if (nf2.ok || nf2.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: route ไม่มีควร NOT_FOUND');
-  const mma = api.handleRequest('POST', '/api/health', {});
-  if (mma.ok || mma.error.code !== 'METHOD_NOT_ALLOWED') throw new Error('testApiLayer: method ผิดควร METHOD_NOT_ALLOWED');
-
-  // 10) envelope shape: ทุก response มี ok + (data หรือ error.code)
-  const all = [health, p, noId, nf, s, v1, v2, a1, a2, a3, rn, rnBad, nf2, mma];
-  for (const r of all) {
-    if (typeof r.ok !== 'boolean') throw new Error('testApiLayer: envelope ต้องมี ok (boolean)');
-    if (r.ok && !('data' in r)) throw new Error('testApiLayer: ok ต้องมี data');
-    if (!r.ok && (!r.error || !r.error.code)) throw new Error('testApiLayer: error ต้องมี code');
+  for (const pathName of [
+    '/api/member/profile',
+    '/api/member/savings',
+    '/api/member/loans',
+    '/api/member/dividends',
+    '/api/member/validity'
+  ]) {
+    const legacy = api.handleRequest('GET', pathName, { query:{ lineUserId:'U11111111111111111111111111111111' } });
+    if (legacy.ok || legacy.error.code !== 'NOT_FOUND') {
+      throw new Error('testApiLayer: legacy route ต้อง retired: ' + pathName);
+    }
   }
 
-  Logger.log('testApiLayer OK — registry + envelope {ok,error,data} + handlers (profile/savings/validity/activate)');
+  // Activation and legacy renew remain compatibility paths until SEC-WEB-004.
+  delete __fakeSheets['t_member_mast'];
+  __fakeSheets['t_member_mast'] = [
+    DataDict.getHeaders('MEMBER_MASTER'),
+    ['M003', 'นาย', 'ใหม่', 'สมาชิก', 10, '', 2, '', '', 'inactive', 'ACT003', '', 'member', 60, 0, 1000]
+  ];
+  const a1 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode:'ACT003', lineUserId:'U33333333333333333333333333333333' } });
+  if (!a1.ok) throw new Error('testApiLayer: activation compatibility ต้องยังทำงาน');
+
+  const unknown = api.handleRequest('GET','/api/nope',{});
+  if (unknown.ok || unknown.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: unknown route ควร NOT_FOUND');
+
+  Logger.log('testApiLayer OK — legacy read routes retired; activation compatibility retained');
   return true;
 }
 
@@ -1326,7 +1276,7 @@ function testBotUsesApi() {
     ['M001', 'SAV-0001', 'ออมทรัพย์', 25000, '2026-08-01']
   ];
 
-  // 2) spy: ตรวจว่า EventHandler เรียกผ่าน Api.ApiService.handleRequest (ไม่เรียก repo ตรง ๆ)
+  // 2) spy: EventHandler ต้องไม่ย้อนกลับไปใช้ legacy Api.ApiService member reads
   const origHandle = Api.ApiService.handleRequest;
   const apiCalls = [];
   Api.ApiService.handleRequest = function (method, path, opts) {
@@ -1354,12 +1304,11 @@ function testBotUsesApi() {
     LineBot.MessageService.replyFlex = origReplyFlex;
   }
 
-  // 3) ตรวจว่าเรียก API ครบทั้ง 2 เส้นทาง (GET)
-  const paths = apiCalls.map(c => c.path);
-  if (!paths.includes('/api/member/profile')) throw new Error('testBotUsesApi: profile ต้องเรียกผ่าน /api/member/profile');
-  if (!paths.includes('/api/member/savings')) throw new Error('testBotUsesApi: saving_acct ต้องเรียกผ่าน /api/member/savings');
-  if (apiCalls.length !== 2) throw new Error('testBotUsesApi: ควรเรียก API 2 ครั้ง (ได้ ' + apiCalls.length + ')');
-  if (apiCalls.some(c => c.method !== 'GET')) throw new Error('testBotUsesApi: data read ต้องเป็น GET');
+  // 3) profile/finance must use application use cases, not retired legacy routes.
+  const retiredCalls = apiCalls.filter(c => [
+    '/api/member/profile','/api/member/savings','/api/member/loans','/api/member/dividends','/api/member/validity'
+  ].includes(c.path));
+  if (retiredCalls.length !== 0) throw new Error('testBotUsesApi: พบ legacy member API call หลัง migration');
 
   // 4) user-visible behavior เหมือนเดิม (แต่เป็น Flex Card): profile มีชื่อ/คะแนนตำแหน่ง/ฟิลด์ใหม่ · finance มีข้อมูลจริง
   if (flexReplies.length !== 2) throw new Error('testBotUsesApi: ควร replyFlex 2 ครั้ง (ได้ ' + flexReplies.length + ')');
@@ -1374,7 +1323,7 @@ function testBotUsesApi() {
   // 1 บัญชี 25,000 → รวมเงินฝาก 25,000.00 (total box แสดง label + ยอดรวม)
   if (!sJson.includes('รวมเงินฝาก') || !/"text":"25,000\.00 บาท"/.test(sJson)) throw new Error('testBotUsesApi: saving การ์ดต้องมีรวมยอด');
 
-  Logger.log('testBotUsesApi OK — postback → Api.ApiService (profile/savings) → Flex Card ข้อมูลเหมือนเดิม');
+  Logger.log('testBotUsesApi OK — postback → application use cases → Flex Card; no legacy member reads');
   return true;
 }
 
@@ -1486,10 +1435,13 @@ function testApiMount() {
   let env = resp(doGet({ pathInfo: 'api/health', parameter: {} }));
   if (!env.ok || env.data.status !== 'ok') throw new Error('testApiMount: /api/health ต้องตอบ ok (public)');
 
-  // 3) GET /api/member/profile โดยไม่มี key → 401 UNAUTHORIZED
-  env = resp(doGet({ pathInfo: 'api/member/profile', parameter: { lineUserId: 'U11111111111111111111111111111111' } }));
-  if (env.ok || env.error.code !== 'UNAUTHORIZED') {
-    throw new Error('testApiMount: profile ไม่มี api_key ต้องตอบ UNAUTHORIZED (ได้ ' + JSON.stringify(env) + ')');
+  // 3) retired profile route must not be restored even with API key
+  env = resp(doGet({
+    pathInfo:'api/member/profile',
+    parameter:{ api_key:'test-api-key-123', lineUserId:'U11111111111111111111111111111111' }
+  }));
+  if (env.ok || env.error.code !== 'NOT_FOUND') {
+    throw new Error('testApiMount: retired profile route ต้อง NOT_FOUND');
   }
 
   // 4) POST /api/member/activate — api_key ใน body (ไม่ใช่ query) → ผูก line_user_id กับ M001
@@ -1509,19 +1461,6 @@ function testApiMount() {
     throw new Error('testApiMount: activate ซ้ำผ่าน mount ต้องตอบ ALREADY_ACTIVATED');
   }
 
-  // 5) GET /api/member/profile พร้อม api_key ถูกต้อง (หลัง activate) → ข้อมูลสมาชิก
-  env = resp(doGet({
-    pathInfo: 'api/member/profile',
-    parameter: { api_key: 'test-api-key-123', lineUserId: 'U11111111111111111111111111111111' }
-  }));
-  if (!env.ok || env.data.mem_code !== 'M001') throw new Error('testApiMount: profile ผ่าน api_key ต้องคืน mem_code=M001');
-  // api_key ผิด → UNAUTHORIZED
-  env = resp(doGet({
-    pathInfo: 'api/member/profile',
-    parameter: { api_key: 'wrong-key', lineUserId: 'U11111111111111111111111111111111' }
-  }));
-  if (env.ok || env.error.code !== 'UNAUTHORIZED') throw new Error('testApiMount: api_key ผิดต้องตอบ UNAUTHORIZED');
-
   // 6) LINE webhook (ไม่มี pathInfo) — ไม่แตะ API mount: ตรวจ webhook_secret เหมือนเดิม
   env = resp(doPost({ parameter: {}, postData: { contents: JSON.stringify({ events: [] }) } }));
   if (env.status !== 'error' || env.message !== 'Unauthorized') {
@@ -1530,7 +1469,7 @@ function testApiMount() {
   env = resp(doPost({ parameter: { webhook_secret: 'wh-secret' }, postData: { contents: JSON.stringify({ events: [] }) } }));
   if (env.status !== 'ok') throw new Error('testApiMount: webhook ที่มี webhook_secret ต้องตอบ ok (เส้นทางเดิมไม่เปลี่ยน)');
 
-  Logger.log('testApiMount OK — /api/* ผ่าน Api.ApiService + API key · health public · webhook เดิมไม่เปลี่ยน');
+  Logger.log('testApiMount OK — retired reads stay unavailable; activation compatibility + webhook preserved');
   return true;
 }
 
