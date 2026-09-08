@@ -120,6 +120,13 @@ Composition.SystemFactory = (() => {
         activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine,
         audit
       });
+    const selfActivateMember = o.selfActivateMember ||
+      Application.Member.SelfActivateMemberUseCase.create({
+        memberRepository,
+        clock,
+        activationEngine: o.memberActivationEngine || Engine.MemberActivationEngine,
+        audit
+      });
     const renewMember = o.renewMember ||
       Application.Member.RenewMemberUseCase.create({
         memberRepository,
