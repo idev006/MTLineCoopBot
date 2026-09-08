@@ -136,6 +136,7 @@ const FILE_ORDER = [
   'Application/Member/GetCurrentMemberProfileUseCase.js',
   'Application/Member/GetCurrentMemberFinanceUseCase.js',
   'Application/Member/ActivateMemberUseCase.js',
+  'Application/Member/RenewMemberUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
