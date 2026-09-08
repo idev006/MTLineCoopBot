@@ -55,6 +55,8 @@ const Config = (() => {
     return {
       CHANNEL_ACCESS_TOKEN: _props.getProperty('CHANNEL_ACCESS_TOKEN'),
       CHANNEL_SECRET: _props.getProperty('CHANNEL_SECRET'),
+      // LINE Login channel ID used to verify LIFF/LINE Login ID tokens server-side
+      LINE_LOGIN_CHANNEL_ID: _props.getProperty('LINE_LOGIN_CHANNEL_ID'),
       WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET'),
       // API Key สำหรับเรียก /api/* (WebApp mount — ดูบทที่ 5.10) — ส่งผ่าน ?api_key= หรือใน body
       API_KEY: _props.getProperty('API_KEY'),
@@ -72,6 +74,7 @@ const Config = (() => {
     const defaults = {
       'CHANNEL_ACCESS_TOKEN': 'ใส่_TOKEN_ของคุณ_ที่นี่',
       'CHANNEL_SECRET': 'ใส่_CHANNEL_SECRET_ของคุณ_ที่นี่',
+      'LINE_LOGIN_CHANNEL_ID': 'ใส่_LINE_LOGIN_CHANNEL_ID_ของคุณ_ที่นี่',
       'WEBHOOK_SECRET': 'ใส่_รหัสยาวสุ่ม_สำหรับ_Webhook_URL_ที่นี่',
       'API_KEY': 'ใส่_API_KEY_ยาวสุ่ม_สำหรับ_เรียก_API_ที่นี่'
     };
@@ -86,6 +89,9 @@ const Config = (() => {
     }
     if (!cfg.CHANNEL_SECRET || cfg.CHANNEL_SECRET.includes('ใส่_CHANNEL_SECRET')) {
       throw new Error('ยังไม่ได้ตั้งค่า CHANNEL_SECRET — กรุณาใส่ข้อมูลใน Script Properties');
+    }
+    if (!cfg.LINE_LOGIN_CHANNEL_ID || cfg.LINE_LOGIN_CHANNEL_ID.includes('ใส่_LINE_LOGIN_CHANNEL_ID')) {
+      Logger.log('คำเตือน: ยังไม่ได้ตั้งค่า LINE_LOGIN_CHANNEL_ID — verified LIFF identity จะ fail closed');
     }
     if (!cfg.WEBHOOK_SECRET || cfg.WEBHOOK_SECRET.includes('ใส่_รหัสยาวสุ่ม')) {
       throw new Error('ยังไม่ได้ตั้งค่า WEBHOOK_SECRET — กรุณาใส่ข้อมูลใน Script Properties');
