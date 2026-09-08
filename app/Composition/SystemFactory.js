@@ -252,6 +252,7 @@ Composition.SystemFactory = (() => {
       getAuditLog,
       getSummaryReport,
       renewWebMember,
+      listStaffAccounts,
       api: o.api || defaultApi()
     });
   }
