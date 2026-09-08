@@ -48,6 +48,7 @@ function isIdentityAuthenticatedApiPath(path) {
     path === '/api/web/admin/settings' ||
     path === '/api/web/admin/staff' ||
     path === '/api/web/admin/roles' ||
+    path === '/api/web/admin/staff/role' ||
     path === '/api/web/admin/audit-log' ||
     path === '/api/web/reports/summary' ||
     path === '/api/web/members/renew' ||
