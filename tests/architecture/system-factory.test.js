@@ -206,6 +206,10 @@ const getSummaryReportSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetSummaryReportUseCase.js'),
   'utf8'
 );
+const renewWebMemberSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'RenewMemberByStaffUseCase.js'),
+  'utf8'
+);
 const loanCalculatorSrc = fs.readFileSync(
   path.join(root, 'app', 'Core', 'LoanCalculator.js'),
   'utf8'
@@ -337,6 +341,7 @@ vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseC
 vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
 vm.runInContext(getAuditLogSrc, sandbox, { filename: 'GetAuditLogUseCase.js' });
 vm.runInContext(getSummaryReportSrc, sandbox, { filename: 'GetSummaryReportUseCase.js' });
+vm.runInContext(renewWebMemberSrc, sandbox, { filename: 'RenewMemberByStaffUseCase.js' });
 vm.runInContext(createWebSessionSrc, sandbox, { filename: 'CreateWebSessionUseCase.js' });
 vm.runInContext(exchangeLineForWebSessionSrc, sandbox, { filename: 'ExchangeLineForWebSessionUseCase.js' });
 vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
@@ -434,6 +439,9 @@ if (!defaults.getAuditLog || typeof defaults.getAuditLog.execute !== 'function')
 }
 if (!defaults.getSummaryReport || typeof defaults.getSummaryReport.execute !== 'function') {
   throw new Error('default summary-report wiring failed');
+}
+if (!defaults.renewWebMember || typeof defaults.renewWebMember.execute !== 'function') {
+  throw new Error('default Web member renewal wiring failed');
 }
 if (!defaults.createWebSession || typeof defaults.createWebSession.execute !== 'function') {
   throw new Error('default create web session wiring failed');
