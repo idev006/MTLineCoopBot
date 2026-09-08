@@ -56,6 +56,7 @@ function isIdentityAuthenticatedApiPath(path) {
     path === '/api/member/me/savings' ||
     path === '/api/member/me/loans' ||
     path === '/api/member/me/dividends' ||
+    path === '/api/member/me/activate' ||
     path === '/api/member/me/renew';
 }
 
