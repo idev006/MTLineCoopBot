@@ -13,6 +13,7 @@ Ports.MemberRepositoryPort = (() => {
 
   const METHODS = Object.freeze([
     'findByLineUserId',
+    'findByMemberCode',
     'findByActivateCode',
     'activateMember',
     'findSavingsByMember',
