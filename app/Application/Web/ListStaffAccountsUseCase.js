@@ -8,7 +8,7 @@ Application.Web = Application.Web || {};
 Application.Web.ListStaffAccountsUseCase = (() => {
   'use strict';
 
-  const STAFF_ROLES = Object.freeze(['staff','manager','admin']);
+  const STAFF_ROLES = Object.freeze(Security.RoleCatalog.staffRoleIds());
 
   function create(deps) {
     const d = deps || {};
