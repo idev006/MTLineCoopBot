@@ -36,6 +36,9 @@ jobs:
       - name: Architecture tests (engine wiring / plug-in seams)
         run: node tests/architecture/system-factory.test.js
 
+      - name: Port contract tests (plug-compatible adapters)
+        run: node tests/contracts/member-repository.contract.test.js
+
       - name: Upload test log on failure
         if: failure()
         uses: actions/upload-artifact@v4
