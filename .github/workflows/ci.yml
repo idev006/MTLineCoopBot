@@ -48,6 +48,9 @@ jobs:
       - name: Application use-case tests (headless orchestration)
         run: node tests/application/current-member-profile.test.js
 
+      - name: Protected delivery contract tests
+        run: node tests/application/protected-profile-api.test.js
+
       - name: Upload test log on failure
         if: failure()
         uses: actions/upload-artifact@v4
