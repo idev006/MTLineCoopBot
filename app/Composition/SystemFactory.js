@@ -179,6 +179,11 @@ Composition.SystemFactory = (() => {
         memberRepository,
         authorization
       });
+    const getAdminSettings = o.getAdminSettings ||
+      Application.Web.GetAdminSettingsUseCase.create({
+        config,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -210,6 +215,7 @@ Composition.SystemFactory = (() => {
       exchangeLineForWebSession,
       listWebMembers,
       getWebMemberDetail,
+      getAdminSettings,
       api: o.api || defaultApi()
     });
   }
