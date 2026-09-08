@@ -447,36 +447,48 @@ LineBot.SheetService = (() => {
   }
 
   /**
-   * ต่ออายุสมาชิก: เขียน mem_exp_dt ใหม่ + ตั้งสถานะ active (การ์ด MT-12)
-   * (วันหมดอายุใหม่คำนวณโดย Core.MemberRules.computeRenewal)
-   * @param {number} rowIndex - 1-based row index ของสมาชิก
-   * @param {string} newExpDt - วันที่ใหม่ รูปแบบ yyyy-mm-dd
-   * @param {string} [lineUserId] - ถ้าให้ จะ bind/update line_user_id ด้วย
-   * @returns {Object} { memExpDt, memStatus }
+   * Persist precomputed renewal values.
+   * @param {number} rowIndex
+   * @param {{memExpDt:string,memStatus:string}} renewal
+   * @returns {Object}
    */
-  function renewMember(rowIndex, newExpDt, lineUserId) {
+  function saveRenewal(rowIndex, renewal) {
     const tableKey = 'MEMBER_MASTER';
     const sheet = getSheet(tableKey);
+    const r = renewal || {};
     const headerMap = getHeaderMap(sheet);
     const col = (name) => {
       const idx = headerMap[name];
       if (idx === undefined) {
         throw new Error(`ไม่พบคอลัมน์ ${name} ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
       }
-      return idx + 1; // 1-based
+      return idx + 1;
     };
-    const expDtIndex = col('mem_exp_dt');
-    const statusIndex = col('mem_status');
 
-    sheet.getRange(rowIndex, expDtIndex).setValue(newExpDt);
-    sheet.getRange(rowIndex, statusIndex).setValue('active');
+    sheet.getRange(rowIndex, col('mem_exp_dt')).setValue(r.memExpDt);
+    sheet.getRange(rowIndex, col('mem_status')).setValue(r.memStatus);
+
+    Logger.log('Saved renewal at row ' + rowIndex + ' — new exp: ' + r.memExpDt);
+    return { memExpDt: r.memExpDt, memStatus: r.memStatus };
+  }
+
+  /**
+   * Legacy compatibility renewal operation.
+   * New secure application code computes policy first and calls saveRenewal().
+   */
+  function renewMember(rowIndex, newExpDt, lineUserId) {
+    const result = saveRenewal(rowIndex, { memExpDt: newExpDt, memStatus: 'active' });
     if (lineUserId) {
-      const lineIdIndex = col('line_user_id');
-      sheet.getRange(rowIndex, lineIdIndex).setValue(lineUserId);
+      const tableKey = 'MEMBER_MASTER';
+      const sheet = getSheet(tableKey);
+      const headerMap = getHeaderMap(sheet);
+      const lineIndex = headerMap['line_user_id'];
+      if (lineIndex === undefined) {
+        throw new Error(`ไม่พบคอลัมน์ line_user_id ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+      }
+      sheet.getRange(rowIndex, lineIndex + 1).setValue(lineUserId);
     }
-
-    Logger.log('Renewed member at row ' + rowIndex + ' — new exp: ' + newExpDt);
-    return { memExpDt: newExpDt, memStatus: 'active' };
+    return result;
   }
 
   /**
@@ -539,6 +551,7 @@ LineBot.SheetService = (() => {
     listNotices,
     markNoticeSent,
     renewMember,
+    saveRenewal,
     activateMember,
     saveActivation,
     isActiveMember,
