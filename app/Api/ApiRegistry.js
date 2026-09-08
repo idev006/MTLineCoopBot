@@ -33,6 +33,7 @@ Api.ApiRegistry = (() => {
       { method: 'POST', path: '/api/web/members/detail', handler: h.getWebMemberDetail, auth: 'web-session' },
       { method: 'POST', path: '/api/web/admin/settings', handler: h.getWebAdminSettings, auth: 'web-session' },
       { method: 'POST', path: '/api/web/admin/audit-log', handler: h.getWebAuditLog, auth: 'web-session' },
+      { method: 'POST', path: '/api/web/reports/summary', handler: h.getWebSummaryReport, auth: 'web-session' },
       { method: 'POST', path: '/api/member/me/profile', handler: h.getCurrentProfile, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/savings', handler: h.getCurrentSavings, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/loans', handler: h.getCurrentLoans, auth: 'line-id-token' },
