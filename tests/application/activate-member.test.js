@@ -9,9 +9,11 @@ const sandbox={Ports:{},Engine:{},Application:{},Adapters:{},Date,String,Object,
 vm.createContext(sandbox);
 for(const rel of [
   'app/Ports/ClockPort.js',
+  'app/Ports/AuditPort.js',
   'app/Ports/MemberRepositoryPort.js',
   'app/Engine/MemberActivationEngine.js',
   'app/Adapters/Test/InMemoryMemberRepository.js',
+  'app/Adapters/Test/InMemoryAuditAdapter.js',
   'app/Application/Member/ActivateMemberUseCase.js'
 ]){
   vm.runInContext(fs.readFileSync(path.join(root,rel),'utf8'),sandbox,{filename:rel});
@@ -22,15 +24,18 @@ const seed={members:[{
   activate_code:'ABC123',mem_eff_dt:'',mem_exp_dt:'',mem_status:'inactive',line_user_id:''
 }]};
 const repo=sandbox.Adapters.Test.InMemoryMemberRepository.create(seed);
+const audit=sandbox.Adapters.Test.InMemoryAuditAdapter.create();
 const clock={now:()=>new Date(2026,8,8,9,0,0)};
-const uc=sandbox.Application.Member.ActivateMemberUseCase.create({memberRepository:repo,clock});
+const uc=sandbox.Application.Member.ActivateMemberUseCase.create({memberRepository:repo,clock,audit});
 
 const ok=uc.execute({activateCode:'ABC123',lineUserId:'U123'});
 if(!ok.ok || ok.data.mem_code!=='M001') throw new Error('activation use case should succeed');
 if(ok.data.mem_eff_dt!=='2026-09-08 09:00:00') throw new Error('deterministic eff date mismatch');
 if(ok.data.mem_exp_dt!=='2027-09-08 09:00:00') throw new Error('deterministic exp date mismatch');
 if(repo.findByMemberCode('M001').line_user_id!=='U123') throw new Error('activation not persisted');
-if(repo.snapshot().activationLogs.length!==1) throw new Error('activation audit log missing');
+if(audit.snapshot().length!==1 || audit.snapshot()[0].type!=='member.activation') {
+  throw new Error('activation AuditPort event missing');
+}
 
 const dup=uc.execute({activateCode:'ABC123',lineUserId:'U123'});
 if(dup.ok || dup.error.code!=='ALREADY_ACTIVATED') throw new Error('duplicate activation must fail');
@@ -46,7 +51,8 @@ failingRepo.saveActivation=()=>{ throw new Error('storage failed'); };
 
 const failingUc=sandbox.Application.Member.ActivateMemberUseCase.create({
   memberRepository:failingRepo,
-  clock
+  clock,
+  audit
 });
 let storageFailed=false;
 try {
