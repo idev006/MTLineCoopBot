@@ -206,12 +206,20 @@ Api.ApiHandlers = (() => {
     return getCurrentFinance(ctx, 'dividends');
   }
 
+  function renewCurrentMember(ctx) {
+    const { system, principal } = requireLinePrincipal(ctx);
+    const result = system.renewMember.execute({ principal });
+    if (!result.ok) throwApplicationError(result);
+    return result.data;
+  }
+
   return {
     health,
     getCurrentProfile,
     getCurrentSavings,
     getCurrentLoans,
     getCurrentDividends,
+    renewCurrentMember,
     getProfile,
     getSavings,
     getLoans,
