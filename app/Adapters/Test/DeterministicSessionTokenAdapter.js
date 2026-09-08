@@ -12,7 +12,12 @@ Adapters.Test.DeterministicSessionTokenAdapter = (() => {
     const prefix = String(seed || 'test-session');
     return Object.freeze({
       generate: () => prefix + '-' + (++counter),
-      hash: raw => 'hash:' + String(raw || '')
+      hash: raw => {
+        const s = String(raw || '');
+        let acc = 17;
+        for (let i = 0; i < s.length; i++) acc = ((acc * 31) + s.charCodeAt(i)) >>> 0;
+        return 'test-hash-' + s.length + '-' + acc.toString(16);
+      }
     });
   }
 
