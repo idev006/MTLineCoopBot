@@ -24,6 +24,15 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
+   * ค้นหาสมาชิกจากรหัสสมาชิก
+   * @param {string} memberCode
+   * @returns {Object|null}
+   */
+  function findByMemberCode(memberCode) {
+    return LineBot.SheetService.findByMemberCode(memberCode);
+  }
+
+  /**
    * ค้นหาสมาชิกจาก activate code
    * @param {string} activateCode
    * @returns {Object|null} member object (มี _rowIndex) หรือ null
@@ -171,6 +180,7 @@ Data.SheetsMemberRepository = (() => {
 
   return {
     findByLineUserId,
+    findByMemberCode,
     findByActivateCode,
     activateMember,
     isActiveMember,
