@@ -94,6 +94,10 @@ const renewUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'RenewMemberUseCase.js'),
   'utf8'
 );
+const expiryScanUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Scheduled', 'ExpiryScanUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -174,6 +178,7 @@ vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfile
 vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
 vm.runInContext(activateUseCaseSrc, sandbox, { filename: 'ActivateMemberUseCase.js' });
 vm.runInContext(renewUseCaseSrc, sandbox, { filename: 'RenewMemberUseCase.js' });
+vm.runInContext(expiryScanUseCaseSrc, sandbox, { filename: 'ExpiryScanUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -222,6 +227,9 @@ if (!defaults.activateMember || typeof defaults.activateMember.execute !== 'func
 }
 if (!defaults.renewMember || typeof defaults.renewMember.execute !== 'function') {
   throw new Error('default renewal use case wiring failed');
+}
+if (!defaults.expiryScan || typeof defaults.expiryScan.execute !== 'function') {
+  throw new Error('default expiry scan use case wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
