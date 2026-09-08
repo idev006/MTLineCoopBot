@@ -14,6 +14,10 @@ LineBot.EventHandler = (() => {
    * handler does not capture undefined services during initialization.
    * @returns {{MessageService: Object, ReplyStore: Object, FlexBuilder: Object}}
    */
+  function getSystem() {
+    return Composition.SystemFactory.createSystem();
+  }
+
   function getDependencies() {
     return {
       MessageService: LineBot.MessageService,
@@ -118,12 +122,10 @@ LineBot.EventHandler = (() => {
    * @returns {Object|null} member ถ้าผ่าน / null ถ้าไม่ผ่าน
    */
   function getAuthorizedMember(lineUserId) {
-    const repo = Data.MemberRepository.getRepository();
-    const member = repo.findByLineUserId(lineUserId);
+    const system = getSystem();
+    const member = system.memberRepository.findByLineUserId(lineUserId);
     if (!member) return null;
-    if (!repo.isActiveMember(member)) return null;
-    const knownRoles = ['member', 'staff', 'admin'];
-    if (!knownRoles.includes(member.mem_role)) return null;
+    if (!system.memberAccess.hasKnownRole(member)) return null;
     return member;
   }
 
@@ -136,7 +138,8 @@ LineBot.EventHandler = (() => {
    * @returns {string}
    */
   function withExpiryWarning(text, member) {
-    const expiry = Core.MemberRules.getExpiryStatus(member, undefined, Config.get().EXPIRY_WARNING_DAYS);
+    const system = getSystem();
+    const expiry = system.memberAccess.expiryStatus(member, system.config.get().EXPIRY_WARNING_DAYS);
     return LineBot.MemberDataService.appendExpiryWarning(text, member, expiry);
   }
 
@@ -147,7 +150,8 @@ LineBot.EventHandler = (() => {
    */
   function getExpiryWarningText(member) {
     if (!member) return '';
-    const expiry = Core.MemberRules.getExpiryStatus(member, undefined, Config.get().EXPIRY_WARNING_DAYS);
+    const system = getSystem();
+    const expiry = system.memberAccess.expiryStatus(member, system.config.get().EXPIRY_WARNING_DAYS);
     return LineBot.MemberDataService.buildExpiryWarning(member, expiry);
   }
 
@@ -183,9 +187,9 @@ LineBot.EventHandler = (() => {
     // ถ้าเคยถูกผูกเป็นสมาชิกแล้ว แต่ตอนนี้ไม่ valid → ยกเลิกการผูกเมนู (กลับไป Welcome)
     if (lineUserId) {
       try {
-        const repo = Data.MemberRepository.getRepository();
-        const member = repo.findByLineUserId(lineUserId);
-        if (member && !repo.isActiveMember(member)) {
+        const system = getSystem();
+        const member = system.memberRepository.findByLineUserId(lineUserId);
+        if (member && !system.memberAccess.isActive(member)) {
           if (typeof RichMenu !== 'undefined' && RichMenu.Gating) {
             RichMenu.Gating.unlinkMemberMenu(lineUserId, token);
             Logger.log(`[Gate] Unlinked member menu for expired/revoked user: ${lineUserId}`);
