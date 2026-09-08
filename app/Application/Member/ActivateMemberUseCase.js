@@ -12,6 +12,7 @@ Application.Member.ActivateMemberUseCase = (() => {
     const d = deps || {};
     const repo = Ports.MemberRepositoryPort.assertImplemented(d.memberRepository);
     const clock = Ports.ClockPort.assertImplemented(d.clock);
+    const audit = Ports.AuditPort.assertImplemented(d.audit);
     const activationEngine = d.activationEngine || Engine.MemberActivationEngine;
 
     if (!activationEngine || typeof activationEngine.plan !== 'function') {
@@ -37,12 +38,13 @@ Application.Member.ActivateMemberUseCase = (() => {
 
       const persisted = repo.saveActivation(member._rowIndex, planned.activation);
 
-      repo.logActivation({
-        memCode: member.mem_code,
+      audit.record({
+        type: 'member.activation',
+        memberCode: member.mem_code,
         lineUserId,
         activateCode,
         status: 'success',
-        activatedDt: planned.activation.memEffDt
+        occurredAt: planned.activation.memEffDt
       });
 
       return {
