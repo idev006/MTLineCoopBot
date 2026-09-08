@@ -162,6 +162,10 @@ const activateUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'ActivateMemberUseCase.js'),
   'utf8'
 );
+const selfActivateUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Member', 'SelfActivateMemberUseCase.js'),
+  'utf8'
+);
 const renewUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'RenewMemberUseCase.js'),
   'utf8'
@@ -371,6 +375,7 @@ vm.runInContext(appsScriptSessionStoreSrc, sandbox, { filename: 'AppsScriptPrope
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
 vm.runInContext(activateUseCaseSrc, sandbox, { filename: 'ActivateMemberUseCase.js' });
+vm.runInContext(selfActivateUseCaseSrc, sandbox, { filename: 'SelfActivateMemberUseCase.js' });
 vm.runInContext(renewUseCaseSrc, sandbox, { filename: 'RenewMemberUseCase.js' });
 vm.runInContext(expiryUseCaseSrc, sandbox, { filename: 'ExpiryScanUseCase.js' });
 vm.runInContext(noticeUseCaseSrc, sandbox, { filename: 'NoticeBroadcastUseCase.js' });
@@ -463,6 +468,9 @@ if (!defaults.getCurrentMemberFinance || typeof defaults.getCurrentMemberFinance
 }
 if (!defaults.activateMember || typeof defaults.activateMember.execute !== 'function') {
   throw new Error('default activation use case wiring failed');
+}
+if (!defaults.selfActivateMember || typeof defaults.selfActivateMember.execute !== 'function') {
+  throw new Error('default secure self-activation wiring failed');
 }
 if (!defaults.renewMember || typeof defaults.renewMember.execute !== 'function') {
   throw new Error('default renewal use case wiring failed');
