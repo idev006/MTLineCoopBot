@@ -491,6 +491,39 @@ LineBot.SheetService = (() => {
     return result;
   }
 
+
+  function saveRole(rowIndex, role) {
+    const tableKey = 'MEMBER_MASTER';
+    const sheet = getSheet(tableKey);
+    const headerMap = getHeaderMap(sheet);
+    const roleIndex = headerMap['mem_role'];
+    if (roleIndex === undefined) {
+      throw new Error(`ไม่พบคอลัมน์ mem_role ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
+    }
+    sheet.getRange(rowIndex, roleIndex + 1).setValue(role);
+    return { memRole:role };
+  }
+
+  function appendAdminAuditLog(entry) {
+    const tableKey = 'ADMIN_AUDIT_LOG';
+    const sheet = getSheet(tableKey);
+    const logId = 'ALOG-' + String(Date.now());
+    const headers = getHeaderRow(sheet);
+    const row = DataDict.objectToRowByHeaders(tableKey, headers, {
+      log_id:logId,
+      actor_subject:entry.actorSubject || '',
+      actor_mem_code:entry.actorMemberCode || '',
+      action:entry.action || '',
+      mem_code:entry.memberCode || '',
+      old_value:entry.oldValue || '',
+      new_value:entry.newValue || '',
+      status:entry.status || 'attempt',
+      created_dt:DataDict.formatDateTime(entry.createdDt || new Date())
+    });
+    sheet.appendRow(row);
+    return { log_id:logId, status:entry.status || 'attempt' };
+  }
+
   /**
    * แปลงวันที่รูปแบบ yyyy-mm-dd[ HH:mm:ss] เป็น Date
    * (parse แบบ manual เพื่อกันปัญหา timezone ของ new Date(string))
@@ -554,6 +587,8 @@ LineBot.SheetService = (() => {
     saveRenewal,
     activateMember,
     saveActivation,
+    saveRole,
+    appendAdminAuditLog,
     isActiveMember,
     hasRole,
     isActivated,
