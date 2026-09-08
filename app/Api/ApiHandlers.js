@@ -348,6 +348,13 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function getWebRoleCatalog(ctx) {
+    const { system, principal } = requireWebPrincipal(ctx);
+    const result = system.getRoleCatalog.execute({ principal });
+    if (!result.ok) throwWebApplicationError(result);
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -378,6 +385,7 @@ Api.ApiHandlers = (() => {
     getWebSummaryReport,
     renewWebMember,
     listWebStaffAccounts,
+    getWebRoleCatalog,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
