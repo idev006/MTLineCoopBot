@@ -62,6 +62,10 @@ const profileUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'GetCurrentMemberProfileUseCase.js'),
   'utf8'
 );
+const financeUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Member', 'GetCurrentMemberFinanceUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -131,6 +135,7 @@ vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js
 vm.runInContext(lineVerifierSrc, sandbox, { filename: 'LineIdTokenVerifier.js' });
 vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' });
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
+vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -166,7 +171,10 @@ if (!defaults.authorization.requireAuthenticated) throw new Error('default autho
 if (!defaults.lineIdentity || typeof defaults.lineIdentity.authenticate !== 'function') throw new Error('default LINE identity wiring failed');
 if (!defaults.lineIdTokenVerifier || typeof defaults.lineIdTokenVerifier.verify !== 'function') throw new Error('default LINE verifier wiring failed');
 if (!defaults.getCurrentMemberProfile || typeof defaults.getCurrentMemberProfile.execute !== 'function') {
-  throw new Error('default application use case wiring failed');
+  throw new Error('default profile use case wiring failed');
+}
+if (!defaults.getCurrentMemberFinance || typeof defaults.getCurrentMemberFinance.execute !== 'function') {
+  throw new Error('default finance use case wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
