@@ -22,6 +22,14 @@ const auditPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'AuditPort.js'),
   'utf8'
 );
+const adminAuditStorePortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'AdminAuditStorePort.js'),
+  'utf8'
+);
+const staffAdminRepositoryPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'StaffAdminRepositoryPort.js'),
+  'utf8'
+);
 const auditQueryPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'AuditQueryPort.js'),
   'utf8'
@@ -108,6 +116,14 @@ const appsScriptConfigSrc = fs.readFileSync(
 );
 const repositoryAuditSrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Audit', 'MemberRepositoryAuditAdapter.js'),
+  'utf8'
+);
+const sheetsAdminAuditStoreSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Audit', 'SheetsAdminAuditStore.js'),
+  'utf8'
+);
+const sheetsStaffAdminRepositorySrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Admin', 'SheetsStaffAdminRepository.js'),
   'utf8'
 );
 const sheetsAuditQuerySrc = fs.readFileSync(
@@ -210,6 +226,10 @@ const getRoleCatalogSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetRoleCatalogUseCase.js'),
   'utf8'
 );
+const assignStaffRoleSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'AssignStaffRoleUseCase.js'),
+  'utf8'
+);
 const getAuditLogSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetAuditLogUseCase.js'),
   'utf8'
@@ -262,6 +282,8 @@ const fakeRepo = makeRepo('fake-repo');
 const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeAudit = { record: () => ({ ok: true }) };
+const fakeAdminAuditStore = { append: () => ({ ok:true }) };
+const fakeStaffAdminRepository = { saveRole: () => ({ memRole:'staff' }) };
 const fakeAuditQuery = { list: () => [] };
 const fakeReportQuery = { snapshot: () => ({members:[],savings:[],loans:[],dividends:[]}) };
 const fakeMessaging = { send: () => ({ ok: true }) };
@@ -312,6 +334,8 @@ vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
 vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
+vm.runInContext(adminAuditStorePortSrc, sandbox, { filename: 'AdminAuditStorePort.js' });
+vm.runInContext(staffAdminRepositoryPortSrc, sandbox, { filename: 'StaffAdminRepositoryPort.js' });
 vm.runInContext(auditQueryPortSrc, sandbox, { filename: 'AuditQueryPort.js' });
 vm.runInContext(reportQueryPortSrc, sandbox, { filename: 'ReportQueryPort.js' });
 vm.runInContext(messagingPortSrc, sandbox, { filename: 'MessagingPort.js' });
@@ -333,6 +357,8 @@ vm.runInContext(webSessionEngineSrc, sandbox, { filename: 'WebSessionEngine.js' 
 vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
 vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
 vm.runInContext(repositoryAuditSrc, sandbox, { filename: 'MemberRepositoryAuditAdapter.js' });
+vm.runInContext(sheetsAdminAuditStoreSrc, sandbox, { filename: 'SheetsAdminAuditStore.js' });
+vm.runInContext(sheetsStaffAdminRepositorySrc, sandbox, { filename: 'SheetsStaffAdminRepository.js' });
 vm.runInContext(sheetsAuditQuerySrc, sandbox, { filename: 'SheetsAuditQueryAdapter.js' });
 vm.runInContext(sheetsReportQuerySrc, sandbox, { filename: 'SheetsReportQueryAdapter.js' });
 vm.runInContext(lineMessagingSrc, sandbox, { filename: 'LineMessagingAdapter.js' });
@@ -354,6 +380,7 @@ vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseC
 vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
 vm.runInContext(listStaffAccountsSrc, sandbox, { filename: 'ListStaffAccountsUseCase.js' });
 vm.runInContext(getRoleCatalogSrc, sandbox, { filename: 'GetRoleCatalogUseCase.js' });
+vm.runInContext(assignStaffRoleSrc, sandbox, { filename: 'AssignStaffRoleUseCase.js' });
 vm.runInContext(getAuditLogSrc, sandbox, { filename: 'GetAuditLogUseCase.js' });
 vm.runInContext(getSummaryReportSrc, sandbox, { filename: 'GetSummaryReportUseCase.js' });
 vm.runInContext(renewWebMemberSrc, sandbox, { filename: 'RenewMemberByStaffUseCase.js' });
@@ -373,6 +400,8 @@ const injected = createSystem({
   clock: fakeClock,
   config: fakeConfig,
   audit: fakeAudit,
+  adminAuditStore: fakeAdminAuditStore,
+  staffAdminRepository: fakeStaffAdminRepository,
   auditQuery: fakeAuditQuery,
   reportQuery: fakeReportQuery,
   messaging: fakeMessaging,
@@ -391,6 +420,8 @@ if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository in
 if (injected.clock !== fakeClock) throw new Error('clock injection failed');
 if (injected.config !== fakeConfig) throw new Error('config injection failed');
 if (injected.audit !== fakeAudit) throw new Error('audit injection failed');
+if (injected.adminAuditStore !== fakeAdminAuditStore) throw new Error('adminAuditStore injection failed');
+if (injected.staffAdminRepository !== fakeStaffAdminRepository) throw new Error('staffAdminRepository injection failed');
 if (injected.auditQuery !== fakeAuditQuery) throw new Error('auditQuery injection failed');
 if (injected.reportQuery !== fakeReportQuery) throw new Error('reportQuery injection failed');
 if (injected.messaging !== fakeMessaging) throw new Error('messaging injection failed');
@@ -409,6 +440,8 @@ const defaults = createSystem();
 if (defaults.memberRepository.name !== 'prod-repo') throw new Error('default repository wiring failed');
 if (defaults.config.get().mode !== 'prod') throw new Error('default config wiring failed');
 if (!defaults.audit || typeof defaults.audit.record !== 'function') throw new Error('default audit wiring failed');
+if (!defaults.adminAuditStore || typeof defaults.adminAuditStore.append !== 'function') throw new Error('default admin audit store wiring failed');
+if (!defaults.staffAdminRepository || typeof defaults.staffAdminRepository.saveRole !== 'function') throw new Error('default staff admin repository wiring failed');
 if (!defaults.auditQuery || typeof defaults.auditQuery.list !== 'function') throw new Error('default audit-query wiring failed');
 if (!defaults.reportQuery || typeof defaults.reportQuery.snapshot !== 'function') throw new Error('default report-query wiring failed');
 if (!defaults.messaging || typeof defaults.messaging.send !== 'function') throw new Error('default messaging wiring failed');
@@ -454,6 +487,9 @@ if (!defaults.listStaffAccounts || typeof defaults.listStaffAccounts.execute !==
 }
 if (!defaults.getRoleCatalog || typeof defaults.getRoleCatalog.execute !== 'function') {
   throw new Error('default role catalog wiring failed');
+}
+if (!defaults.assignStaffRole || typeof defaults.assignStaffRole.execute !== 'function') {
+  throw new Error('default staff role assignment wiring failed');
 }
 if (!defaults.getAuditLog || typeof defaults.getAuditLog.execute !== 'function') {
   throw new Error('default audit-log wiring failed');
