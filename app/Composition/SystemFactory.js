@@ -62,6 +62,16 @@ Composition.SystemFactory = (() => {
     const audit = Ports.AuditPort.assertImplemented(
       o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({ memberRepository })
     );
+    const messaging = Ports.MessagingPort.assertImplemented(
+      o.messaging || Adapters.Line.LineMessagingAdapter.create({
+        tokenProvider: () => config.get().CHANNEL_ACCESS_TOKEN
+      })
+    );
+    const memberMenu = Ports.MemberMenuPort.assertImplemented(
+      o.memberMenu || Adapters.Line.LineMemberMenuAdapter.create({
+        tokenProvider: () => config.get().CHANNEL_ACCESS_TOKEN
+      })
+    );
     const lineIdentity = Ports.IdentityPort.assertImplemented(
       o.lineIdentity || Adapters.Security.LineIdentityAdapter.create({
         verifier: lineIdTokenVerifier,
@@ -95,11 +105,36 @@ Composition.SystemFactory = (() => {
         authorization,
         audit
       });
+    const expiryScan = o.expiryScan ||
+      Application.Scheduled.ExpiryScanUseCase.create({
+        memberRepository,
+        clock,
+        config,
+        messaging,
+        memberMenu,
+        audit
+      });
+    const noticeBroadcast = o.noticeBroadcast ||
+      Application.Scheduled.NoticeBroadcastUseCase.create({
+        memberRepository,
+        clock,
+        messaging
+      });
+    const loanReminder = o.loanReminder ||
+      Application.Scheduled.LoanReminderUseCase.create({
+        memberRepository,
+        clock,
+        config,
+        messaging,
+        audit
+      });
 
     return Object.freeze({
       clock,
       config,
       audit,
+      messaging,
+      memberMenu,
       memberRepository,
       memberAccess,
       identity,
@@ -110,6 +145,9 @@ Composition.SystemFactory = (() => {
       getCurrentMemberFinance,
       activateMember,
       renewMember,
+      expiryScan,
+      noticeBroadcast,
+      loanReminder,
       api: o.api || defaultApi()
     });
   }
