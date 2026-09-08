@@ -161,6 +161,7 @@ const FILE_ORDER = [
   'Application/Security/ExchangeLineForWebSessionUseCase.js',
   'Application/Web/ListMembersUseCase.js',
   'Application/Web/GetMemberDetailUseCase.js',
+  'Application/Web/GetAdminSettingsUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',
