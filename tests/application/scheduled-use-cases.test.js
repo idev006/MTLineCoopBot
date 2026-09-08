@@ -69,8 +69,8 @@ function makeDeps(seed){
       {mem_code:'M2',mem_status:'inactive',line_user_id:'U2'}
     ],
     notices:[
-      {notice_id:'N1',status:'pending',publish_dt:'2026-09-01'},
-      {notice_id:'N2',status:'sent',publish_dt:'2026-09-01'}
+      {notice_id:'N1',status:'published',published_dt:'2026-09-01 09:00:00',sent_dt:''},
+      {notice_id:'N2',status:'published',published_dt:'2026-09-01 09:00:00',sent_dt:'2026-09-02 09:00:00'}
     ]
   });
   const uc=sandbox.Application.Scheduled.NoticeBroadcastUseCase.create({
