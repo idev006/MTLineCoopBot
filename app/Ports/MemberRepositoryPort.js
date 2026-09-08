@@ -24,6 +24,7 @@ Ports.MemberRepositoryPort = (() => {
     'listMembers',
     'logExpiry',
     'renewMember',
+    'saveRenewal',
     'listNotices',
     'markNoticeSent',
     'listLoans',
