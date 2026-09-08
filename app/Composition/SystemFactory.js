@@ -262,6 +262,7 @@ Composition.SystemFactory = (() => {
       getCurrentMemberProfile,
       getCurrentMemberFinance,
       activateMember,
+      selfActivateMember,
       renewMember,
       expiryScan,
       noticeBroadcast,
