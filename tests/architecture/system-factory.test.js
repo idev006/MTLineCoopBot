@@ -74,6 +74,10 @@ const principalSrc = fs.readFileSync(
   path.join(root, 'app', 'Security', 'Principal.js'),
   'utf8'
 );
+const roleCatalogSrc = fs.readFileSync(
+  path.join(root, 'app', 'Security', 'RoleCatalog.js'),
+  'utf8'
+);
 const identityPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'IdentityPort.js'),
   'utf8'
@@ -202,6 +206,10 @@ const listStaffAccountsSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'ListStaffAccountsUseCase.js'),
   'utf8'
 );
+const getRoleCatalogSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'GetRoleCatalogUseCase.js'),
+  'utf8'
+);
 const getAuditLogSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetAuditLogUseCase.js'),
   'utf8'
@@ -315,6 +323,7 @@ vm.runInContext(loanRulesSrc, sandbox, { filename: 'LoanRules.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
 vm.runInContext(activationEngineSrc, sandbox, { filename: 'MemberActivationEngine.js' });
 vm.runInContext(principalSrc, sandbox, { filename: 'Principal.js' });
+vm.runInContext(roleCatalogSrc, sandbox, { filename: 'RoleCatalog.js' });
 vm.runInContext(identityPortSrc, sandbox, { filename: 'IdentityPort.js' });
 vm.runInContext(httpClientPortSrc, sandbox, { filename: 'HttpClientPort.js' });
 vm.runInContext(lineIdTokenVerifierPortSrc, sandbox, { filename: 'IdTokenVerifierPort.js' });
@@ -344,6 +353,7 @@ vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
 vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
 vm.runInContext(listStaffAccountsSrc, sandbox, { filename: 'ListStaffAccountsUseCase.js' });
+vm.runInContext(getRoleCatalogSrc, sandbox, { filename: 'GetRoleCatalogUseCase.js' });
 vm.runInContext(getAuditLogSrc, sandbox, { filename: 'GetAuditLogUseCase.js' });
 vm.runInContext(getSummaryReportSrc, sandbox, { filename: 'GetSummaryReportUseCase.js' });
 vm.runInContext(renewWebMemberSrc, sandbox, { filename: 'RenewMemberByStaffUseCase.js' });
@@ -441,6 +451,9 @@ if (!defaults.getAdminSettings || typeof defaults.getAdminSettings.execute !== '
 }
 if (!defaults.listStaffAccounts || typeof defaults.listStaffAccounts.execute !== 'function') {
   throw new Error('default staff accounts wiring failed');
+}
+if (!defaults.getRoleCatalog || typeof defaults.getRoleCatalog.execute !== 'function') {
+  throw new Error('default role catalog wiring failed');
 }
 if (!defaults.getAuditLog || typeof defaults.getAuditLog.execute !== 'function') {
   throw new Error('default audit-log wiring failed');
