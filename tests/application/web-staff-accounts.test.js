@@ -6,6 +6,7 @@ const sandbox={Ports:{},Security:{},Engine:{},Application:{},Adapters:{},Date,Ob
 vm.createContext(sandbox);
 for(const rel of [
   'app/Security/Principal.js',
+  'app/Security/RoleCatalog.js',
   'app/Ports/MemberRepositoryPort.js',
   'app/Engine/AuthorizationEngine.js',
   'app/Adapters/Test/InMemoryMemberRepository.js',

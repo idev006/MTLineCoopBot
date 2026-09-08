@@ -71,6 +71,7 @@ jobs:
           node tests/application/web-member-rbac.test.js
           node tests/application/web-admin-settings.test.js
           node tests/application/web-staff-accounts.test.js
+          node tests/application/web-role-catalog.test.js
           node tests/application/web-audit-query.test.js
           node tests/application/web-summary-report.test.js
           node tests/application/web-member-renew-write.test.js
@@ -88,6 +89,7 @@ jobs:
           node tests/application/web-member-api.test.js
           node tests/application/web-admin-settings-api.test.js
           node tests/application/web-staff-accounts-api.test.js
+          node tests/application/web-role-catalog-api.test.js
           node tests/application/web-audit-api.test.js
           node tests/application/web-summary-report-api.test.js
           node tests/application/web-member-renew-write-api.test.js
