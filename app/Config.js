@@ -65,7 +65,9 @@ const Config = (() => {
       // จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" — แจ้งเตือน + แนบคำเตือนในคำตอบ (การ์ด MT-11)
       EXPIRY_WARNING_DAYS: Number(_props.getProperty('EXPIRY_WARNING_DAYS') || 30),
       // จำนวนวันก่อนครบกำหนดชำระที่ถือว่า "ใกล้ถึงกำหนด" — เตือนชำระ (การ์ด MT-13b)
-      PAYMENT_REMINDER_DAYS: Number(_props.getProperty('PAYMENT_REMINDER_DAYS') || 14)
+      PAYMENT_REMINDER_DAYS: Number(_props.getProperty('PAYMENT_REMINDER_DAYS') || 14),
+      // Server-side Web session TTL (seconds). Default 8 hours.
+      WEB_SESSION_TTL_SECONDS: Number(_props.getProperty('WEB_SESSION_TTL_SECONDS') || 28800)
       // IMAGE_FILE_IDS ถูกกำหนดไว้ใน Config.IMAGE_FILE_IDS โดยตรง
     };
   }
@@ -76,7 +78,8 @@ const Config = (() => {
       'CHANNEL_SECRET': 'ใส่_CHANNEL_SECRET_ของคุณ_ที่นี่',
       'LINE_LOGIN_CHANNEL_ID': 'ใส่_LINE_LOGIN_CHANNEL_ID_ของคุณ_ที่นี่',
       'WEBHOOK_SECRET': 'ใส่_รหัสยาวสุ่ม_สำหรับ_Webhook_URL_ที่นี่',
-      'API_KEY': 'ใส่_API_KEY_ยาวสุ่ม_สำหรับ_เรียก_API_ที่นี่'
+      'API_KEY': 'ใส่_API_KEY_ยาวสุ่ม_สำหรับ_เรียก_API_ที่นี่',
+      'WEB_SESSION_TTL_SECONDS': '28800'
     };
     _props.setProperties({ ...defaults, ...values });
     Logger.log('บันทึก config แล้ว — กรุณาเลือกฟังก์ชัน main แล้วกดรัน');
