@@ -40,10 +40,14 @@ Composition.SystemFactory = (() => {
    */
   function createSystem(overrides) {
     const o = overrides || {};
+    const clock = Ports.ClockPort.assertImplemented(o.clock || defaultClock());
+    const memberAccess = o.memberAccess || Engine.MemberAccessEngine.create({ clock });
+
     return Object.freeze({
-      clock: Ports.ClockPort.assertImplemented(o.clock || defaultClock()),
+      clock,
       config: o.config || defaultConfig(),
       memberRepository: o.memberRepository || defaultMemberRepository(),
+      memberAccess,
       api: o.api || defaultApi()
     });
   }
