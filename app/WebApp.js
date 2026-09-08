@@ -43,6 +43,8 @@ function isIdentityAuthenticatedApiPath(path) {
   return path === '/api/web/session/line' ||
     path === '/api/web/session/verify' ||
     path === '/api/web/session/revoke' ||
+    path === '/api/web/members/list' ||
+    path === '/api/web/members/detail' ||
     path === '/api/member/me/profile' ||
     path === '/api/member/me/savings' ||
     path === '/api/member/me/loans' ||
