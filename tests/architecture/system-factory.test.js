@@ -26,6 +26,10 @@ const auditQueryPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'AuditQueryPort.js'),
   'utf8'
 );
+const reportQueryPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'ReportQueryPort.js'),
+  'utf8'
+);
 const messagingPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'MessagingPort.js'),
   'utf8'
@@ -104,6 +108,10 @@ const repositoryAuditSrc = fs.readFileSync(
 );
 const sheetsAuditQuerySrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Audit', 'SheetsAuditQueryAdapter.js'),
+  'utf8'
+);
+const sheetsReportQuerySrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Report', 'SheetsReportQueryAdapter.js'),
   'utf8'
 );
 const lineVerifierSrc = fs.readFileSync(
@@ -194,6 +202,10 @@ const getAuditLogSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetAuditLogUseCase.js'),
   'utf8'
 );
+const getSummaryReportSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'GetSummaryReportUseCase.js'),
+  'utf8'
+);
 const loanCalculatorSrc = fs.readFileSync(
   path.join(root, 'app', 'Core', 'LoanCalculator.js'),
   'utf8'
@@ -235,6 +247,7 @@ const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeAudit = { record: () => ({ ok: true }) };
 const fakeAuditQuery = { list: () => [] };
+const fakeReportQuery = { snapshot: () => ({members:[],savings:[],loans:[],dividends:[]}) };
 const fakeMessaging = { send: () => ({ ok: true }) };
 const fakeMemberMenu = { revokeMemberMenu: () => ({ ok: true }) };
 const fakeApi = { handleRequest: () => ({ ok: true }) };
@@ -284,6 +297,7 @@ vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
 vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
 vm.runInContext(auditQueryPortSrc, sandbox, { filename: 'AuditQueryPort.js' });
+vm.runInContext(reportQueryPortSrc, sandbox, { filename: 'ReportQueryPort.js' });
 vm.runInContext(messagingPortSrc, sandbox, { filename: 'MessagingPort.js' });
 vm.runInContext(memberMenuPortSrc, sandbox, { filename: 'MemberMenuPort.js' });
 vm.runInContext(sessionStorePortSrc, sandbox, { filename: 'SessionStorePort.js' });
@@ -303,6 +317,7 @@ vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAda
 vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
 vm.runInContext(repositoryAuditSrc, sandbox, { filename: 'MemberRepositoryAuditAdapter.js' });
 vm.runInContext(sheetsAuditQuerySrc, sandbox, { filename: 'SheetsAuditQueryAdapter.js' });
+vm.runInContext(sheetsReportQuerySrc, sandbox, { filename: 'SheetsReportQueryAdapter.js' });
 vm.runInContext(lineMessagingSrc, sandbox, { filename: 'LineMessagingAdapter.js' });
 vm.runInContext(lineMemberMenuSrc, sandbox, { filename: 'LineMemberMenuAdapter.js' });
 vm.runInContext(denyIdentitySrc, sandbox, { filename: 'DenyAllIdentityAdapter.js' });
@@ -321,6 +336,7 @@ vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
 vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
 vm.runInContext(getAuditLogSrc, sandbox, { filename: 'GetAuditLogUseCase.js' });
+vm.runInContext(getSummaryReportSrc, sandbox, { filename: 'GetSummaryReportUseCase.js' });
 vm.runInContext(createWebSessionSrc, sandbox, { filename: 'CreateWebSessionUseCase.js' });
 vm.runInContext(exchangeLineForWebSessionSrc, sandbox, { filename: 'ExchangeLineForWebSessionUseCase.js' });
 vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
@@ -338,6 +354,7 @@ const injected = createSystem({
   config: fakeConfig,
   audit: fakeAudit,
   auditQuery: fakeAuditQuery,
+  reportQuery: fakeReportQuery,
   messaging: fakeMessaging,
   memberMenu: fakeMemberMenu,
   api: fakeApi,
@@ -355,6 +372,7 @@ if (injected.clock !== fakeClock) throw new Error('clock injection failed');
 if (injected.config !== fakeConfig) throw new Error('config injection failed');
 if (injected.audit !== fakeAudit) throw new Error('audit injection failed');
 if (injected.auditQuery !== fakeAuditQuery) throw new Error('auditQuery injection failed');
+if (injected.reportQuery !== fakeReportQuery) throw new Error('reportQuery injection failed');
 if (injected.messaging !== fakeMessaging) throw new Error('messaging injection failed');
 if (injected.memberMenu !== fakeMemberMenu) throw new Error('memberMenu injection failed');
 if (injected.api !== fakeApi) throw new Error('api injection failed');
@@ -372,6 +390,7 @@ if (defaults.memberRepository.name !== 'prod-repo') throw new Error('default rep
 if (defaults.config.get().mode !== 'prod') throw new Error('default config wiring failed');
 if (!defaults.audit || typeof defaults.audit.record !== 'function') throw new Error('default audit wiring failed');
 if (!defaults.auditQuery || typeof defaults.auditQuery.list !== 'function') throw new Error('default audit-query wiring failed');
+if (!defaults.reportQuery || typeof defaults.reportQuery.snapshot !== 'function') throw new Error('default report-query wiring failed');
 if (!defaults.messaging || typeof defaults.messaging.send !== 'function') throw new Error('default messaging wiring failed');
 if (!defaults.memberMenu || typeof defaults.memberMenu.revokeMemberMenu !== 'function') throw new Error('default member-menu wiring failed');
 if (!defaults.clock.now()) throw new Error('default clock wiring failed');
@@ -412,6 +431,9 @@ if (!defaults.getAdminSettings || typeof defaults.getAdminSettings.execute !== '
 }
 if (!defaults.getAuditLog || typeof defaults.getAuditLog.execute !== 'function') {
   throw new Error('default audit-log wiring failed');
+}
+if (!defaults.getSummaryReport || typeof defaults.getSummaryReport.execute !== 'function') {
+  throw new Error('default summary-report wiring failed');
 }
 if (!defaults.createWebSession || typeof defaults.createWebSession.execute !== 'function') {
   throw new Error('default create web session wiring failed');
