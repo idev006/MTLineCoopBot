@@ -40,7 +40,10 @@ function isPublicApiPath(path) {
 }
 
 function isIdentityAuthenticatedApiPath(path) {
-  return path === '/api/member/me/profile' ||
+  return path === '/api/web/session/line' ||
+    path === '/api/web/session/verify' ||
+    path === '/api/web/session/revoke' ||
+    path === '/api/member/me/profile' ||
     path === '/api/member/me/savings' ||
     path === '/api/member/me/loans' ||
     path === '/api/member/me/dividends' ||

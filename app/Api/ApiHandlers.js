@@ -213,6 +213,51 @@ Api.ApiHandlers = (() => {
     return result.data;
   }
 
+  function webSessionFromLine(ctx) {
+    const system = getSystem();
+    const idToken = ctx && ctx.body ? ctx.body.idToken : null;
+    const result = system.exchangeLineForWebSession.execute({ idToken });
+    if (!result.ok) {
+      const code = result.error && result.error.code ? result.error.code : 'UNAUTHENTICATED';
+      const status = code === 'FORBIDDEN' ? 403 : 401;
+      throw Api.ApiError.create(code, code === 'FORBIDDEN'
+        ? 'บัญชีนี้ไม่มีสิทธิ์ใช้งานระบบเจ้าหน้าที่'
+        : 'ไม่สามารถยืนยันตัวตนได้', status);
+    }
+    return result.data;
+  }
+
+  function verifyWebSession(ctx) {
+    const system = getSystem();
+    const token = ctx && ctx.body ? ctx.body.sessionToken : null;
+    const result = system.verifyWebSession.execute({ token });
+    if (!result.ok) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'session ไม่ถูกต้องหรือหมดอายุ', 401);
+    }
+    const principal = result.data.principal;
+    return {
+      valid:true,
+      user:{
+        subject:principal.subject,
+        roles:Array.from(principal.roles || []),
+        memberCode:principal.memberCode || null
+      },
+      expiresAt:principal.claims && principal.claims.sessionExpiresAt
+        ? principal.claims.sessionExpiresAt
+        : null
+    };
+  }
+
+  function revokeWebSession(ctx) {
+    const system = getSystem();
+    const token = ctx && ctx.body ? ctx.body.sessionToken : null;
+    const result = system.revokeWebSession.execute({ token });
+    if (!result.ok) {
+      throw Api.ApiError.create('UNAUTHENTICATED', 'session ไม่ถูกต้อง', 401);
+    }
+    return result.data;
+  }
+
   /**
    * POST /api/loan/calculate
    * Public/read-only canonical loan calculation.
@@ -233,6 +278,9 @@ Api.ApiHandlers = (() => {
 
   return {
     health,
+    webSessionFromLine,
+    verifyWebSession,
+    revokeWebSession,
     calculateLoan,
     getCurrentProfile,
     getCurrentSavings,
