@@ -170,6 +170,14 @@ const webSessionIdentitySrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Security', 'WebSessionIdentityAdapter.js'),
   'utf8'
 );
+const listWebMembersSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'ListMembersUseCase.js'),
+  'utf8'
+);
+const getWebMemberDetailSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'GetMemberDetailUseCase.js'),
+  'utf8'
+);
 const loanCalculatorSrc = fs.readFileSync(
   path.join(root, 'app', 'Core', 'LoanCalculator.js'),
   'utf8'
@@ -294,6 +302,8 @@ vm.runInContext(exchangeLineForWebSessionSrc, sandbox, { filename: 'ExchangeLine
 vm.runInContext(verifyWebSessionSrc, sandbox, { filename: 'VerifyWebSessionUseCase.js' });
 vm.runInContext(revokeWebSessionSrc, sandbox, { filename: 'RevokeWebSessionUseCase.js' });
 vm.runInContext(webSessionIdentitySrc, sandbox, { filename: 'WebSessionIdentityAdapter.js' });
+vm.runInContext(listWebMembersSrc, sandbox, { filename: 'ListMembersUseCase.js' });
+vm.runInContext(getWebMemberDetailSrc, sandbox, { filename: 'GetMemberDetailUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -381,6 +391,12 @@ if (!defaults.revokeWebSession || typeof defaults.revokeWebSession.execute !== '
 }
 if (!defaults.exchangeLineForWebSession || typeof defaults.exchangeLineForWebSession.execute !== 'function') {
   throw new Error('default LINE-to-Web session exchange wiring failed');
+}
+if (!defaults.listWebMembers || typeof defaults.listWebMembers.execute !== 'function') {
+  throw new Error('default Web member list wiring failed');
+}
+if (!defaults.getWebMemberDetail || typeof defaults.getWebMemberDetail.execute !== 'function') {
+  throw new Error('default Web member detail wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');

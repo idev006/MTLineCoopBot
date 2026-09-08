@@ -159,6 +159,8 @@ const FILE_ORDER = [
   'Application/Security/VerifyWebSessionUseCase.js',
   'Application/Security/RevokeWebSessionUseCase.js',
   'Application/Security/ExchangeLineForWebSessionUseCase.js',
+  'Application/Web/ListMembersUseCase.js',
+  'Application/Web/GetMemberDetailUseCase.js',
   'Composition/SystemFactory.js',
   'LineBot/SheetService.js',
   'LineBot/ReplyStore.js',

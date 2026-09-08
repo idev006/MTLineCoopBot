@@ -169,6 +169,16 @@ Composition.SystemFactory = (() => {
         authorization,
         createWebSession
       });
+    const listWebMembers = o.listWebMembers ||
+      Application.Web.ListMembersUseCase.create({
+        memberRepository,
+        authorization
+      });
+    const getWebMemberDetail = o.getWebMemberDetail ||
+      Application.Web.GetMemberDetailUseCase.create({
+        memberRepository,
+        authorization
+      });
 
     return Object.freeze({
       clock,
@@ -198,6 +208,8 @@ Composition.SystemFactory = (() => {
       verifyWebSession,
       revokeWebSession,
       exchangeLineForWebSession,
+      listWebMembers,
+      getWebMemberDetail,
       api: o.api || defaultApi()
     });
   }

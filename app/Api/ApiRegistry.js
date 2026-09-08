@@ -29,6 +29,8 @@ Api.ApiRegistry = (() => {
       { method: 'POST', path: '/api/web/session/line', handler: h.webSessionFromLine, auth: 'line-id-token' },
       { method: 'POST', path: '/api/web/session/verify', handler: h.verifyWebSession, auth: 'web-session' },
       { method: 'POST', path: '/api/web/session/revoke', handler: h.revokeWebSession, auth: 'web-session' },
+      { method: 'POST', path: '/api/web/members/list', handler: h.listWebMembers, auth: 'web-session' },
+      { method: 'POST', path: '/api/web/members/detail', handler: h.getWebMemberDetail, auth: 'web-session' },
       { method: 'POST', path: '/api/member/me/profile', handler: h.getCurrentProfile, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/savings', handler: h.getCurrentSavings, auth: 'line-id-token' },
       { method: 'POST', path: '/api/member/me/loans', handler: h.getCurrentLoans, auth: 'line-id-token' },
