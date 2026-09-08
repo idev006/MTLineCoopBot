@@ -23,7 +23,7 @@ Application.Web.GetAuditLogUseCase = (() => {
         id:String(r.log_id || ''),
         memCode:String(r.mem_code || ''),
         status:String(r.status || ''),
-        timestamp:String(r.activated_dt || r.checked_dt || r.reminded_dt || '')
+        timestamp:String(r.activated_dt || r.checked_dt || r.reminded_dt || r.created_dt || '')
       };
       if (type === 'expiry') {
         base.daysLeft = Number(r.days_left || 0);
@@ -32,6 +32,11 @@ Application.Web.GetAuditLogUseCase = (() => {
         base.daysLeft = Number(r.days_left || 0);
         base.loanNo = r.loan_no || '';
         base.dueDt = r.due_dt || '';
+      } else if (type === 'admin') {
+        base.action = r.action || '';
+        base.actorMemberCode = r.actor_mem_code || '';
+        base.oldValue = r.old_value || '';
+        base.newValue = r.new_value || '';
       }
       return base;
     }
@@ -44,7 +49,7 @@ Application.Web.GetAuditLogUseCase = (() => {
       }
 
       const type = String(x.type || 'all');
-      if (!['all','activation','expiry','reminder'].includes(type)) {
+      if (!['all','activation','expiry','reminder','admin'].includes(type)) {
         return { ok:false, error:{ code:'VALIDATION' } };
       }
 

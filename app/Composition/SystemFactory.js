@@ -65,9 +65,18 @@ Composition.SystemFactory = (() => {
     );
     const webSessionEngine = o.webSessionEngine || Engine.WebSessionEngine.create({ clock });
     const memberRepository = o.memberRepository || defaultMemberRepository();
+    const staffAdminRepository = Ports.StaffAdminRepositoryPort.assertImplemented(
+      o.staffAdminRepository || Adapters.Admin.SheetsStaffAdminRepository
+    );
+    const adminAuditStore = Ports.AdminAuditStorePort.assertImplemented(
+      o.adminAuditStore || Adapters.Audit.SheetsAdminAuditStore
+    );
     const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
     const audit = Ports.AuditPort.assertImplemented(
-      o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({ memberRepository })
+      o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({
+        memberRepository,
+        adminAuditStore
+      })
     );
     const auditQuery = Ports.AuditQueryPort.assertImplemented(
       o.auditQuery || Adapters.Audit.SheetsAuditQueryAdapter
@@ -200,6 +209,15 @@ Composition.SystemFactory = (() => {
         authorization,
         roleCatalog:o.roleCatalog || Security.RoleCatalog
       });
+    const assignStaffRole = o.assignStaffRole ||
+      Application.Web.AssignStaffRoleUseCase.create({
+        memberRepository,
+        staffAdminRepository,
+        clock,
+        authorization,
+        audit,
+        roleCatalog:o.roleCatalog || Security.RoleCatalog
+      });
     const getAuditLog = o.getAuditLog ||
       Application.Web.GetAuditLogUseCase.create({
         auditQuery,
@@ -230,6 +248,8 @@ Composition.SystemFactory = (() => {
       messaging,
       memberMenu,
       memberRepository,
+      staffAdminRepository,
+      adminAuditStore,
       memberAccess,
       identity,
       lineIdentity,
@@ -259,6 +279,7 @@ Composition.SystemFactory = (() => {
       renewWebMember,
       listStaffAccounts,
       getRoleCatalog,
+      assignStaffRole,
       api: o.api || defaultApi()
     });
   }
