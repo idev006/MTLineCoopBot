@@ -1,29 +1,9 @@
 /**
  * @fileoverview Data.MemberRepository
- * สัญญา (interface) ของ Repository สมาชิก + factory สำหรับเลือกฐานข้อมูล
+ * Compatibility factory for selecting the configured member repository adapter.
  *
- * ออกแบบตาม Repository Pattern (บทที่ 3.2.4):
- * - Core/Business Logic เรียกผ่าน interface นี้เท่านั้น — ไม่รู้ว่าข้อมูลเก็บที่ไหน
- * - เปลี่ยนฐานข้อมูล = เขียน repository ใหม่ + เปลี่ยนค่า DB_TYPE ใน Script Properties
- *
- * สัญญาที่ทุก implementation ต้องมี:
- * - findByLineUserId(lineUserId) → member|null
- * - findByActivateCode(code)     → member|null (มี _rowIndex)
- * - activateMember(rowIndex, lineUserId) → { memEffDt, memExpDt }
- * - isActiveMember(member)       → boolean (กฎความ valid — จะย้ายไป Core ในเฟส 3)
- * - hasRole(member, role)        → boolean
- * - findSavingsByMember(memCode) → Array<Object> (t_savings_acct — MT-27)
- * - findLoansByMember(memCode)   → Array<Object> (t_loan_acct — MT-27)
- * - findDividendsByMember(memCode) → Array<Object> (t_dividend — MT-27)
- * - logActivation(entry)         → { log_id, status } (t_activation_log — MT-27)
- * - listMembers()                → Array<Object> สมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
- * - logExpiry(entry)            → { log_id, status } (t_expiry_log — MT-32)
- * - renewMember(rowIndex, newExpDt, lineUserId?) → { memExpDt, memStatus } (MT-12)
- * - listNotices()               → Array<Object> ประกาศทั้งหมด (t_notice — MT-13)
- * - markNoticeSent(noticeId, sentDt) → boolean (กัน broadcast ซ้ำ — MT-13)
- * - listLoans()                 → Array<Object> สัญญากู้ทั้งหมด (t_loan_acct — MT-13b)
- * - logReminder(entry)         → { log_id, status } (t_reminder_log — MT-13b)
- * - getContent(key)            → string|null เนื้อหาเมนูจาก t_content (MT-14)
+ * Port contract is authoritative at Ports.MemberRepositoryPort.
+ * This module remains as a legacy-compatible factory during incremental migration.
  */
 
 var Data = Data || {};
@@ -31,38 +11,28 @@ var Data = Data || {};
 Data.MemberRepository = (() => {
   'use strict';
 
-  const INTERFACE = [
-    'findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole',
-    'findSavingsByMember', 'findLoansByMember', 'findDividendsByMember', 'logActivation',
-    'listMembers', 'logExpiry', 'renewMember', 'listNotices', 'markNoticeSent',
-    'listLoans', 'logReminder', 'getContent'
-  ];
-
   /**
-   * ตรวจว่า repository ครบตามสัญญา (interface) หรือไม่
+   * Backward-compatible contract assertion.
    * @param {Object} repo
-   * @returns {Object} repo เดิมถ้าครบ / throw ถ้าขาด
+   * @returns {Object}
    */
   function assertImplemented(repo) {
-    const missing = INTERFACE.filter(name => typeof repo[name] !== 'function');
-    if (missing.length > 0) {
-      throw new Error('MemberRepository ขาดฟังก์ชันตามสัญญา: ' + missing.join(', '));
-    }
-    return repo;
+    return Ports.MemberRepositoryPort.assertImplemented(repo);
   }
 
   /**
-   * factory — เลือก repository ตาม Config.DB_TYPE
-   * 'sheets' (ค่า default) → Data.SheetsMemberRepository
-   * 'firestore'           → ยังไม่ได้ implement (อนาคต)
-   * @returns {Object} repository ตามสัญญา
+   * Select repository adapter according to configuration.
+   * Adapter selection will move to the canonical composition root incrementally.
+   * @returns {Object}
    */
   function getRepository() {
     const cfg = Config.get();
     const type = (cfg.DB_TYPE || 'sheets').toLowerCase();
+
     if (type === 'firestore') {
-      throw new Error('DB_TYPE=firestore ยังไม่ได้ implement — ดู Roadmap ระยะที่ 3 (การ์ด MT-15/MT-20b)');
+      throw new Error('DB_TYPE=firestore ยังไม่ได้ implement — ต้องมี adapter ที่ผ่าน MemberRepositoryPort contract ก่อน');
     }
+
     return assertImplemented(Data.SheetsMemberRepository);
   }
 
