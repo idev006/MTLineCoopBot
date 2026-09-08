@@ -228,7 +228,9 @@ const fakeApi = { handleRequest: () => ({ ok: true }) };
 const fakeIdentity = { authenticate: () => ({ subject: 'test', channel: 'test', roles: [], memberCode: null, claims: {}, authenticated: true }) };
 const fakeAuthorization = {
   requireAuthenticated: () => ({ allowed: true }),
-  requireAnyRole: () => ({ allowed: true, reason: 'role_match' })
+  requireRole: () => ({ allowed: true, reason: 'role_match' }),
+  requireAnyRole: () => ({ allowed: true, reason: 'role_match' }),
+  requireMemberBinding: () => ({ allowed: true, reason: 'member_match' })
 };
 const fakeLineVerifier = { verify: () => ({ ok: false, error: { code: 'TEST' } }) };
 const fakeLineIdentity = { authenticate: () => ({ subject: 'anonymous', channel: 'line', roles: [], memberCode: null, claims: {}, authenticated: false }) };
