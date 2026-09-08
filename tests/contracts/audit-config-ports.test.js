@@ -48,7 +48,8 @@ const methods=sandbox.Ports.MemberRepositoryPort.listMethods();
 const calls=[];
 const repo={};
 for(const m of methods) repo[m]=()=>null;
-repo.logActivation=(entry)=>{ calls.push(entry); return {log_id:'L1',status:entry.status}; };
+repo.logActivation=(entry)=>{ calls.push({kind:'activation',entry}); return {log_id:'L1',status:entry.status}; };
+repo.logExpiry=(entry)=>{ calls.push({kind:'expiry',entry}); return {log_id:'E1',status:entry.status}; };
 
 const durable=sandbox.Adapters.Audit.MemberRepositoryAuditAdapter.create({memberRepository:repo});
 AuditPort.assertImplemented(durable);
@@ -67,12 +68,25 @@ durable.record({
   status:'renewed'
 });
 
-if(calls.length!==2) throw new Error('durable audit adapter did not persist both events');
-if(calls[0].activateCode!=='A1' || calls[0].status!=='success') {
+durable.record({
+  type:'member.expiry_checked',
+  memberCode:'M001',
+  lineUserId:'U1',
+  status:'expiring',
+  daysLeft:2,
+  memExpDt:'2026-09-10',
+  checkedAt:'2026-09-08'
+});
+
+if(calls.length!==3) throw new Error('durable audit adapter did not persist all events');
+if(calls[0].entry.activateCode!=='A1' || calls[0].entry.status!=='success') {
   throw new Error('activation audit mapping incorrect');
 }
-if(calls[1].activateCode!=='' || calls[1].status!=='renewed') {
+if(calls[1].entry.activateCode!=='' || calls[1].entry.status!=='renewed') {
   throw new Error('renewal audit mapping incorrect');
+}
+if(calls[2].kind!=='expiry' || calls[2].entry.status!=='expiring' || calls[2].entry.daysLeft!==2) {
+  throw new Error('expiry audit mapping incorrect');
 }
 
 let unsupported=false;
@@ -92,6 +106,6 @@ if(memory.snapshot().length!==1 || memory.snapshot()[0].type!=='seed') {
 }
 
 console.log('PASS  ConfigPort production adapter + invalid adapter rejection');
-console.log('PASS  AuditPort durable activation/renewal mapping');
+console.log('PASS  AuditPort durable activation/renewal/expiry mapping');
 console.log('PASS  InMemoryAuditAdapter deterministic snapshot/reset');
 console.log('=== AUDIT CONFIG PORT TESTS PASS (3/3) ===');
