@@ -190,6 +190,11 @@ Composition.SystemFactory = (() => {
         config,
         authorization
       });
+    const listStaffAccounts = o.listStaffAccounts ||
+      Application.Web.ListStaffAccountsUseCase.create({
+        memberRepository,
+        authorization
+      });
     const getAuditLog = o.getAuditLog ||
       Application.Web.GetAuditLogUseCase.create({
         auditQuery,
@@ -247,6 +252,7 @@ Composition.SystemFactory = (() => {
       getAuditLog,
       getSummaryReport,
       renewWebMember,
+      listStaffAccounts,
       api: o.api || defaultApi()
     });
   }

@@ -198,6 +198,10 @@ const getAdminSettingsSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetAdminSettingsUseCase.js'),
   'utf8'
 );
+const listStaffAccountsSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Web', 'ListStaffAccountsUseCase.js'),
+  'utf8'
+);
 const getAuditLogSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Web', 'GetAuditLogUseCase.js'),
   'utf8'
@@ -339,6 +343,7 @@ vm.runInContext(reminderUseCaseSrc, sandbox, { filename: 'LoanReminderUseCase.js
 vm.runInContext(loanCalculatorSrc, sandbox, { filename: 'LoanCalculator.js' });
 vm.runInContext(calculateLoanUseCaseSrc, sandbox, { filename: 'CalculateLoanUseCase.js' });
 vm.runInContext(getAdminSettingsSrc, sandbox, { filename: 'GetAdminSettingsUseCase.js' });
+vm.runInContext(listStaffAccountsSrc, sandbox, { filename: 'ListStaffAccountsUseCase.js' });
 vm.runInContext(getAuditLogSrc, sandbox, { filename: 'GetAuditLogUseCase.js' });
 vm.runInContext(getSummaryReportSrc, sandbox, { filename: 'GetSummaryReportUseCase.js' });
 vm.runInContext(renewWebMemberSrc, sandbox, { filename: 'RenewMemberByStaffUseCase.js' });
@@ -433,6 +438,9 @@ if (!defaults.calculateLoan || typeof defaults.calculateLoan.execute !== 'functi
 }
 if (!defaults.getAdminSettings || typeof defaults.getAdminSettings.execute !== 'function') {
   throw new Error('default admin settings wiring failed');
+}
+if (!defaults.listStaffAccounts || typeof defaults.listStaffAccounts.execute !== 'function') {
+  throw new Error('default staff accounts wiring failed');
 }
 if (!defaults.getAuditLog || typeof defaults.getAuditLog.execute !== 'function') {
   throw new Error('default audit-log wiring failed');
