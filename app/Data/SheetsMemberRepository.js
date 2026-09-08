@@ -52,6 +52,17 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
+   * Persist precomputed activation values.
+   * Business date/status policy must be computed before calling this adapter.
+   * @param {number} rowIndex
+   * @param {Object} activation
+   * @returns {Object}
+   */
+  function saveActivation(rowIndex, activation) {
+    return LineBot.SheetService.saveActivation(rowIndex, activation);
+  }
+
+  /**
    * ตรวจว่าสมาชิก valid หรือไม่ (ช่วงวัน + สถานะ — บทที่ 3.7.2)
    * @param {Object} member
    * @returns {boolean}
@@ -183,6 +194,7 @@ Data.SheetsMemberRepository = (() => {
     findByMemberCode,
     findByActivateCode,
     activateMember,
+    saveActivation,
     isActiveMember,
     hasRole,
     findSavingsByMember,

@@ -131,31 +131,28 @@ Api.ApiHandlers = (() => {
     };
   }
 
-  /** POST /api/member/activate { activateCode, lineUserId } — ตรรกะเดียวกับ Bot (ActivationService) */
+  /** POST /api/member/activate { activateCode, lineUserId } — thin delivery adapter */
   function activate(ctx) {
     const activateCode = (ctx.body && ctx.body.activateCode) || (ctx.query && ctx.query.activateCode);
     const lineUserId = (ctx.body && ctx.body.lineUserId) || (ctx.query && ctx.query.lineUserId);
-    if (!activateCode || !lineUserId) {
-      throw Api.ApiError.create('VALIDATION', 'ต้องระบุ activateCode และ lineUserId');
+    const system = getSystem();
+    const result = system.activateMember.execute({ activateCode, lineUserId });
+
+    if (!result.ok) {
+      const code = result.error && result.error.code ? result.error.code : 'INTERNAL';
+      if (code === 'VALIDATION') {
+        throw Api.ApiError.create('VALIDATION', 'ต้องระบุ activateCode และ lineUserId');
+      }
+      if (code === 'MEMBER_NOT_FOUND') {
+        throw Api.ApiError.create('MEMBER_NOT_FOUND', 'ไม่พบรหัส activate นี้ในระบบ', 404);
+      }
+      if (code === 'ALREADY_ACTIVATED') {
+        throw Api.ApiError.create('ALREADY_ACTIVATED', 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้', 409);
+      }
+      throw Api.ApiError.create(code, 'ไม่สามารถ activate สมาชิกได้', 500);
     }
-    const repo = getRepo();
-    const found = repo.findByActivateCode(activateCode);
-    if (!found) throw Api.ApiError.create('MEMBER_NOT_FOUND', 'ไม่พบรหัส activate นี้ในระบบ', 404);
-    if (found.mem_eff_dt && found.mem_eff_dt !== '') {
-      throw Api.ApiError.create('ALREADY_ACTIVATED', 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้', 409);
-    }
-    const result = repo.activateMember(found._rowIndex, lineUserId);
-    // คืนชื่อสมาชิกด้วย — UI adapter (Bot) ใช้สร้าง welcome flex โดยไม่ต้องโหลด profile แยก
-    return {
-      mem_code: found.mem_code,
-      mem_title: found.mem_title,
-      mem_fname: found.mem_fname,
-      mem_lname: found.mem_lname,
-      mem_status: result.memStatus,
-      mem_eff_dt: result.memEffDt,
-      mem_exp_dt: result.memExpDt,
-      line_user_id: lineUserId
-    };
+
+    return result.data;
   }
 
 

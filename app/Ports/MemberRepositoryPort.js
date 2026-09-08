@@ -16,6 +16,7 @@ Ports.MemberRepositoryPort = (() => {
     'findByMemberCode',
     'findByActivateCode',
     'activateMember',
+    'saveActivation',
     'findSavingsByMember',
     'findLoansByMember',
     'findDividendsByMember',

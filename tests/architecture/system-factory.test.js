@@ -66,6 +66,14 @@ const financeUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'GetCurrentMemberFinanceUseCase.js'),
   'utf8'
 );
+const activationEngineSrc = fs.readFileSync(
+  path.join(root, 'app', 'Engine', 'MemberActivationEngine.js'),
+  'utf8'
+);
+const activateUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Member', 'ActivateMemberUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -78,6 +86,7 @@ function makeRepo(name) {
     findByMemberCode: () => null,
     findByActivateCode: () => null,
     activateMember: () => null,
+    saveActivation: () => null,
     findSavingsByMember: () => [],
     findLoansByMember: () => [],
     findDividendsByMember: () => [],
@@ -124,6 +133,7 @@ vm.createContext(sandbox);
 vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(memberAccessSrc, sandbox, { filename: 'MemberAccessEngine.js' });
+vm.runInContext(activationEngineSrc, sandbox, { filename: 'MemberActivationEngine.js' });
 vm.runInContext(principalSrc, sandbox, { filename: 'Principal.js' });
 vm.runInContext(identityPortSrc, sandbox, { filename: 'IdentityPort.js' });
 vm.runInContext(httpClientPortSrc, sandbox, { filename: 'HttpClientPort.js' });
@@ -136,6 +146,7 @@ vm.runInContext(lineVerifierSrc, sandbox, { filename: 'LineIdTokenVerifier.js' }
 vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' });
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
+vm.runInContext(activateUseCaseSrc, sandbox, { filename: 'ActivateMemberUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -175,6 +186,9 @@ if (!defaults.getCurrentMemberProfile || typeof defaults.getCurrentMemberProfile
 }
 if (!defaults.getCurrentMemberFinance || typeof defaults.getCurrentMemberFinance.execute !== 'function') {
   throw new Error('default finance use case wiring failed');
+}
+if (!defaults.activateMember || typeof defaults.activateMember.execute !== 'function') {
+  throw new Error('default activation use case wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
