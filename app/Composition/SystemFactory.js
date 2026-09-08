@@ -195,6 +195,11 @@ Composition.SystemFactory = (() => {
         memberRepository,
         authorization
       });
+    const getRoleCatalog = o.getRoleCatalog ||
+      Application.Web.GetRoleCatalogUseCase.create({
+        authorization,
+        roleCatalog:o.roleCatalog || Security.RoleCatalog
+      });
     const getAuditLog = o.getAuditLog ||
       Application.Web.GetAuditLogUseCase.create({
         auditQuery,
@@ -253,6 +258,7 @@ Composition.SystemFactory = (() => {
       getSummaryReport,
       renewWebMember,
       listStaffAccounts,
+      getRoleCatalog,
       api: o.api || defaultApi()
     });
   }
