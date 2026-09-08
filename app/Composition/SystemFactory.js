@@ -35,6 +35,12 @@ Composition.SystemFactory = (() => {
     return Adapters.Security.DenyAllIdentityAdapter;
   }
 
+  function defaultLineIdTokenVerifier() {
+    return Adapters.Security.LineIdTokenVerifier.create({
+      httpClient: Adapters.Http.AppsScriptHttpClientAdapter
+    });
+  }
+
   /**
    * Create a dependency bundle.
    * Callers may replace any dependency explicitly.
@@ -48,19 +54,33 @@ Composition.SystemFactory = (() => {
     const memberAccess = o.memberAccess || Engine.MemberAccessEngine.create({ clock });
     const identity = Ports.IdentityPort.assertImplemented(o.identity || defaultIdentity());
     const authorization = o.authorization || Engine.AuthorizationEngine.create();
+    const lineIdTokenVerifier = Ports.IdTokenVerifierPort.assertImplemented(
+      o.lineIdTokenVerifier || defaultLineIdTokenVerifier()
+    );
+    const memberRepository = o.memberRepository || defaultMemberRepository();
+    const config = o.config || defaultConfig();
+    const lineIdentity = Ports.IdentityPort.assertImplemented(
+      o.lineIdentity || Adapters.Security.LineIdentityAdapter.create({
+        verifier: lineIdTokenVerifier,
+        memberRepository,
+        clientIdProvider: () => config.get().LINE_LOGIN_CHANNEL_ID
+      })
+    );
     const getCurrentMemberProfile = o.getCurrentMemberProfile ||
       Application.Member.GetCurrentMemberProfileUseCase.create({
-        memberRepository: o.memberRepository || defaultMemberRepository(),
+        memberRepository,
         memberAccess,
         authorization
       });
 
     return Object.freeze({
       clock,
-      config: o.config || defaultConfig(),
-      memberRepository: o.memberRepository || defaultMemberRepository(),
+      config,
+      memberRepository,
       memberAccess,
       identity,
+      lineIdentity,
+      lineIdTokenVerifier,
       authorization,
       getCurrentMemberProfile,
       api: o.api || defaultApi()
