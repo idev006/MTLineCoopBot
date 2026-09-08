@@ -35,6 +35,10 @@ function isApiRequest(e) {
  * @param {string} path
  * @returns {boolean}
  */
+function isPublicApiPath(path) {
+  return path === '/api/health' || path === '/api/loan/calculate';
+}
+
 function isIdentityAuthenticatedApiPath(path) {
   return path === '/api/member/me/profile' ||
     path === '/api/member/me/savings' ||
@@ -71,7 +75,7 @@ function dispatchApi(e, method) {
 
     // Legacy API-key check remains only for legacy routes.
     // Identity-authenticated routes verify their credential in the protected handler.
-    if (path !== '/api/health' && !isIdentityAuthenticatedApiPath(path)) {
+    if (!isPublicApiPath(path) && !isIdentityAuthenticatedApiPath(path)) {
       if (!cfg.API_KEY || cfg.API_KEY.includes('ใส่_API_KEY')) {
         return jsonOutput({ ok: false, error: { code: 'NOT_CONFIGURED', message: 'ยังไม่ได้ตั้งค่า API_KEY ใน Script Properties' } });
       }
