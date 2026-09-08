@@ -74,6 +74,10 @@ const activateUseCaseSrc = fs.readFileSync(
   path.join(root, 'app', 'Application', 'Member', 'ActivateMemberUseCase.js'),
   'utf8'
 );
+const renewUseCaseSrc = fs.readFileSync(
+  path.join(root, 'app', 'Application', 'Member', 'RenewMemberUseCase.js'),
+  'utf8'
+);
 const src = fs.readFileSync(
   path.join(root, 'app', 'Composition', 'SystemFactory.js'),
   'utf8'
@@ -94,6 +98,7 @@ function makeRepo(name) {
     listMembers: () => [],
     logExpiry: () => null,
     renewMember: () => null,
+    saveRenewal: () => null,
     listNotices: () => [],
     markNoticeSent: () => false,
     listLoans: () => [],
@@ -147,6 +152,7 @@ vm.runInContext(lineIdentitySrc, sandbox, { filename: 'LineIdentityAdapter.js' }
 vm.runInContext(profileUseCaseSrc, sandbox, { filename: 'GetCurrentMemberProfileUseCase.js' });
 vm.runInContext(financeUseCaseSrc, sandbox, { filename: 'GetCurrentMemberFinanceUseCase.js' });
 vm.runInContext(activateUseCaseSrc, sandbox, { filename: 'ActivateMemberUseCase.js' });
+vm.runInContext(renewUseCaseSrc, sandbox, { filename: 'RenewMemberUseCase.js' });
 vm.runInContext(src, sandbox, { filename: 'SystemFactory.js' });
 
 const createSystem = sandbox.Composition.SystemFactory.createSystem;
@@ -189,6 +195,9 @@ if (!defaults.getCurrentMemberFinance || typeof defaults.getCurrentMemberFinance
 }
 if (!defaults.activateMember || typeof defaults.activateMember.execute !== 'function') {
   throw new Error('default activation use case wiring failed');
+}
+if (!defaults.renewMember || typeof defaults.renewMember.execute !== 'function') {
+  throw new Error('default renewal use case wiring failed');
 }
 
 console.log('PASS  SystemFactory explicit dependency wiring');
