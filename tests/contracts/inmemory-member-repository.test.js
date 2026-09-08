@@ -39,7 +39,13 @@ if(repo.findDividendsByMember('M001').length!==1) throw new Error('dividends loo
 if(repo.getContent('welcome')!=='hello') throw new Error('content lookup failed');
 
 repo.renewMember(2,'2027-01-01','U1');
-if(repo.findByMemberCode('M001').mem_exp_dt!=='2027-01-01') throw new Error('renew persistence failed');
+if(repo.findByMemberCode('M001').mem_exp_dt!=='2027-01-01') throw new Error('legacy renew persistence failed');
+
+repo.saveRenewal(2,{memExpDt:'2028-01-01',memStatus:'active'});
+const savedRenewal=repo.findByMemberCode('M001');
+if(savedRenewal.mem_exp_dt!=='2028-01-01' || savedRenewal.mem_status!=='active') {
+  throw new Error('explicit saveRenewal persistence failed');
+}
 
 repo.markNoticeSent('N1','2026-09-08');
 if(repo.listNotices()[0].sent!==true) throw new Error('notice mutation failed');
