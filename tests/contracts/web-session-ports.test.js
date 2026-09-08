@@ -21,7 +21,9 @@ store.save({tokenHash:'h',subject:'u',roles:[],expiresAt:'2026-09-08T08:00:00.00
 if(store.findByTokenHash('h').subject!=='u') throw new Error('store contract failed');
 store.revokeByTokenHash('h','2026-09-08T07:30:00.000Z');
 if(!store.findByTokenHash('h').revokedAt) throw new Error('store revoke contract failed');
-if(tokens.hash(tokens.generate())!=='hash:s-1') throw new Error('token adapter contract failed');
+const issued=tokens.generate();
+const hashed=tokens.hash(issued);
+if(!hashed || hashed.includes(issued)) throw new Error('token adapter must hash without embedding raw token');
 let a=false,b=false;
 try{sandbox.Ports.SessionStorePort.assertImplemented({});}catch(_){a=true;}
 try{sandbox.Ports.SessionTokenPort.assertImplemented({});}catch(_){b=true;}
