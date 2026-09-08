@@ -34,7 +34,9 @@ jobs:
         run: node scripts/ci-test.js
 
       - name: Architecture tests (engine wiring / plug-in seams)
-        run: node tests/architecture/system-factory.test.js
+        run: |
+          node tests/architecture/system-factory.test.js
+          node tests/architecture/loan-calculator-authority.test.js
 
       - name: Port contract tests (plug-compatible adapters)
         run: |
