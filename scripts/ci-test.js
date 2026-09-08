@@ -118,6 +118,7 @@ const FILE_ORDER = [
   'Core/DateConverter.js',
   'Core/NoticeRules.js',
   'Core/LoanRules.js',
+  'Ports/MemberRepositoryPort.js',
   'Data/MemberRepository.js',
   'Data/SheetsMemberRepository.js',
   'LineBot/SheetService.js',
