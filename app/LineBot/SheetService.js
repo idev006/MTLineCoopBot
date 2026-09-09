@@ -465,25 +465,6 @@ LineBot.SheetService = (() => {
     return { memExpDt: r.memExpDt, memStatus: r.memStatus };
   }
 
-  /**
-   * Legacy compatibility renewal operation.
-   * New secure application code computes policy first and calls saveRenewal().
-   */
-  function renewMember(rowIndex, newExpDt, lineUserId) {
-    const result = saveRenewal(rowIndex, { memExpDt: newExpDt, memStatus: 'active' });
-    if (lineUserId) {
-      const tableKey = 'MEMBER_MASTER';
-      const sheet = getSheet(tableKey);
-      const headerMap = getHeaderMap(sheet);
-      const lineIndex = headerMap['line_user_id'];
-      if (lineIndex === undefined) {
-        throw new Error(`ไม่พบคอลัมน์ line_user_id ในชีท ${DataDict.getTable(tableKey).name} — ตรวจสอบ header`);
-      }
-      sheet.getRange(rowIndex, lineIndex + 1).setValue(lineUserId);
-    }
-    return result;
-  }
-
 
   function saveRole(rowIndex, role) {
     const tableKey = 'MEMBER_MASTER';
@@ -556,7 +537,6 @@ LineBot.SheetService = (() => {
     appendReminderLog,
     listNotices,
     markNoticeSent,
-    renewMember,
     saveRenewal,
     saveActivation,
     saveRole,

@@ -106,17 +106,6 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
-   * ต่ออายุสมาชิก (MT-12): เขียน mem_exp_dt ใหม่ + สถานะ active
-   * @param {number} rowIndex
-   * @param {string} newExpDt - yyyy-mm-dd
-   * @param {string} [lineUserId]
-   * @returns {Object} { memExpDt, memStatus }
-   */
-  function renewMember(rowIndex, newExpDt, lineUserId) {
-    return LineBot.SheetService.renewMember(rowIndex, newExpDt, lineUserId);
-  }
-
-  /**
    * Persist precomputed renewal values.
    * @param {number} rowIndex
    * @param {{memExpDt:string,memStatus:string}} renewal
@@ -181,7 +170,6 @@ Data.SheetsMemberRepository = (() => {
     logActivation,
     listMembers,
     logExpiry,
-    renewMember,
     saveRenewal,
     listNotices,
     markNoticeSent,
