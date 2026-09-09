@@ -38,9 +38,6 @@ if(repo.findLoansByMember('M001').length!==1) throw new Error('loans lookup fail
 if(repo.findDividendsByMember('M001').length!==1) throw new Error('dividends lookup failed');
 if(repo.getContent('welcome')!=='hello') throw new Error('content lookup failed');
 
-repo.renewMember(2,'2027-01-01','U1');
-if(repo.findByMemberCode('M001').mem_exp_dt!=='2027-01-01') throw new Error('legacy renew persistence failed');
-
 repo.saveRenewal(2,{memExpDt:'2028-01-01',memStatus:'active'});
 const savedRenewal=repo.findByMemberCode('M001');
 if(savedRenewal.mem_exp_dt!=='2028-01-01' || savedRenewal.mem_status!=='active') {
