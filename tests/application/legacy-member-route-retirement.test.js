@@ -56,9 +56,8 @@ for(const pathName of [
 if(routes.some(r=>r.path==='/api/member/activate')) {
   throw new Error('legacy client-lineUserId activation route must remain retired');
 }
-const legacyRenew=routes.find(r=>r.path==='/api/member/renew');
-if(!legacyRenew) {
-  throw new Error('legacy renewal compatibility remains a separate retirement concern');
+if(routes.some(r=>r.path==='/api/member/renew')) {
+  throw new Error('legacy client-lineUserId renewal route must remain retired');
 }
 
 const handlers=fs.readFileSync(path.join(root,'app','Api','ApiHandlers.js'),'utf8');
@@ -69,5 +68,5 @@ for(const marker of ['function requireMember(','function getProfile(','function 
 console.log('PASS  legacy lineUserId read/validity routes retired');
 console.log('PASS  verified ID-token self-service replacements retained');
 console.log('PASS  legacy client-lineUserId activation route retired');
-console.log('PASS  renewal compatibility remains explicitly tracked separately');
+console.log('PASS  legacy client-lineUserId renewal route retired');
 console.log('=== LEGACY MEMBER ROUTE RETIREMENT TESTS PASS (4/4) ===');

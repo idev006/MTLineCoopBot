@@ -17,10 +17,6 @@ Api.ApiHandlers = (() => {
     return Composition.SystemFactory.createSystem();
   }
 
-  function getRepo() {
-    return getSystem().memberRepository;
-  }
-
   /** GET /api/health — ตรวจว่า API ทำงาน */
   function health() {
     return {
@@ -28,33 +24,6 @@ Api.ApiHandlers = (() => {
       service: 'MTLineCoopBot API',
       time: DataDict.formatDateTime(new Date()),
       routes: Api.ApiRegistry.listRoutes().length
-    };
-  }
-
-  /** POST /api/member/renew { activateCode?, lineUserId } — ต่ออายุ (การ์ด MT-12) */
-  function renew(ctx) {
-    const activateCode = (ctx.body && ctx.body.activateCode) || (ctx.query && ctx.query.activateCode) || '';
-    const lineUserId = (ctx.body && ctx.body.lineUserId) || (ctx.query && ctx.query.lineUserId);
-    if (!lineUserId) throw Api.ApiError.create('VALIDATION', 'ต้องระบุ lineUserId');
-    const repo = getRepo();
-    const member = activateCode
-      ? repo.findByActivateCode(activateCode)
-      : repo.findByLineUserId(lineUserId);
-    if (!member) {
-      // detail ช่วย UI adapter แยก "ไม่พบรหัส" vs "ไม่พบสมาชิก" (การ์ด MT-17)
-      throw Api.ApiError.create('MEMBER_NOT_FOUND',
-        activateCode ? 'ไม่พบรหัสต่ออายุนี้ในระบบ' : 'ไม่พบสมาชิกสำหรับ lineUserId นี้',
-        404, { detail: activateCode ? 'code_not_found' : 'member_not_found' });
-    }
-    // internal.now = seam สำหรับทดสอบ deterministic (WebApp/HTTP ไม่ส่งค่านี้)
-    const now = (ctx.internal && ctx.internal.now) || new Date();
-    const renewal = Core.MemberRules.computeRenewal(member, now);
-    const result = repo.renewMember(member._rowIndex, renewal.newExpDt, lineUserId);
-    return {
-      mem_code: member.mem_code,
-      mem_exp_dt: result.memExpDt,
-      mem_status: result.memStatus,
-      renewed_from: renewal.fromDt
     };
   }
 
@@ -336,7 +305,6 @@ Api.ApiHandlers = (() => {
     getCurrentLoans,
     getCurrentDividends,
     activateCurrentMember,
-    renewCurrentMember,
-    renew
+    renewCurrentMember
   };
 })();

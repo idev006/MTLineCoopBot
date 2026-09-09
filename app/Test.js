@@ -1428,68 +1428,64 @@ function testApiMount() {
 }
 
 /**
- * ทดสอบการต่ออายุสมาชิก (MT-12): Core.computeRenewal (pure) + RenewalService.performRenew
- * (ผ่าน Fake Sheets + fake gater — ไม่แตะ LINE API)
+ * ทดสอบ canonical renewal rule + legacy renewal retirement.
  * @returns {boolean}
  */
 function testRenewal() {
-  // 1) Core.computeRenewal (pure, deterministic now)
+  // 1) Core.computeRenewal remains canonical and deterministic.
   const R = Core.MemberRules;
   const now = new Date('2026-08-12T12:00:00');
-  // ยังไม่หมดอายุ → ต่อจากวันหมดอายุเดิม +1 ปี
-  const r1 = R.computeRenewal({ mem_code: 'M002', mem_exp_dt: '2026-12-31' }, now);
-  if (r1.newExpDt !== '2027-12-31') throw new Error('testRenewal: ยังไม่หมดอายุควรต่อจาก exp เดิม (' + r1.newExpDt + ')');
-  // หมดอายุแล้ว → ต่อจากวันนี้ +1 ปี
-  const r2 = R.computeRenewal({ mem_code: 'M001', mem_exp_dt: '2026-08-01' }, now);
-  if (r2.newExpDt !== '2027-08-12') throw new Error('testRenewal: หมดอายุควรต่อจากวันนี้ (' + r2.newExpDt + ')');
-  // ไม่มี exp → ต่อจากวันนี้
-  const r3 = R.computeRenewal({ mem_code: 'M003' }, now);
-  if (r3.newExpDt !== '2027-08-12') throw new Error('testRenewal: ไม่มี exp ควรต่อจากวันนี้ (' + r3.newExpDt + ')');
 
-  // 2) seed fake sheets: M001 หมดอายุแล้ว / M002 ยัง valid
+  const r1 = R.computeRenewal({ mem_code: 'M002', mem_exp_dt: '2026-12-31' }, now);
+  if (r1.newExpDt !== '2027-12-31') {
+    throw new Error('testRenewal: ยังไม่หมดอายุควรต่อจาก exp เดิม (' + r1.newExpDt + ')');
+  }
+
+  const r2 = R.computeRenewal({ mem_code: 'M001', mem_exp_dt: '2026-08-01' }, now);
+  if (r2.newExpDt !== '2027-08-12') {
+    throw new Error('testRenewal: หมดอายุควรต่อจากวันนี้ (' + r2.newExpDt + ')');
+  }
+
+  const r3 = R.computeRenewal({ mem_code: 'M003' }, now);
+  if (r3.newExpDt !== '2027-08-12') {
+    throw new Error('testRenewal: ไม่มี exp ควรต่อจากวันนี้ (' + r3.newExpDt + ')');
+  }
+
+  // 2) Legacy direct renewal service must fail closed and never mutate.
   delete __fakeSheets['t_member_mast'];
-  delete __fakeSheets['t_activation_log'];
   __fakeSheets['t_member_mast'] = [
     DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-08-01', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000]
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-08-01', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000]
   ];
+  const before = JSON.stringify(__fakeSheets['t_member_mast'][1]);
 
-  const S = LineBot.RenewalService;
-  const gated = [];
-
-  // 3) ต่ออายุด้วยรหัส (ACT001 — หมดอายุแล้ว) → ใหม่เป็น 2027-08-12 + ตั้ง active + gater ถูกเรียก + log renewed
-  const res = S.performRenew('ACT001', 'U11111111111111111111111111111111', {
-    now: now,
-    gater: (userId) => { gated.push(userId); return { ok: true }; }
-  });
-  if (!res.success) throw new Error('testRenewal: ต่ออายุควรสำเร็จ — ' + JSON.stringify(res));
-  if (res.newExpDt !== '2027-08-12') throw new Error('testRenewal: newExpDt ผิด (' + res.newExpDt + ')');
-  const mRow = __fakeSheets['t_member_mast'][1];
-  if (mRow[8] !== '2027-08-12') throw new Error('testRenewal: mem_exp_dt ในชีทไม่ถูกเขียน');
-  if (mRow[9] !== 'active') throw new Error('testRenewal: mem_status ควรเป็น active');
-  if (!gated.includes('U11111111111111111111111111111111')) throw new Error('testRenewal: ควรผูกเมนูสมาชิกกลับ (gater)');
-  const actLogs = (__fakeSheets['t_activation_log'] || []).slice(1);
-  if (actLogs.length !== 1 || actLogs[0][4] !== 'renewed') {
-    throw new Error('testRenewal: ควรมี audit log renewed ใน t_activation_log');
+  const legacy = LineBot.RenewalService.performRenew(
+    'ACT001',
+    'U11111111111111111111111111111111',
+    { now }
+  );
+  if (legacy.success || legacy.reason !== 'retired' ||
+      !legacy.error || legacy.error.code !== 'LEGACY_RENEWAL_RETIRED') {
+    throw new Error('testRenewal: legacy RenewalService ต้อง fail closed');
+  }
+  if (JSON.stringify(__fakeSheets['t_member_mast'][1]) !== before) {
+    throw new Error('testRenewal: retired RenewalService ต้องไม่ mutate member');
   }
 
-  // 4) ต่ออายุตัวเอง (ไม่มีรหัส — renew) สมาชิกที่ยัง valid → ต่อจาก exp เดิม
-  const res2 = S.performRenew('', 'U22222222222222222222222222222222', {
-    now: now,
-    gater: (userId) => { gated.push(userId); return { ok: true }; }
+  // 3) Legacy route must be gone; canonical protected self-renew remains.
+  const oldEnv = Api.ApiService.handleRequest('POST', '/api/member/renew', {
+    body:{ lineUserId:'U11111111111111111111111111111111' }
   });
-  if (!res2.success || res2.newExpDt !== '2027-12-31') {
-    throw new Error('testRenewal: ต่ออายุตัวเองผิด (' + JSON.stringify(res2) + ')');
+  if (oldEnv.ok || oldEnv.error.code !== 'NOT_FOUND') {
+    throw new Error('testRenewal: retired /api/member/renew ต้อง NOT_FOUND');
   }
 
-  // 5) รหัสผิด → code_not_found · ไม่พบตัวเอง → member_not_found
-  const bad = S.performRenew('WRONG', 'U11111111111111111111111111111111', { now: now, gater: () => ({ ok: true }) });
-  if (bad.success || bad.reason !== 'code_not_found') throw new Error('testRenewal: รหัสผิดควร code_not_found');
-  const nf = S.performRenew('', 'U99999999999999999999999999999999', { now: now, gater: () => ({ ok: true }) });
-  if (nf.success || nf.reason !== 'member_not_found') throw new Error('testRenewal: ไม่พบตัวเองควร member_not_found');
+  const secureRoute = Api.ApiRegistry.listRoutes().find(r => r.path === '/api/member/me/renew');
+  if (!secureRoute || secureRoute.method !== 'POST' || secureRoute.auth !== 'line-id-token') {
+    throw new Error('testRenewal: canonical /api/member/me/renew route missing');
+  }
 
-  Logger.log('testRenewal OK — computeRenewal (ต่อจาก exp/วันนี้) + performRenew (รหัส/ตัวเอง + log + gater)');
+  Logger.log('testRenewal OK — computeRenewal canonical + legacy RenewalService/route retired');
   return true;
 }
 
