@@ -130,19 +130,6 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       return appendLog(state.expiryLogs, entry, 'EXP');
     }
 
-    function renewMember(rowIndex, newExpDt, lineUserId) {
-      const i = Number(rowIndex) - 2;
-      if (i < 0 || i >= state.members.length) {
-        throw new Error('Member row not found: ' + rowIndex);
-      }
-      state.members[i].mem_exp_dt = newExpDt;
-      if (lineUserId) state.members[i].line_user_id = lineUserId;
-      return {
-        memExpDt: state.members[i].mem_exp_dt,
-        memStatus: state.members[i].mem_status || null
-      };
-    }
-
     function saveRenewal(rowIndex, renewal) {
       const i = Number(rowIndex) - 2;
       if (i < 0 || i >= state.members.length) {
@@ -203,7 +190,6 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       logActivation,
       listMembers,
       logExpiry,
-      renewMember,
       saveRenewal,
       listNotices,
       markNoticeSent,
