@@ -7,10 +7,10 @@
  * - GET|POST /exec/api/<path> → API Layer (Api.ApiService)
  *   (Apps Script ใช้ e.pathInfo เป็น path ต่อจาก /exec เช่น /exec/api/member/me/profile)
  *
- * Authentication is route-owned:
- * - public routes are explicitly classified here
+ * Authentication is route-owned by ApiRegistry/handlers:
+ * - public routes are explicitly declared with auth='none'
  * - protected LINE/LIFF and Web routes verify credentials in protected handlers
- * - there is no browser-visible API-key authentication fallback
+ * - there is no browser-visible shared-secret authentication fallback
  */
 
 /** JSON TextOutput (envelope) */
@@ -27,38 +27,6 @@ function jsonOutput(obj) {
 function isApiRequest(e) {
   return !!(e && e.pathInfo && String(e.pathInfo).trim().startsWith('api/'));
 }
-
-/**
- * Paths authenticated by their own verified identity credential.
- * These routes must not rely on the browser-visible API key.
- * @param {string} path
- * @returns {boolean}
- */
-function isPublicApiPath(path) {
-  return path === '/api/health' || path === '/api/loan/calculate';
-}
-
-function isIdentityAuthenticatedApiPath(path) {
-  return path === '/api/web/session/line' ||
-    path === '/api/web/session/verify' ||
-    path === '/api/web/session/revoke' ||
-    path === '/api/web/members/list' ||
-    path === '/api/web/members/detail' ||
-    path === '/api/web/admin/settings' ||
-    path === '/api/web/admin/staff' ||
-    path === '/api/web/admin/roles' ||
-    path === '/api/web/admin/staff/role' ||
-    path === '/api/web/admin/audit-log' ||
-    path === '/api/web/reports/summary' ||
-    path === '/api/web/members/renew' ||
-    path === '/api/member/me/profile' ||
-    path === '/api/member/me/savings' ||
-    path === '/api/member/me/loans' ||
-    path === '/api/member/me/dividends' ||
-    path === '/api/member/me/activate' ||
-    path === '/api/member/me/renew';
-}
-
 
 /**
  * dispatch /api/* ผ่าน Api.ApiService (API mount — การ์ด MT-16/17/20)
