@@ -47,7 +47,19 @@ if(uc.execute({principal:p,kind:'unknown'}).error.code!=='FINANCE_KIND_INVALID')
   throw new Error('unknown finance kind must fail');
 }
 
+const deniedBinding={
+  requireAuthenticated:authorization.requireAuthenticated,
+  requireMemberBinding:()=>({allowed:false,reason:'member_mismatch'})
+};
+const bindingUc=sandbox.Application.Member.GetCurrentMemberFinanceUseCase.create({
+  memberRepository:repo,memberAccess,authorization:deniedBinding
+});
+if(bindingUc.execute({principal:p,kind:'savings'}).error.code!=='FORBIDDEN') {
+  throw new Error('member binding denial must fail closed');
+}
+
 console.log('PASS  current member savings/loans/dividends use case');
 console.log('PASS  unauthenticated finance access denied');
 console.log('PASS  invalid finance kind denied');
-console.log('=== CURRENT MEMBER FINANCE TESTS PASS (3/3) ===');
+console.log('PASS  member binding denial fails closed');
+console.log('=== CURRENT MEMBER FINANCE TESTS PASS (4/4) ===');
