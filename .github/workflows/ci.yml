@@ -50,6 +50,7 @@ jobs:
           node tests/architecture/richmenu-config-wiring.test.js
           node tests/architecture/config-port-authority.test.js
           node tests/architecture/clock-port-authority.test.js
+          node tests/architecture/runtime-global-layer-boundary.test.js
           node tests/architecture/loan-calculator-authority.test.js
 
       - name: Port contract tests (plug-compatible adapters)
