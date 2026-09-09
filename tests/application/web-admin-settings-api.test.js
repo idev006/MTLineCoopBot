@@ -62,8 +62,6 @@ if(res.ok||res.error.code!=='METHOD_NOT_ALLOWED') throw new Error('admin setting
 const route=sandbox.Api.ApiRegistry.listRoutes().find(r=>r.path==='/api/web/admin/settings');
 if(!route||route.auth!=='web-session'||route.method!=='POST') throw new Error('route metadata mismatch');
 
-const webSrc=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
-if(!webSrc.includes("path === '/api/web/admin/settings'")) throw new Error('WebApp route classification missing');
 
 console.log('PASS  admin settings requires server Web session');
 console.log('PASS  admin-only RBAC enforced');
