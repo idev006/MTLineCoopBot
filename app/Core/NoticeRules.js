@@ -3,7 +3,7 @@
  * กฎการ Broadcast ประกาศ/ข่าวสาร (การ์ด MT-13 — บทที่ 7 ระยะ 2)
  * Pure functions — เทสต์ใน node ได้โดยไม่ต้อง mock (ไม่มี SpreadsheetApp / LINE API)
  *
- * - getPendingNotices(notices, now?) — กรองประกาศที่พร้อมส่ง
+ * - getPendingNotices(notices, now)  — กรองประกาศที่พร้อมส่ง
  * - buildNoticeText(notice)          — ข้อความ push (รูปแบบเดียวกับข้อความอื่นในระบบ)
  * - getBroadcastTargets(members)     — สมาชิกที่ควรได้รับ broadcast (active + มี line_user_id)
  *
@@ -26,11 +26,12 @@ Core.NoticeRules = (() => {
   /**
    * กรองประกาศที่พร้อมส่ง (status='published' + ยังไม่เคยส่ง + ถึงเวลาแล้ว)
    * @param {Array<Object>} notices - รายการจาก t_notice
-   * @param {Date|string} [now] - เวลาปัจจุบัน (default = new Date()) — ส่ง Date หรือ string ได้
+   * @param {Date|string} now - เวลาอ้างอิงจาก caller/ClockPort
    * @returns {Array<Object>}
    */
   function getPendingNotices(notices, now) {
-    const nowStr = now instanceof Date ? fmtDateTime(now) : String(now || fmtDateTime(new Date()));
+    if (!now) throw new Error('NoticeRules now is required');
+    const nowStr = now instanceof Date ? fmtDateTime(now) : String(now);
     return (notices || []).filter((n) => {
       if (!n) return false;
       if (n.status !== 'published') return false;
