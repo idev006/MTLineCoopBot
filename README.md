@@ -49,6 +49,37 @@ GitHub เป็น **source of truth** ของโค้ด ส่วน Apps 
 แก้โค้ด → git commit + git push (GitHub) → clasp push (Apps Script) → Deploy Web App ใหม่
 ```
 
+### Deployment gate ก่อนทดสอบใช้งานจริง
+
+สำหรับ release ปัจจุบัน ให้ถือ GitHub `main` เป็น source of truth และต้อง sync source ไปยัง Apps Script ก่อนเริ่ม LINE live/staging test
+
+Canonical backend commit:
+`c7df357d29b37f6c74e0203cea850190087fd122`
+
+โครงการนี้ไม่มีขั้น build/bundle แยกสำหรับ Apps Script; `.clasp.json` ใช้ `rootDir: app` และ Apps Script V8 รัน source โดยตรง
+
+ขั้นตอนบังคับ:
+
+```bash
+git checkout main
+git pull
+git rev-parse HEAD
+clasp push
+```
+
+ก่อน `clasp push` ค่า `git rev-parse HEAD` ต้องตรงกับ canonical commit ที่ release กำหนด
+
+หลัง `clasp push` ต้องสร้างหรืออัปเดต Web App deployment version ให้ endpoint `/exec` ใช้ source ล่าสุด การ `clasp push` เพียงอย่างเดียวไม่ถือเป็นหลักฐานว่า deployment ที่เผยแพร่อยู่กำลังรันโค้ดใหม่
+
+ให้บันทึก release evidence:
+- backend Git commit
+- ผล `clasp push`
+- Apps Script deployment/version ID
+- Web App deployment URL
+- เวลาที่ update deployment
+
+ห้ามเริ่ม LINE live smoke test จน deployment sync gate นี้ผ่าน
+
 ### เริ่มทำงานในเครื่องใหม่
 
 ```bash
