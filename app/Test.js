@@ -860,12 +860,19 @@ function testColumnReordering() {
   const a = repo.findByActivateCode('ACT001');
   if (!a || a.mem_code !== 'M001') throw new Error('testColumnReordering: findByActivateCode ผิด');
 
-  // 4) activateMember เขียนถูกคอลัมน์ (line_user_id = คอลัมน์ 1, mem_status = คอลัมน์ 2 ใน layout ใหม่)
-  repo.activateMember(2, 'U99999999999999999999999999999999');
+  // 4) saveActivation เขียนค่าที่คำนวณล่วงหน้าถูกคอลัมน์
+  //    persistence ต้องไม่คำนวณวันที่/อายุสมาชิกเอง
+  repo.saveActivation(2, {
+    memEffDt: '2026-09-09 10:00:00',
+    memExpDt: '2027-09-09 10:00:00',
+    memStatus: 'active',
+    lineUserId: 'U99999999999999999999999999999999'
+  });
   const row = __fakeSheets['t_member_mast'][1];
   if (row[0] !== 'U99999999999999999999999999999999') throw new Error('testColumnReordering: line_user_id เขียนผิดคอลัมน์');
   if (row[1] !== 'active') throw new Error('testColumnReordering: mem_status เขียนผิดคอลัมน์');
-  if (typeof row[10] !== 'string' || row[10].length < 10) throw new Error('testColumnReordering: mem_eff_dt ไม่ถูกเขียน');
+  if (row[10] !== '2026-09-09 10:00:00') throw new Error('testColumnReordering: mem_eff_dt เขียนผิด');
+  if (row[11] !== '2027-09-09 10:00:00') throw new Error('testColumnReordering: mem_exp_dt เขียนผิด');
   if (row[4] !== 'ใจดี') throw new Error('testColumnReordering: ข้อมูลอื่นเสียหายจากการเขียน');
 
   // 5) ตารางการเงินสลับคอลัมน์ — findAllByColumn ยังอ่านถูกต้อง
