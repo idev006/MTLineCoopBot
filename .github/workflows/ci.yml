@@ -43,6 +43,7 @@ jobs:
           node tests/architecture/audit-timestamp-authority.test.js
           node tests/architecture/member-audit-store-extraction.test.js
           node tests/architecture/audit-caller-authority.test.js
+          node tests/architecture/audit-id-authority.test.js
           node tests/architecture/core-time-determinism.test.js
           node tests/architecture/protected-identity-usecase-authority.test.js
           node tests/architecture/delivery-config-clock-wiring.test.js
@@ -56,6 +57,7 @@ jobs:
           node tests/contracts/member-repository.contract.test.js
           node tests/contracts/inmemory-member-repository.test.js
           node tests/contracts/audit-config-ports.test.js
+          node tests/contracts/id-port.test.js
           node tests/contracts/scheduled-ports.test.js
           node tests/contracts/web-session-ports.test.js
           node tests/contracts/web-session-production-adapters.test.js
