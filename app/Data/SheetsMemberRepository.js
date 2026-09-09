@@ -2,9 +2,9 @@
  * @fileoverview Data.SheetsMemberRepository
  * Repository สมาชิกบน Google Sheets — ห่อ LineBot.SheetService
  *
- * การสลับฐานข้อมูล (Firestore/PostgreSQL) = เขียน repository ใหม่ตามสัญญา
- * Data.MemberRepository (บทที่ 3.2.4) แล้วเปลี่ยน Config.DB_TYPE — ไม่ต้อง
- * แก้ Core/Handler แต่อย่างใด
+ * การสลับฐานข้อมูล (Firestore/PostgreSQL) = เขียน adapter ใหม่ให้ผ่าน
+ * Ports.MemberRepositoryPort แล้วให้ Composition.SystemFactory เลือกตาม DB_TYPE
+ * โดยไม่ต้องแก้ Core/Handler
  *
  * หมายเหตุ: SpreadsheetApp ถูกจำกัดอยู่ใน layer นี้เท่านั้น (ผ่าน SheetService)
  */
