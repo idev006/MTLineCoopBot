@@ -41,17 +41,7 @@ Data.SheetsMemberRepository = (() => {
     return LineBot.SheetService.findByActivateCode(activateCode);
   }
 
-  /**
-   * ลงทะเบียน activate สมาชิก (เขียน mem_eff_dt/mem_exp_dt/mem_status/line_user_id)
-   * @param {number} rowIndex
-   * @param {string} lineUserId
-   * @returns {Object} { memEffDt, memExpDt }
-   */
-  function activateMember(rowIndex, lineUserId) {
-    return LineBot.SheetService.activateMember(rowIndex, lineUserId);
-  }
-
-  /**
+    /**
    * Persist precomputed activation values.
    * Business date/status policy must be computed before calling this adapter.
    * @param {number} rowIndex
@@ -184,7 +174,6 @@ Data.SheetsMemberRepository = (() => {
     findByLineUserId,
     findByMemberCode,
     findByActivateCode,
-    activateMember,
     saveActivation,
     findSavingsByMember,
     findLoansByMember,
