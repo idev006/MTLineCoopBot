@@ -4,19 +4,11 @@ LINE Bot บริการสมาชิกสหกรณ์ — Frontend/UI 
 
 ![CI — Contract Tests & Lint](https://github.com/idev006/MTLineCoopBot/actions/workflows/ci.yml/badge.svg)
 
-## 📚 เอกสารโครงการ (Project Book)
+## 📚 เอกสารโครงการ
 
-เอกสารฉบับสมบูรณ์ (ปกหน้า · คำนำ · สารบัญ · 8 บท · บรรณานุกรม) อยู่ที่:
+เอกสารโครงการ canonical อยู่ที่ **`idev006/MTP6LineCoopBot/docs/ssot/`** ซึ่งเป็น Single Source of Truth (SSOT) สำหรับ architecture, security, process, Kanban, API contract, release gates และ traceability.
 
-👉 **[app/docs/README.md](./app/docs/README.md)** — เริ่มอ่านที่นี่
-
-| เอกสาร | คำอธิบาย |
-|--------|----------|
-| [KANBAN.md](./app/docs/KANBAN.md) | บอร์ดงานทีม (Backlog / To Do / In Progress / Done) |
-| [data-dictionary.md](./app/docs/data-dictionary.md) | พจนานุกรมข้อมูล (SSOT — ตาราง `t_member_mast` 16 คอลัมน์) |
-| [foundation-readiness.md](./app/docs/foundation-readiness.md) | Checklist ความพร้อมรากฐาน — เมทริกซ์เสาหลัก ↔ หลักฐานการทดสอบ |
-| [metrics-dashboard-template.md](./app/docs/metrics-dashboard-template.md) | เทมเพลต Dashboard KPI ของทีม |
-| [use-case-member-activation.md](./app/docs/use-case-member-activation.md) | Use Case ระบบ Activate สมาชิก |
+ไฟล์ [`app/docs/README.md`](./app/docs/README.md) เป็น legacy pointer เท่านั้น; substantive documentation copies ใน backend ถูก retire เพื่อป้องกัน drift.
 
 ## 🧰 เทคโนโลยี
 
