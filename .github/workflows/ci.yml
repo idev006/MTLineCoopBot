@@ -39,6 +39,7 @@ jobs:
           node tests/architecture/member-repository-factory-retirement.test.js
           node tests/architecture/repository-policy-helper-retirement.test.js
           node tests/architecture/repository-activation-policy-retirement.test.js
+          node tests/architecture/repository-renewal-policy-retirement.test.js
           node tests/architecture/audit-timestamp-authority.test.js
           node tests/architecture/core-time-determinism.test.js
           node tests/architecture/protected-identity-usecase-authority.test.js
