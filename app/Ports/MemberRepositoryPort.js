@@ -19,14 +19,11 @@ Ports.MemberRepositoryPort = (() => {
     'findSavingsByMember',
     'findLoansByMember',
     'findDividendsByMember',
-    'logActivation',
     'listMembers',
-    'logExpiry',
     'saveRenewal',
     'listNotices',
     'markNoticeSent',
     'listLoans',
-    'logReminder',
     'getContent'
   ]);
 

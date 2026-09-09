@@ -5,7 +5,7 @@ const vm = require('vm');
 const root = process.cwd();
 const sheetPath = path.join(root, 'app/LineBot/SheetService.js');
 const sheetSrc = fs.readFileSync(sheetPath, 'utf8');
-const adapterSrc = fs.readFileSync(path.join(root, 'app/Adapters/Audit/MemberRepositoryAuditAdapter.js'), 'utf8');
+const adapterSrc = fs.readFileSync(path.join(root, 'app/Adapters/Audit/DurableAuditAdapter.js'), 'utf8');
 const renewSrc = fs.readFileSync(path.join(root, 'app/Application/Member/RenewMemberUseCase.js'), 'utf8');
 const staffRenewSrc = fs.readFileSync(path.join(root, 'app/Application/Web/RenewMemberByStaffUseCase.js'), 'utf8');
 
@@ -19,11 +19,10 @@ for (const forbidden of [
 }
 
 for (const required of [
-  'activatedDt: e.occurredAt',
-  'occurredAt: now',
-  'occurredAt:now'
+  /activatedDt\s*:\s*e\.occurredAt/,
+  /occurredAt\s*:\s*now/
 ]) {
-  if (!(adapterSrc + renewSrc + staffRenewSrc).includes(required)) {
+  if (!required.test(adapterSrc + renewSrc + staffRenewSrc)) {
     throw new Error('audit timestamp propagation missing: ' + required);
   }
 }

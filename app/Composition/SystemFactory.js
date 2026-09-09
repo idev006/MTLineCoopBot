@@ -93,12 +93,15 @@ Composition.SystemFactory = (() => {
     const staffAdminRepository = Ports.StaffAdminRepositoryPort.assertImplemented(
       o.staffAdminRepository || Adapters.Admin.SheetsStaffAdminRepository
     );
+    const memberAuditStore = Ports.MemberAuditStorePort.assertImplemented(
+      o.memberAuditStore || Adapters.Audit.SheetsMemberAuditStore
+    );
     const adminAuditStore = Ports.AdminAuditStorePort.assertImplemented(
       o.adminAuditStore || Adapters.Audit.SheetsAdminAuditStore
     );
     const audit = Ports.AuditPort.assertImplemented(
-      o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({
-        memberRepository,
+      o.audit || Adapters.Audit.DurableAuditAdapter.create({
+        memberAuditStore,
         adminAuditStore
       })
     );
@@ -279,6 +282,7 @@ Composition.SystemFactory = (() => {
       messaging,
       memberMenu,
       memberRepository,
+      memberAuditStore,
       staffAdminRepository,
       adminAuditStore,
       memberAccess,

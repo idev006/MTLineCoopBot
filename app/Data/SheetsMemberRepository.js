@@ -80,29 +80,11 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
-   * บันทึกเหตุการณ์ Activate (MT-27)
-   * @param {Object} entry
-   * @returns {Object} { log_id, status }
-   */
-  function logActivation(entry) {
-    return LineBot.SheetService.logActivation(entry);
-  }
-
-  /**
    * ดึงสมาชิกทั้งหมด (MT-11 — scan วันหมดอายุ)
    * @returns {Array<Object>}
    */
   function listMembers() {
     return LineBot.SheetService.findAllMembers();
-  }
-
-  /**
-   * บันทึกผลการตรวจวันหมดอายุ (MT-32)
-   * @param {Object} entry - { memCode, lineUserId, status, daysLeft, memExpDt }
-   * @returns {Object} { log_id, status }
-   */
-  function logExpiry(entry) {
-    return LineBot.SheetService.appendExpiryLog(entry);
   }
 
   /**
@@ -142,15 +124,6 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
-   * บันทึกการเตือนชำระลง t_reminder_log (MT-13b)
-   * @param {Object} entry - { memCode, loanNo, dueDt, daysLeft, status }
-   * @returns {Object} { log_id, status }
-   */
-  function logReminder(entry) {
-    return LineBot.SheetService.appendReminderLog(entry);
-  }
-
-  /**
    * ดึงเนื้อหาเมนูจาก t_content (MT-14)
    * @param {string} key
    * @returns {string|null}
@@ -167,14 +140,11 @@ Data.SheetsMemberRepository = (() => {
     findSavingsByMember,
     findLoansByMember,
     findDividendsByMember,
-    logActivation,
     listMembers,
-    logExpiry,
     saveRenewal,
     listNotices,
     markNoticeSent,
     listLoans,
-    logReminder,
     getContent
   };
 })();
