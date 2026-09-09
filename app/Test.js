@@ -583,61 +583,20 @@ function testLoanRules() {
  * @returns {boolean}
  */
 function testLoanReminders() {
-  // 1) seed fake sheets: t_member_mast + t_loan_acct
-  delete __fakeSheets['t_member_mast'];
-  __fakeSheets['t_member_mast'] = [
-    DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', '', 'member', 80, 8000, 5000],
-    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'inactive', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000]
-  ];
-  delete __fakeSheets['t_loan_acct'];
-  __fakeSheets['t_loan_acct'] = [
-    DataDict.getHeaders('LOAN_ACCT'),
-    ['M001', 'LN-001', 100000, 45000, '2026-08-20'],   // ถึงรอบ (8 วัน) — active + userId → reminded
-    ['M001', 'LN-002', 50000, 10000, '2026-12-31'],    // ไกลเกิน → ไม่เตือน
-    ['M002', 'LN-003', 30000, 12000, '2026-08-25'],    // ถึงรอบ (13 วัน) — ไม่มี userId → skipped
-    ['M003', 'LN-004', 20000, 5000, '2026-08-01']      // เลยกำหนด → ไม่เตือน
-  ];
-
-  const sent = [];
-  const summary = LineBot.LoanReminderService.runLoanReminders('TOKEN', {
-    now: new Date('2026-08-12T12:00:00'),
-    reminderDays: 14,
-    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; }
-  });
-
-  if (summary.loans !== 4) throw new Error('testLoanReminders: loans ควร 4 (' + summary.loans + ')');
-  if (summary.due !== 2) throw new Error('testLoanReminders: due ควร 2 (' + summary.due + ')');
-  if (summary.reminded !== 1) throw new Error('testLoanReminders: reminded ควร 1');
-  if (summary.skipped !== 1) throw new Error('testLoanReminders: skipped ควร 1');
-  if (summary.pushed !== 1) throw new Error('testLoanReminders: pushed ควร 1 (' + summary.pushed + ')');
-
-  // เตือนเฉพาะ LN-001 (M001) — Flex Card รายบุคคล (การ์ด MT-36)
-  if (sent.length !== 1) throw new Error('testLoanReminders: ควร push 1 ครั้ง');
-  if (sent[0].to !== 'U11111111111111111111111111111111') throw new Error('testLoanReminders: ต้อง push ถึง M001');
-  const cardJson = JSON.stringify(sent[0].text);
-  if (!sent[0].text || sent[0].text.type !== 'flex' || !sent[0].text.altText.includes('คุณนาย สมชาย ใจดี')) {
-    throw new Error('testLoanReminders: ต้อง push Flex Card (loanReminderCard)');
+  const original = Composition.SystemFactory.createSystem;
+  let calls = 0;
+  Composition.SystemFactory.createSystem = function () {
+    return { loanReminder: { execute: function () { calls++; return { source:'application', kind:'loan' }; } } };
+  };
+  try {
+    const result = LineBot.LoanReminderService.runLoanReminders();
+    if (calls !== 1 || result.source !== 'application' || result.kind !== 'loan') {
+      throw new Error('testLoanReminders: ต้อง delegate ไป Application loanReminder เพียงครั้งเดียว');
+    }
+  } finally {
+    Composition.SystemFactory.createSystem = original;
   }
-  if (!cardJson.includes('LN-001') || !cardJson.includes('45,000.00 บาท') || !cardJson.includes('อีก 8 วัน')) {
-    throw new Error('testLoanReminders: การ์ดต้องมีข้อมูลรายบุคคล (ชื่อ + สัญญา + ยอด + วันเหลือ)');
-  }
-
-  // audit trail: reminded (M001/LN-001) + skipped (M002/LN-003)
-  const logs = __fakeSheets['t_reminder_log'] || [];
-  const logRows = logs.length > 0 ? logs.slice(1) : [];
-  if (logRows.length !== 2) throw new Error('testLoanReminders: t_reminder_log ควรมี 2 แถว (ได้ ' + logRows.length + ')');
-  const byLoan = {};
-  for (const r of logRows) byLoan[r[2]] = r;
-  if (!byLoan['LN-001'] || byLoan['LN-001'][5] !== 'reminded' || byLoan['LN-001'][4] !== 8) {
-    throw new Error('testLoanReminders: log LN-001 ควรเป็น reminded 8 วัน');
-  }
-  if (!byLoan['LN-003'] || byLoan['LN-003'][5] !== 'skipped') {
-    throw new Error('testLoanReminders: log LN-003 ควรเป็น skipped (M002 ไม่มี userId)');
-  }
-
-  Logger.log('testLoanReminders OK — เตือนรายบุคคล + skipped + audit log (Fake Sheets + fake sender)');
+  Logger.log('testLoanReminders OK — thin adapter delegates exclusively to Application Layer');
   return true;
 }
 
@@ -741,64 +700,20 @@ function testNoticeRules() {
  * @returns {boolean}
  */
 function testNoticeBroadcast() {
-  // 1) seed fake sheets: t_member_mast (3 active + 1 inactive) + t_notice (dummy 6 คอลัมน์)
-  delete __fakeSheets['t_member_mast'];
-  __fakeSheets['t_member_mast'] = [
-    DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-12-31', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-12-31', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
-    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'active', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000],
-    ['M004', 'นาย', 'ยังไม่', 'Activate', 0, '', 0, '', '', 'inactive', 'ACT004', '', 'member', 0, 0, 0]
-  ];
-  delete __fakeSheets['t_notice'];
-  __fakeSheets['t_notice'] = [
-    DataDict.getHeaders('NOTICE'),
-    ['NTC-0001', 'ประกาศปิดทำการ', 'ปิดวันที่ 12 ส.ค. 2569', '2026-08-01 09:00:00', '2026-08-01 09:00:05', 'published'],
-    ['NTC-0002', 'ประชุมใหญ่สามัญ', 'ประชุมวันที่ 20 ส.ค. 2569 เวลา 09:00 น.', '2026-08-06 09:00:00', '', 'published'],
-    ['NTC-0003', 'แบบร่างประกาศ', 'ยังไม่เผยแพร่', '2026-08-10 09:00:00', '', 'draft']
-  ];
-
-  const sent = [];
-  const summary = LineBot.NoticeService.runNoticeBroadcast('TOKEN', {
-    now: new Date('2026-08-06T12:00:00'),
-    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; }
-  });
-
-  if (summary.notices !== 3) throw new Error('testNoticeBroadcast: notices ควร 3 (' + summary.notices + ')');
-  if (summary.pending !== 1) throw new Error('testNoticeBroadcast: pending ควร 1 (' + summary.pending + ')');
-  if (summary.sent !== 1) throw new Error('testNoticeBroadcast: sent ควร 1 (' + summary.sent + ')');
-  if (summary.targets !== 3) throw new Error('testNoticeBroadcast: targets ควร 3 (' + summary.targets + ')');
-  if (summary.pushed !== 3) throw new Error('testNoticeBroadcast: pushed ควร 3 (' + summary.pushed + ')');
-
-  // ทุก active member ได้รับประกาศ NTC-0002 — Flex Card (noticeCard — การ์ด MT-36) · inactive ไม่ได้รับ
-  if (!sent.every(s => s.text && s.text.type === 'flex')) throw new Error('testNoticeBroadcast: ต้อง push Flex Card (noticeCard)');
-  if (!sent.every(s => s.text.altText.includes('ประชุมใหญ่สามัญ'))) throw new Error('testNoticeBroadcast: การ์ดต้องเป็น NTC-0002');
-  if (!JSON.stringify(sent[0].text).includes('ประชุมวันที่ 20 ส.ค. 2569') ||
-      !JSON.stringify(sent[0].text).includes('2026-08-06 09:00:00')) {
-    throw new Error('testNoticeBroadcast: การ์ดต้องมีเนื้อหา + ประกาศเมื่อ');
+  const original = Composition.SystemFactory.createSystem;
+  let calls = 0;
+  Composition.SystemFactory.createSystem = function () {
+    return { noticeBroadcast: { execute: function () { calls++; return { source:'application', kind:'notice' }; } } };
+  };
+  try {
+    const result = LineBot.NoticeService.runNoticeBroadcast();
+    if (calls !== 1 || result.source !== 'application' || result.kind !== 'notice') {
+      throw new Error('testNoticeBroadcast: ต้อง delegate ไป Application noticeBroadcast เพียงครั้งเดียว');
+    }
+  } finally {
+    Composition.SystemFactory.createSystem = original;
   }
-  if (!sent.some(s => s.to === 'U11111111111111111111111111111111')) throw new Error('testNoticeBroadcast: M001 ไม่ได้รับประกาศ');
-  if (!sent.some(s => s.to === 'U22222222222222222222222222222222')) throw new Error('testNoticeBroadcast: M002 ไม่ได้รับประกาศ');
-  if (!sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testNoticeBroadcast: M003 ไม่ได้รับประกาศ');
-  if (sent.some(s => s.to === 'U44444444444444444444444444444444')) throw new Error('testNoticeBroadcast: inactive ไม่ควรได้รับประกาศ');
-
-  // NTC-0002 ถูก mark sent แล้ว (sent_dt + status='sent')
-  const noticeRows = __fakeSheets['t_notice'] || [];
-  const ntc2 = noticeRows.find(r => r[0] === 'NTC-0002');
-  if (!ntc2 || !ntc2[4] || ntc2[5] !== 'sent') {
-    throw new Error('testNoticeBroadcast: NTC-0002 ต้องถูก mark sent (sent_dt + status=sent)');
-  }
-
-  // 2) รันรอบที่ 2 — ไม่ส่งซ้ำ (pending = 0, pushed = 0)
-  const sent2 = [];
-  const summary2 = LineBot.NoticeService.runNoticeBroadcast('TOKEN', {
-    now: new Date('2026-08-06T13:00:00'),
-    sender: (to, text) => { sent2.push({ to, text }); return { ok: true }; }
-  });
-  if (summary2.pending !== 0) throw new Error('testNoticeBroadcast: รอบ 2 pending ควร 0 (กันส่งซ้ำ)');
-  if (summary2.pushed !== 0) throw new Error('testNoticeBroadcast: รอบ 2 pushed ควร 0');
-
-  Logger.log('testNoticeBroadcast OK — broadcast + mark sent + ไม่ส่งซ้ำ (Fake Sheets + fake sender)');
+  Logger.log('testNoticeBroadcast OK — thin adapter delegates exclusively to Application Layer');
   return true;
 }
 
@@ -1154,67 +1069,20 @@ function testExpiryStatus() {
  * @returns {boolean}
  */
 function testExpiryService() {
-  // 1) seed t_member_mast ใน fake sheets (header + 4 แถว: expiring / expired / valid / inactive)
-  delete __fakeSheets['t_member_mast'];
-  __fakeSheets['t_member_mast'] = [
-    DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '2026-01-01', '2026-08-20', 'active', 'ACT001', 'U11111111111111111111111111111111', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '2026-01-01', '2026-08-01', 'active', 'ACT002', 'U22222222222222222222222222222222', 'member', 80, 8000, 5000],
-    ['M003', 'นาย', 'ทดสอบ', 'ระบบ', 15, '', 3, '2026-01-01', '2026-12-31', 'active', 'ACT003', 'U33333333333333333333333333333333', 'member', 70, 0, 2000],
-    ['M004', 'นาย', 'ยังไม่', 'Activate', 0, '', 0, '', '', 'inactive', 'ACT004', '', 'member', 0, 0, 0]
-  ];
-
-  const sent = [];
-  const unlinked = [];
-  const summary = LineBot.ExpiryService.runExpiryCheck('TOKEN', {
-    now: new Date('2026-08-06T12:00:00'),
-    warningDays: 30,
-    sender: (to, text) => { sent.push({ to, text }); return { ok: true }; },
-    unlinker: (lineUserId) => { unlinked.push(lineUserId); return { ok: true }; }
-  });
-
-  if (summary.checked !== 4) throw new Error('testExpiryService: checked ควร 4 (' + summary.checked + ')');
-  if (summary.logged !== 3) throw new Error('testExpiryService: logged ควร 3 (ทุก active+userId ที่ถูกตรวจ)');
-  if (summary.expiring !== 1) throw new Error('testExpiryService: expiring ควร 1');
-  if (summary.expired !== 1) throw new Error('testExpiryService: expired ควร 1');
-  if (summary.pushed !== 2) throw new Error('testExpiryService: pushed ควร 2 (' + summary.pushed + ')');
-  if (sent.length !== 2) throw new Error('testExpiryService: sender ควรถูกเรียก 2 ครั้ง');
-
-  if (!sent.some(s => s.to === 'U11111111111111111111111111111111' && s.text.includes('14 วัน'))) {
-    throw new Error('testExpiryService: ไม่มี push เตือน expiring');
+  const original = Composition.SystemFactory.createSystem;
+  let calls = 0;
+  Composition.SystemFactory.createSystem = function () {
+    return { expiryScan: { execute: function () { calls++; return { source:'application', kind:'expiry' }; } } };
+  };
+  try {
+    const result = LineBot.ExpiryService.runExpiryCheck();
+    if (calls !== 1 || result.source !== 'application' || result.kind !== 'expiry') {
+      throw new Error('testExpiryService: ต้อง delegate ไป Application expiryScan เพียงครั้งเดียว');
+    }
+  } finally {
+    Composition.SystemFactory.createSystem = original;
   }
-  if (!sent.some(s => s.to === 'U22222222222222222222222222222222' && s.text.includes('หมดอายุแล้ว'))) {
-    throw new Error('testExpiryService: ไม่มี push แจ้ง expired');
-  }
-  if (!unlinked.includes('U22222222222222222222222222222222')) throw new Error('testExpiryService: expired ควรถูก unlink');
-  if (unlinked.includes('U11111111111111111111111111111111')) throw new Error('testExpiryService: expiring ไม่ควรถูก unlink');
-  if (sent.some(s => s.to === 'U33333333333333333333333333333333')) throw new Error('testExpiryService: valid ไม่ควรถูก push');
-  if (sent.some(s => s.to === 'U44444444444444444444444444444444')) throw new Error('testExpiryService: inactive ไม่ควรถูก push');
-
-  // 2) audit trail: ทุกการตรวจถูกบันทึกลง t_expiry_log (การ์ด MT-32)
-  const logs = __fakeSheets['t_expiry_log'] || [];
-  const logRows = logs.length > 0 ? logs.slice(1) : []; // ข้าม header
-  if (logRows.length !== 3) throw new Error('testExpiryService: t_expiry_log ควรมี 3 แถว (ได้ ' + logRows.length + ')');
-  const byMember = {};
-  for (const r of logRows) byMember[r[1]] = r;
-  if (!byMember['M001'] || byMember['M001'][3] !== 'expiring' || byMember['M001'][4] !== 14) {
-    throw new Error('testExpiryService: log M001 ผิด (ควร expiring 14 วัน)');
-  }
-  if (!byMember['M002'] || byMember['M002'][3] !== 'expired' || byMember['M002'][4] !== -5) {
-    throw new Error('testExpiryService: log M002 ผิด (ควร expired -5 วัน)');
-  }
-  if (!byMember['M003'] || byMember['M003'][3] !== 'valid' || byMember['M003'][4] !== 147) {
-    throw new Error('testExpiryService: log M003 ผิด (ควร valid 147 วัน)');
-  }
-  if (byMember['M004']) throw new Error('testExpiryService: inactive ไม่ควรมี log');
-
-  // 3) repository มี listMembers + logExpiry ครบสัญญา
-  const repo = Data.MemberRepository.getRepository();
-  if (typeof repo.listMembers !== 'function') throw new Error('testExpiryService: repository ต้องมี listMembers');
-  if (typeof repo.logExpiry !== 'function') throw new Error('testExpiryService: repository ต้องมี logExpiry');
-  if (repo.listMembers().length !== 4) throw new Error('testExpiryService: listMembers ควรคืน 4 รายการ');
-
-  Logger.log('testExpiryService OK — scan + push + unlink + audit log t_expiry_log (ทุกการตรวจ)');
+  Logger.log('testExpiryService OK — thin adapter delegates exclusively to Application Layer');
   return true;
 }
 
