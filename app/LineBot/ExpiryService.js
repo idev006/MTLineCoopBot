@@ -49,6 +49,6 @@ LineBot.ExpiryService = (() => {
  * (Apps Script เรียก function ระดับบนสุดได้เท่านั้น — ตัวนี้เป็นตัวส่งต่อให้ ExpiryService)
  */
 function runExpiryCheck() {
-  const cfg = Config.validate();
+  Composition.SystemFactory.createValidatedConfig().validate();
   return LineBot.ExpiryService.runExpiryCheck();
 }
