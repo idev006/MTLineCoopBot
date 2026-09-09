@@ -590,11 +590,19 @@ const DataDict = (() => {
 
   /**
    * สร้างเอกสาร Data Dictionary
+   * @param {Date|string|number} generatedAt - เวลาอ้างอิงจาก caller/ClockPort
    * @returns {string} Markdown format
    */
-  function generateDocumentation() {
+  function generateDocumentation(generatedAt) {
+    if (!generatedAt) {
+      throw new Error('DataDict documentation generatedAt is required');
+    }
+    const generatedDate = generatedAt instanceof Date ? generatedAt : new Date(generatedAt);
+    if (Number.isNaN(generatedDate.getTime())) {
+      throw new Error('DataDict documentation generatedAt is invalid');
+    }
     let md = '# Data Dictionary\n\n';
-    md += 'Generated: ' + new Date().toISOString() + '\n\n';
+    md += 'Generated: ' + generatedDate.toISOString() + '\n\n';
     
     Object.keys(TABLES).forEach(key => {
       const table = TABLES[key];
