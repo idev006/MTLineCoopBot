@@ -19,7 +19,8 @@ Adapters.Audit.MemberRepositoryAuditAdapter = (() => {
           memCode: e.memberCode || '',
           lineUserId: e.lineUserId || '',
           activateCode: e.activateCode || '',
-          status: e.status || 'success'
+          status: e.status || 'success',
+          activatedDt: e.occurredAt
         });
       }
       if (e.type === 'member.renewal') {
@@ -27,7 +28,8 @@ Adapters.Audit.MemberRepositoryAuditAdapter = (() => {
           memCode: e.memberCode || '',
           lineUserId: e.lineUserId || '',
           activateCode: '',
-          status: e.status || 'renewed'
+          status: e.status || 'renewed',
+          activatedDt: e.occurredAt
         });
       }
       if (e.type === 'member.expiry.checked') {
