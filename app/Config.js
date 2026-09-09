@@ -58,8 +58,6 @@ const Config = (() => {
       // LINE Login channel ID used to verify LIFF/LINE Login ID tokens server-side
       LINE_LOGIN_CHANNEL_ID: _props.getProperty('LINE_LOGIN_CHANNEL_ID'),
       WEBHOOK_SECRET: _props.getProperty('WEBHOOK_SECRET'),
-      // API Key สำหรับเรียก /api/* (WebApp mount — ดูบทที่ 5.10) — ส่งผ่าน ?api_key= หรือใน body
-      API_KEY: _props.getProperty('API_KEY'),
       // ฐานข้อมูลของระบบ — 'sheets' (ค่า default) / 'firestore' (อนาคต, บทที่ 3.2.4)
       DB_TYPE: _props.getProperty('DB_TYPE') || 'sheets',
       // จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" — แจ้งเตือน + แนบคำเตือนในคำตอบ (การ์ด MT-11)
@@ -80,7 +78,6 @@ const Config = (() => {
       'CHANNEL_SECRET': 'ใส่_CHANNEL_SECRET_ของคุณ_ที่นี่',
       'LINE_LOGIN_CHANNEL_ID': 'ใส่_LINE_LOGIN_CHANNEL_ID_ของคุณ_ที่นี่',
       'WEBHOOK_SECRET': 'ใส่_รหัสยาวสุ่ม_สำหรับ_Webhook_URL_ที่นี่',
-      'API_KEY': 'ใส่_API_KEY_ยาวสุ่ม_สำหรับ_เรียก_API_ที่นี่',
       'WEB_SESSION_TTL_SECONDS': '28800',
       'LIFF_ACTIVATION_URL': 'https://liff.line.me/2008123326-yNw2X0aA'
     };
