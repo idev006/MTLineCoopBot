@@ -49,7 +49,7 @@ for(const role of ['staff','manager','admin']){
   if(events.length!==1||events[0].memberCode!=='M001'||events[0].lineUserId!=='ACTOR-'+role||events[0].status!=='renewed_by_'+role){
     throw new Error(role+' audit evidence failed');
   }
-  if(!(events[0].occurredAt instanceof Date) || events[0].occurredAt.getTime()!==clock.now().getTime()){
+  if(Number(events[0].occurredAt)!==Number(clock.now())){
     throw new Error(role+' audit timestamp must come from ClockPort');
   }
 }
