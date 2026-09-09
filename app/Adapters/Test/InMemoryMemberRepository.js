@@ -109,25 +109,8 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       return byMember(state.dividends, memCode);
     }
 
-    function appendLog(collection, entry, prefix) {
-      const row = Object.assign({}, clone(entry || {}), {
-        log_id: (entry && entry.log_id) || (prefix + '-' + String(collection.length + 1).padStart(4, '0')),
-        status: (entry && entry.status) || 'ok'
-      });
-      collection.push(row);
-      return clone(row);
-    }
-
-    function logActivation(entry) {
-      return appendLog(state.activationLogs, entry, 'ACT');
-    }
-
     function listMembers() {
       return state.members.map((m, i) => withRow(m, i));
-    }
-
-    function logExpiry(entry) {
-      return appendLog(state.expiryLogs, entry, 'EXP');
     }
 
     function saveRenewal(rowIndex, renewal) {
@@ -160,10 +143,6 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       return clone(state.loans);
     }
 
-    function logReminder(entry) {
-      return appendLog(state.reminderLogs, entry, 'REM');
-    }
-
     function getContent(key) {
       return Object.prototype.hasOwnProperty.call(state.content, key)
         ? clone(state.content[key])
@@ -187,14 +166,11 @@ Adapters.Test.InMemoryMemberRepository = (() => {
       findSavingsByMember,
       findLoansByMember,
       findDividendsByMember,
-      logActivation,
       listMembers,
-      logExpiry,
       saveRenewal,
       listNotices,
       markNoticeSent,
       listLoans,
-      logReminder,
       getContent,
       reset,
       snapshot
