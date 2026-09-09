@@ -40,7 +40,8 @@ Application.Web.RenewMemberByStaffUseCase = (() => {
         return { ok:false, error:{ code:'MEMBER_NOT_FOUND' } };
       }
 
-      const renewal = Core.MemberRules.computeRenewal(member, clock.now());
+      const now = clock.now();
+      const renewal = Core.MemberRules.computeRenewal(member, now);
       const persisted = repo.saveRenewal(member._rowIndex, {
         memExpDt: renewal.newExpDt,
         memStatus: 'active'
@@ -51,7 +52,8 @@ Application.Web.RenewMemberByStaffUseCase = (() => {
         type:'member.renewal',
         memberCode:member.mem_code,
         lineUserId:principal.claims && principal.claims.lineUserId ? principal.claims.lineUserId : '',
-        status:'renewed_by_' + actorRole
+        status:'renewed_by_' + actorRole,
+        occurredAt:now
       });
 
       return {

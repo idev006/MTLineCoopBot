@@ -45,7 +45,8 @@ Application.Member.RenewMemberUseCase = (() => {
         return { ok:false, error:{ code:'FORBIDDEN' } };
       }
 
-      const renewal = Core.MemberRules.computeRenewal(member, clock.now());
+      const now = clock.now();
+      const renewal = Core.MemberRules.computeRenewal(member, now);
       const persisted = repo.saveRenewal(member._rowIndex, {
         memExpDt: renewal.newExpDt,
         memStatus: 'active'
@@ -55,7 +56,8 @@ Application.Member.RenewMemberUseCase = (() => {
         type: 'member.renewal',
         memberCode: member.mem_code,
         lineUserId: principal.claims && principal.claims.lineUserId ? principal.claims.lineUserId : '',
-        status: 'renewed'
+        status: 'renewed',
+        occurredAt: now
       });
 
       return {

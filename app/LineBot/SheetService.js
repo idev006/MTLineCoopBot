@@ -269,6 +269,9 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function logActivation(entry) {
+    if (!entry || !entry.activatedDt) {
+      throw new Error('Activation audit timestamp is required');
+    }
     const tableKey = 'ACTIVATION_LOG';
     const sheet = getSheet(tableKey);
     const logId = 'LOG-' + String(Date.now());
@@ -280,7 +283,7 @@ LineBot.SheetService = (() => {
       line_user_id: entry.lineUserId || '',
       activate_code: entry.activateCode || '',
       status: entry.status || 'success',
-      activated_dt: DataDict.formatDateTime(new Date())
+      activated_dt: DataDict.formatDateTime(entry.activatedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ActivationLog] ${logId} — ${entry.status} (${entry.memCode})`);
@@ -293,6 +296,9 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function appendExpiryLog(entry) {
+    if (!entry || !entry.checkedDt) {
+      throw new Error('Expiry audit timestamp is required');
+    }
     const tableKey = 'EXPIRY_LOG';
     const sheet = getSheet(tableKey);
     const logId = 'ELOG-' + String(Date.now());
@@ -304,7 +310,7 @@ LineBot.SheetService = (() => {
       status: entry.status || 'valid',
       days_left: entry.daysLeft,
       mem_exp_dt: entry.memExpDt || '',
-      checked_dt: DataDict.formatDateTime(entry.checkedDt || new Date())
+      checked_dt: DataDict.formatDateTime(entry.checkedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ExpiryLog] ${logId} — ${entry.memCode} (${entry.status}, ${entry.daysLeft} วัน)`);
@@ -336,6 +342,9 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function appendReminderLog(entry) {
+    if (!entry || !entry.remindedDt) {
+      throw new Error('Reminder audit timestamp is required');
+    }
     const tableKey = 'REMINDER_LOG';
     const sheet = getSheet(tableKey);
     const logId = 'RLOG-' + String(Date.now());
@@ -347,7 +356,7 @@ LineBot.SheetService = (() => {
       due_dt: entry.dueDt || '',
       days_left: entry.daysLeft,
       status: entry.status || 'reminded',
-      reminded_dt: DataDict.formatDateTime(entry.remindedDt || new Date())
+      reminded_dt: DataDict.formatDateTime(entry.remindedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ReminderLog] ${logId} — ${entry.memCode} ${entry.loanNo} (${entry.status}, ${entry.daysLeft} วัน)`);
@@ -489,6 +498,9 @@ LineBot.SheetService = (() => {
   }
 
   function appendAdminAuditLog(entry) {
+    if (!entry || !entry.createdDt) {
+      throw new Error('Admin audit timestamp is required');
+    }
     const tableKey = 'ADMIN_AUDIT_LOG';
     const sheet = getSheet(tableKey);
     const logId = 'ALOG-' + String(Date.now());
@@ -502,7 +514,7 @@ LineBot.SheetService = (() => {
       old_value:entry.oldValue || '',
       new_value:entry.newValue || '',
       status:entry.status || 'attempt',
-      created_dt:DataDict.formatDateTime(entry.createdDt || new Date())
+      created_dt:DataDict.formatDateTime(entry.createdDt)
     });
     sheet.appendRow(row);
     return { log_id:logId, status:entry.status || 'attempt' };
