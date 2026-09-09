@@ -135,7 +135,7 @@ function testMemberValidity() {
  * @returns {Object} { ok: boolean, status: number|null, info?: Object, error?: string }
  */
 function checkTokenHealth() {
-  const cfg = Config.get();
+  const cfg = Composition.SystemFactory.createConfig().get();
   const token = cfg.CHANNEL_ACCESS_TOKEN;
   if (!token) {
     Logger.log('❌ ไม่พบ CHANNEL_ACCESS_TOKEN ใน Script Properties — กรุณาตั้งค่าก่อน (บทที่ 5.5)');
