@@ -52,5 +52,5 @@ LineBot.NoticeService = (() => {
  */
 function runNoticeBroadcast() {
   const cfg = Config.validate();
-  return LineBot.NoticeService.runNoticeBroadcast(cfg.CHANNEL_ACCESS_TOKEN);
+  return LineBot.NoticeService.runNoticeBroadcast();
 }
