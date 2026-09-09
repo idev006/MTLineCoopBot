@@ -20,6 +20,14 @@ Composition.SystemFactory = (() => {
     return Adapters.Config.AppsScriptConfigAdapter;
   }
 
+  function createClock(override) {
+    return Ports.ClockPort.assertImplemented(override || defaultClock());
+  }
+
+  function createConfig(override) {
+    return Ports.ConfigPort.assertImplemented(override || defaultConfig());
+  }
+
   function defaultMemberRepository(config) {
     const cfg = Ports.ConfigPort.assertImplemented(config).get();
     const type = String((cfg && cfg.DB_TYPE) || 'sheets').toLowerCase();
@@ -60,7 +68,7 @@ Composition.SystemFactory = (() => {
    */
   function createSystem(overrides) {
     const o = overrides || {};
-    const clock = Ports.ClockPort.assertImplemented(o.clock || defaultClock());
+    const clock = createClock(o.clock);
     const memberAccess = o.memberAccess || Engine.MemberAccessEngine.create({ clock });
     const identity = Ports.IdentityPort.assertImplemented(o.identity || defaultIdentity());
     const authorization = o.authorization || Engine.AuthorizationEngine.create();
@@ -74,7 +82,7 @@ Composition.SystemFactory = (() => {
       o.sessionTokens || Adapters.Security.AppsScriptSessionTokenAdapter
     );
     const webSessionEngine = o.webSessionEngine || Engine.WebSessionEngine.create({ clock });
-    const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
+    const config = createConfig(o.config);
     const memberRepository = Ports.MemberRepositoryPort.assertImplemented(
       o.memberRepository || defaultMemberRepository(config)
     );
@@ -305,6 +313,8 @@ Composition.SystemFactory = (() => {
   }
 
   return {
-    createSystem
+    createSystem,
+    createClock,
+    createConfig
   };
 })();
