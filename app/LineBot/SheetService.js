@@ -431,22 +431,6 @@ LineBot.SheetService = (() => {
   }
 
   /**
-   * Legacy compatibility activation operation.
-   * New application code must compute policy before persistence and call saveActivation().
-   */
-  function activateMember(rowIndex, lineUserId) {
-    const now = new Date();
-    const expDate = new Date(now);
-    expDate.setDate(expDate.getDate() + 365);
-    return saveActivation(rowIndex, {
-      memEffDt: DataDict.formatDateTime(now),
-      memExpDt: DataDict.formatDateTime(expDate),
-      memStatus: 'active',
-      lineUserId: lineUserId
-    });
-  }
-
-  /**
    * Persist precomputed renewal values.
    * @param {number} rowIndex
    * @param {{memExpDt:string,memStatus:string}} renewal
@@ -562,7 +546,6 @@ LineBot.SheetService = (() => {
     markNoticeSent,
     renewMember,
     saveRenewal,
-    activateMember,
     saveActivation,
     saveRole,
     appendAdminAuditLog,
