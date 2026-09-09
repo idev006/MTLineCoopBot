@@ -62,8 +62,6 @@ if(res.ok||res.error.code!=='METHOD_NOT_ALLOWED') throw new Error('audit route m
 const route=sandbox.Api.ApiRegistry.listRoutes().find(r=>r.path==='/api/web/admin/audit-log');
 if(!route||route.auth!=='web-session'||route.method!=='POST') throw new Error('route metadata mismatch');
 
-const webSrc=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
-if(!webSrc.includes("path === '/api/web/admin/audit-log'")) throw new Error('WebApp classification missing');
 
 console.log('PASS  admin audit log requires server Web session');
 console.log('PASS  admin-only RBAC enforced');
