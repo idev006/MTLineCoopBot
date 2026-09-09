@@ -74,10 +74,6 @@ for(const p of ['/api/web/members/list','/api/web/members/detail']){
   if(!route||route.method!=='POST'||route.auth!=='web-session') throw new Error('route contract mismatch: '+p);
 }
 
-const webSrc=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
-for(const p of ['/api/web/members/list','/api/web/members/detail']){
-  if(!webSrc.includes(`path === '${p}'`)) throw new Error('WebApp identity route classification missing: '+p);
-}
 
 console.log('PASS  Web member list/detail require server Web session');
 console.log('PASS  server-side RBAC denies member role');

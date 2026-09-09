@@ -96,6 +96,9 @@ jobs:
       - name: Legacy renewal retirement security test
         run: node tests/application/legacy-renewal-retirement.test.js
 
+      - name: Web API-key retirement security test
+        run: node tests/application/web-api-key-retirement.test.js
+
       - name: Protected delivery contract tests
         run: |
           node tests/application/protected-profile-api.test.js

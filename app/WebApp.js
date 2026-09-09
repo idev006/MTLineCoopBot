@@ -4,8 +4,13 @@
  *
  * เส้นทาง:
  * - POST /exec                    → LINE webhook (ตรวจ webhook_secret — ไม่เปลี่ยน)
- * - GET|POST /exec/api/<path>?api_key=... → API Layer (Api.ApiService) + ตรวจ API key
- *   (Apps Script ใช้ e.pathInfo เป็น path ต่อจาก /exec เช่น /exec/api/member/profile)
+ * - GET|POST /exec/api/<path> → API Layer (Api.ApiService)
+ *   (Apps Script ใช้ e.pathInfo เป็น path ต่อจาก /exec เช่น /exec/api/member/me/profile)
+ *
+ * Authentication is route-owned by ApiRegistry/handlers:
+ * - public routes are explicitly declared with auth='none'
+ * - protected LINE/LIFF and Web routes verify credentials in protected handlers
+ * - there is no browser-visible shared-secret authentication fallback
  */
 
 /** JSON TextOutput (envelope) */
@@ -24,97 +29,34 @@ function isApiRequest(e) {
 }
 
 /**
- * ดึง API key ที่ client ส่งมา — จาก query (?api_key=) หรือ body (POST)
- * (Apps Script Web App อ่าน header ไม่ได้ — ใช้ query/body ตามแบบ webhook_secret)
- * @param {Object} e
- * @returns {string|null}
- */
-/**
- * Paths authenticated by their own verified identity credential.
- * These routes must not rely on the browser-visible API key.
- * @param {string} path
- * @returns {boolean}
- */
-function isPublicApiPath(path) {
-  return path === '/api/health' || path === '/api/loan/calculate';
-}
-
-function isIdentityAuthenticatedApiPath(path) {
-  return path === '/api/web/session/line' ||
-    path === '/api/web/session/verify' ||
-    path === '/api/web/session/revoke' ||
-    path === '/api/web/members/list' ||
-    path === '/api/web/members/detail' ||
-    path === '/api/web/admin/settings' ||
-    path === '/api/web/admin/staff' ||
-    path === '/api/web/admin/roles' ||
-    path === '/api/web/admin/staff/role' ||
-    path === '/api/web/admin/audit-log' ||
-    path === '/api/web/reports/summary' ||
-    path === '/api/web/members/renew' ||
-    path === '/api/member/me/profile' ||
-    path === '/api/member/me/savings' ||
-    path === '/api/member/me/loans' ||
-    path === '/api/member/me/dividends' ||
-    path === '/api/member/me/activate' ||
-    path === '/api/member/me/renew';
-}
-
-function getProvidedApiKey(e) {
-  if (e.parameter && e.parameter.api_key) return e.parameter.api_key;
-  if (e.postData && e.postData.contents) {
-    try {
-      const body = JSON.parse(e.postData.contents);
-      if (body.api_key) return body.api_key;
-    } catch (parseErr) { /* ignore — handler จะตรวจ body อีกครั้ง */ }
-  }
-  return null;
-}
-
-/**
  * dispatch /api/* ผ่าน Api.ApiService (API mount — การ์ด MT-16/17/20)
- * - ตรวจ API key (ยกเว้น /api/health) ก่อน dispatch
- * - ctx.auth = { apiKey, lineUserId? } เตรียมไว้สำหรับ Auth per-channel (เฟส 3)
+ * - public routes are explicitly allowed
+ * - protected routes verify their own LINE ID token / Web session credential
+ * - unregistered routes are dispatched normally and fail closed as NOT_FOUND
  * @param {Object} e
  * @param {string} method - GET | POST
  * @returns {TextOutput} JSON envelope { ok, data } | { ok, error }
  */
 function dispatchApi(e, method) {
   try {
-    const cfg = Config.get();
     // pathInfo เช่น "api/member/profile" → "/api/member/profile" (ตัด slash ท้าย)
     const path = '/' + String(e.pathInfo).trim().replace(/\/+$/, '');
-    const apiKey = getProvidedApiKey(e);
-
-    // Legacy API-key check remains only for legacy routes.
-    // Identity-authenticated routes verify their credential in the protected handler.
-    if (!isPublicApiPath(path) && !isIdentityAuthenticatedApiPath(path)) {
-      if (!cfg.API_KEY || cfg.API_KEY.includes('ใส่_API_KEY')) {
-        return jsonOutput({ ok: false, error: { code: 'NOT_CONFIGURED', message: 'ยังไม่ได้ตั้งค่า API_KEY ใน Script Properties' } });
-      }
-      if (apiKey !== cfg.API_KEY) {
-        return jsonOutput({ ok: false, error: { code: 'UNAUTHORIZED', message: 'API key ไม่ถูกต้อง — ส่งผ่าน ?api_key= หรือใน body' } });
-      }
-    }
-
     // สร้าง ctx สำหรับ Api.ApiService (query/body/auth)
     const query = {};
     for (const k in (e.parameter || {})) {
-      if (k === 'api_key') continue;
       query[k] = e.parameter[k];
     }
-    const ctx = { query, auth: { apiKey } };
+    const ctx = { query, auth: {} };
     if (e.postData && e.postData.contents) {
       try {
         const body = JSON.parse(e.postData.contents);
-        delete body.api_key; // ไม่ส่ง key ลง handler
         ctx.body = body;
       } catch (parseErr) {
         return jsonOutput({ ok: false, error: { code: 'VALIDATION', message: 'รูปแบบ JSON ไม่ถูกต้อง' } });
       }
     }
 
-    Logger.log(`[API] ${method} ${path} (key: ${apiKey ? 'ok' : 'none'})`);
+    Logger.log(`[API] ${method} ${path}`);
     const env = Api.ApiService.handleRequest(method, path, ctx);
     Logger.log(`[API] ${method} ${path} → ok=${env.ok}`);
     return jsonOutput(env);

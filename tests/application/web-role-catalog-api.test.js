@@ -67,8 +67,6 @@ if(res.ok||res.error.code!=='METHOD_NOT_ALLOWED') throw new Error('role catalog 
 const route=sandbox.Api.ApiRegistry.listRoutes().find(r=>r.path==='/api/web/admin/roles');
 if(!route||route.auth!=='web-session'||route.method!=='POST') throw new Error('route metadata mismatch');
 
-const webSrc=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
-if(!webSrc.includes("path === '/api/web/admin/roles'")) throw new Error('WebApp classification missing');
 
 console.log('PASS  admin role catalog requires server Web session');
 console.log('PASS  canonical role vocabulary returned by backend');
