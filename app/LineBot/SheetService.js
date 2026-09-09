@@ -271,6 +271,9 @@ LineBot.SheetService = (() => {
   function logActivation(entry) {
     const tableKey = 'ACTIVATION_LOG';
     const sheet = getSheet(tableKey);
+    if (!entry || !entry.activatedDt) {
+      throw new Error('Activation audit timestamp is required');
+    }
     const logId = 'LOG-' + String(Date.now());
     // เขียนตามลำดับ header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
     const headers = getHeaderRow(sheet);
@@ -280,7 +283,7 @@ LineBot.SheetService = (() => {
       line_user_id: entry.lineUserId || '',
       activate_code: entry.activateCode || '',
       status: entry.status || 'success',
-      activated_dt: DataDict.formatDateTime(new Date())
+      activated_dt: DataDict.formatDateTime(entry.activatedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ActivationLog] ${logId} — ${entry.status} (${entry.memCode})`);
@@ -295,6 +298,9 @@ LineBot.SheetService = (() => {
   function appendExpiryLog(entry) {
     const tableKey = 'EXPIRY_LOG';
     const sheet = getSheet(tableKey);
+    if (!entry || !entry.checkedDt) {
+      throw new Error('Expiry audit timestamp is required');
+    }
     const logId = 'ELOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
@@ -304,7 +310,7 @@ LineBot.SheetService = (() => {
       status: entry.status || 'valid',
       days_left: entry.daysLeft,
       mem_exp_dt: entry.memExpDt || '',
-      checked_dt: DataDict.formatDateTime(entry.checkedDt || new Date())
+      checked_dt: DataDict.formatDateTime(entry.checkedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ExpiryLog] ${logId} — ${entry.memCode} (${entry.status}, ${entry.daysLeft} วัน)`);
@@ -338,6 +344,9 @@ LineBot.SheetService = (() => {
   function appendReminderLog(entry) {
     const tableKey = 'REMINDER_LOG';
     const sheet = getSheet(tableKey);
+    if (!entry || !entry.remindedDt) {
+      throw new Error('Reminder audit timestamp is required');
+    }
     const logId = 'RLOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
@@ -347,7 +356,7 @@ LineBot.SheetService = (() => {
       due_dt: entry.dueDt || '',
       days_left: entry.daysLeft,
       status: entry.status || 'reminded',
-      reminded_dt: DataDict.formatDateTime(entry.remindedDt || new Date())
+      reminded_dt: DataDict.formatDateTime(entry.remindedDt)
     });
     sheet.appendRow(row);
     Logger.log(`[ReminderLog] ${logId} — ${entry.memCode} ${entry.loanNo} (${entry.status}, ${entry.daysLeft} วัน)`);
@@ -491,6 +500,9 @@ LineBot.SheetService = (() => {
   function appendAdminAuditLog(entry) {
     const tableKey = 'ADMIN_AUDIT_LOG';
     const sheet = getSheet(tableKey);
+    if (!entry || !entry.createdDt) {
+      throw new Error('Admin audit timestamp is required');
+    }
     const logId = 'ALOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
@@ -502,7 +514,7 @@ LineBot.SheetService = (() => {
       old_value:entry.oldValue || '',
       new_value:entry.newValue || '',
       status:entry.status || 'attempt',
-      created_dt:DataDict.formatDateTime(entry.createdDt || new Date())
+      created_dt:DataDict.formatDateTime(entry.createdDt)
     });
     sheet.appendRow(row);
     return { log_id:logId, status:entry.status || 'attempt' };
