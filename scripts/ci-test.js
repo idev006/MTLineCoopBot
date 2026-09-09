@@ -154,7 +154,6 @@ const FILE_ORDER = [
   'Adapters/Security/AppsScriptSessionTokenAdapter.js',
   'Adapters/Security/AppsScriptPropertiesSessionStore.js',
   'Adapters/Security/WebSessionIdentityAdapter.js',
-  'Data/MemberRepository.js',
   'Data/SheetsMemberRepository.js',
   'Application/Member/GetCurrentMemberProfileUseCase.js',
   'Application/Member/GetCurrentMemberFinanceUseCase.js',
