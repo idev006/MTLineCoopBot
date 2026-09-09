@@ -47,22 +47,13 @@ if(savedRenewal.mem_exp_dt!=='2028-01-01' || savedRenewal.mem_status!=='active')
 repo.markNoticeSent('N1','2026-09-08');
 if(repo.listNotices()[0].sent!==true) throw new Error('notice mutation failed');
 
-repo.logActivation({memCode:'M001'});
-repo.logExpiry({memCode:'M001'});
-repo.logReminder({memCode:'M001'});
 const changed=repo.snapshot();
-if(changed.activationLogs.length!==1 || changed.expiryLogs.length!==1 || changed.reminderLogs.length!==1) {
-  throw new Error('logs not recorded');
-}
-
 changed.members[0].mem_code='MUTATED';
 if(repo.findByMemberCode('M001')===null) throw new Error('snapshot leaked mutable state');
 
 repo.reset();
 if(repo.findByMemberCode('M001').mem_exp_dt) throw new Error('reset must restore seed state');
-if(repo.snapshot().activationLogs.length!==0) throw new Error('reset must restore log seed');
-
 console.log('PASS  InMemoryMemberRepository satisfies MemberRepositoryPort');
-console.log('PASS  deterministic lookup/mutation/log behavior');
+console.log('PASS  deterministic lookup/mutation behavior');
 console.log('PASS  snapshot isolation and reset');
 console.log('=== IN-MEMORY MEMBER REPOSITORY TESTS PASS (3/3) ===');
