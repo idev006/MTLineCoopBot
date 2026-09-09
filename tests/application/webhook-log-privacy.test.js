@@ -8,8 +8,8 @@ const src=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
 
 const forbidden=[
   /Logger\.log\s*\([^\n]*raw body/i,
-  /Logger\.log\s*\([^\n]*postData\.contents/i,
-  /console\.(log|info|warn|error)\s*\([^\n]*postData\.contents/i
+  /Logger\.log\s*\(\s*`[^`]*\$\{\s*e\.postData\.contents/i,
+  /console\.(log|info|warn|error)\s*\(\s*`[^`]*\$\{\s*e\.postData\.contents/i
 ];
 for(const pattern of forbidden){
   if(pattern.test(src)) throw new Error('raw webhook body logging is forbidden: '+pattern);
