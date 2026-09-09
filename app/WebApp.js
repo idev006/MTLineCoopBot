@@ -99,7 +99,7 @@ function doPost(e) {
 
   let token = null;
   try {
-    const cfg = Config.get();
+    const cfg = Composition.SystemFactory.createSystem().config.get();
 
     // ตรวจสอบความถูกต้องของ Webhook — Apps Script Web App อ่าน header (X-Line-Signature)
     // ไม่ได้ (issuetracker.google.com/issues/67764685) จึงใช้ webhook_secret ที่ผูกท้าย URL
