@@ -70,8 +70,7 @@ LineBot.EventHandler = (() => {
     const caption = deps.ReplyStore.getCaption(item) || item;
     // 1) t_content (data-driven)
     try {
-      const repo = Data.MemberRepository.getRepository();
-      const content = repo.getContent(item);
+      const content = getSystem().memberRepository.getContent(item);
       if (content) {
         const card = deps.FlexBuilder.contentCard({ title: caption, text: content });
         const result = deps.MessageService.replyFlex(replyToken, card, token);
@@ -103,7 +102,7 @@ LineBot.EventHandler = (() => {
    * Gate ตรวจสิทธิ์ (บทที่ 3.7):
    * ตรวจว่าผู้ใช้ LINE เป็นสมาชิกที่ valid — ถูกผูกกับ t_member_mast ผ่าน line_user_id,
    * สถานะ active, อยู่ในช่วง [mem_eff_dt, mem_exp_dt], และมีบทบาทที่รู้จัก (member/staff/admin)
-   * ผ่าน MemberRepository (Data layer — บทที่ 3.2.4) เพื่อสลับฐานข้อมูลได้ในอนาคต
+   * ผ่าน canonical member repository ที่ Composition.SystemFactory จัดให้
    * @param {string} lineUserId
    * @returns {Object|null} member ถ้าผ่าน / null ถ้าไม่ผ่าน
    */
