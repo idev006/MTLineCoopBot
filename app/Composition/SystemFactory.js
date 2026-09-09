@@ -20,8 +20,18 @@ Composition.SystemFactory = (() => {
     return Adapters.Config.AppsScriptConfigAdapter;
   }
 
-  function defaultMemberRepository() {
-    return Data.MemberRepository.getRepository();
+  function defaultMemberRepository(config) {
+    const cfg = Ports.ConfigPort.assertImplemented(config).get();
+    const type = String((cfg && cfg.DB_TYPE) || 'sheets').toLowerCase();
+
+    if (type === 'firestore') {
+      throw new Error('DB_TYPE=firestore ยังไม่ได้ implement — ต้องมี adapter ที่ผ่าน MemberRepositoryPort contract ก่อน');
+    }
+    if (type !== 'sheets') {
+      throw new Error('DB_TYPE ไม่รองรับ: ' + type);
+    }
+
+    return Ports.MemberRepositoryPort.assertImplemented(Data.SheetsMemberRepository);
   }
 
   function defaultApi() {
@@ -64,14 +74,16 @@ Composition.SystemFactory = (() => {
       o.sessionTokens || Adapters.Security.AppsScriptSessionTokenAdapter
     );
     const webSessionEngine = o.webSessionEngine || Engine.WebSessionEngine.create({ clock });
-    const memberRepository = o.memberRepository || defaultMemberRepository();
+    const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
+    const memberRepository = Ports.MemberRepositoryPort.assertImplemented(
+      o.memberRepository || defaultMemberRepository(config)
+    );
     const staffAdminRepository = Ports.StaffAdminRepositoryPort.assertImplemented(
       o.staffAdminRepository || Adapters.Admin.SheetsStaffAdminRepository
     );
     const adminAuditStore = Ports.AdminAuditStorePort.assertImplemented(
       o.adminAuditStore || Adapters.Audit.SheetsAdminAuditStore
     );
-    const config = Ports.ConfigPort.assertImplemented(o.config || defaultConfig());
     const audit = Ports.AuditPort.assertImplemented(
       o.audit || Adapters.Audit.MemberRepositoryAuditAdapter.create({
         memberRepository,
