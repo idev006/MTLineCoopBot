@@ -46,7 +46,7 @@ if(ok.data.mem_status!=='active') throw new Error('renewal should persist active
 if(audit.snapshot().length!==1 || audit.snapshot()[0].type!=='member.renewal') {
   throw new Error('renewal AuditPort event missing');
 }
-if(Number(audit.snapshot()[0].occurredAt)!==Number(clock.now())) {
+if(Date.parse(String(audit.snapshot()[0].occurredAt))!==Number(clock.now())) {
   throw new Error('renewal audit timestamp must come from ClockPort');
 }
 
