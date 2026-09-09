@@ -15,12 +15,14 @@ const pointer=fs.readFileSync(path.join(docsDir,'README.md'),'utf8');
 for(const required of [
   'idev006/MTP6LineCoopBot',
   'docs/ssot/',
-  'Single Source of Truth',
-  'legacy pointer'
+  'Single Source of Truth'
 ]){
   if(!pointer.includes(required)){
     throw new Error('app/docs/README.md must remain a canonical SSOT pointer: '+required);
   }
+}
+if(!/legacy[^\n]*pointer/i.test(pointer)){
+  throw new Error('app/docs/README.md must remain explicitly marked as a legacy pointer');
 }
 
 const rootReadme=fs.readFileSync(path.join(root,'README.md'),'utf8');
