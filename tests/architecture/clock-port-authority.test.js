@@ -28,6 +28,12 @@ if (violations.length) {
   throw new Error('zero-argument new Date() remains outside ClockPort: ' + JSON.stringify(violations));
 }
 
+const dataDict = fs.readFileSync(path.join(root, 'app/DataDict.js'), 'utf8');
+if (!/function\s+generateDocumentation\s*\(generatedAt\)/.test(dataDict) ||
+    !dataDict.includes("DataDict documentation generatedAt is required")) {
+  throw new Error('DataDict documentation generation must require caller-supplied time');
+}
+
 const clockPort = fs.readFileSync(path.join(root, 'app/Ports/ClockPort.js'), 'utf8');
 if (!/systemClock\s*\(\)[\s\S]*now:\s*\(\)\s*=>\s*new Date\s*\(\s*\)/.test(clockPort)) {
   throw new Error('ClockPort.systemClock() must remain the canonical current-time boundary');
