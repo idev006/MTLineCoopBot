@@ -53,8 +53,7 @@ GitHub เป็น **source of truth** ของโค้ด ส่วน Apps 
 
 สำหรับ release ปัจจุบัน ให้ถือ GitHub `main` เป็น source of truth และต้อง sync source ไปยัง Apps Script ก่อนเริ่ม LINE live/staging test
 
-Canonical backend commit:
-`c7df357d29b37f6c74e0203cea850190087fd122`
+Release source must be the current canonical `main` at deployment time. Record the exact commit returned by `git rev-parse HEAD` as release evidence.
 
 โครงการนี้ไม่มีขั้น build/bundle แยกสำหรับ Apps Script; `.clasp.json` ใช้ `rootDir: app` และ Apps Script V8 รัน source โดยตรง
 
@@ -67,7 +66,7 @@ git rev-parse HEAD
 clasp push
 ```
 
-ก่อน `clasp push` ค่า `git rev-parse HEAD` ต้องตรงกับ canonical commit ที่ release กำหนด
+ก่อน `clasp push` ต้องอยู่บน `main`, `git pull` สำเร็จ, working tree สะอาด และบันทึกค่า `git rev-parse HEAD` ไว้เป็น deployment evidence
 
 หลัง `clasp push` ต้องสร้างหรืออัปเดต Web App deployment version ให้ endpoint `/exec` ใช้ source ล่าสุด การ `clasp push` เพียงอย่างเดียวไม่ถือเป็นหลักฐานว่า deployment ที่เผยแพร่อยู่กำลังรันโค้ดใหม่
 
