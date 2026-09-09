@@ -6,10 +6,6 @@
  *                           active ทุกคนที่มี line_user_id → mark sent (กันส่งซ้ำ)
  * - setupNoticeTrigger()  — สร้าง Time-driven Trigger รายวัน (รันครั้งเดียวใน Editor)
  *
- * DI สำหรับทดสอบ (node): opts.repo / opts.sender / opts.now / opts.builder
- * ค่า default = repository จริง / MessageService.pushFlex / เวลาจริง /
- * FlexBuilder.noticeCard (Flex Card — การ์ด MT-36)
- *
  * ⚠️ ใช้ Push API (ต่างจาก Reply) — ต้องใช้ userId ไม่ใช่ replyToken
  * สมาชิกที่ไม่มี line_user_id (ยังไม่ activate) จะถูกข้าม — เป็นกลุ่มเป้าหมายที่
  * ระบบรู้จักได้จริง (LINE ไม่อนุญาต broadcast ไปยังผู้ที่ไม่เป็นเพื่อน)
@@ -22,49 +18,10 @@ LineBot.NoticeService = (() => {
 
   /**
    * รันรอบ broadcast ประกาศ (entry point ของ scheduled trigger)
-   * @param {string} token - CHANNEL_ACCESS_TOKEN
-   * @param {Object} [opts] - { repo, sender, now, builder }
    * @returns {{notices: number, pending: number, sent: number, targets: number, pushed: number}}
    */
-  function runNoticeBroadcast(token, opts) {
-    // Production/default path: delegate to the headless Application Layer.
-    // opts path remains temporarily for legacy characterization/DI tests.
-    if (!opts) {
-      return Composition.SystemFactory.createSystem().noticeBroadcast.execute();
-    }
-
-    const o = opts || {};
-    const repo = o.repo || Data.MemberRepository.getRepository();
-    const now = o.now || new Date();
-    const sender = o.sender || function (to, msg, tk) { return LineBot.MessageService.pushFlex(to, msg, tk); };
-    const builder = o.builder || LineBot.FlexBuilder.noticeCard;
-
-    const notices = repo.listNotices();
-    const pending = Core.NoticeRules.getPendingNotices(notices, now);
-    const members = repo.listMembers();
-    const targets = Core.NoticeRules.getBroadcastTargets(members);
-
-    const summary = {
-      notices: notices.length,
-      pending: pending.length,
-      sent: 0,
-      targets: targets.length,
-      pushed: 0
-    };
-
-    for (const notice of pending) {
-      const text = builder(notice);
-      for (const member of targets) {
-        sender(member.line_user_id, text, token);
-        summary.pushed++;
-      }
-      // กันส่งซ้ำรอบถัดไป: mark sent (แม้ targets = 0 ก็ mark — ประกาศนั้นจบรอบแล้ว)
-      repo.markNoticeSent(notice.notice_id, now);
-      summary.sent++;
-    }
-
-    Logger.log(`[NoticeBroadcast] notices=${summary.notices} pending=${summary.pending} sent=${summary.sent} targets=${summary.targets} pushed=${summary.pushed}`);
-    return summary;
+  function runNoticeBroadcast() {
+    return Composition.SystemFactory.createSystem().noticeBroadcast.execute();
   }
 
   /**
@@ -95,5 +52,5 @@ LineBot.NoticeService = (() => {
  */
 function runNoticeBroadcast() {
   const cfg = Config.validate();
-  return LineBot.NoticeService.runNoticeBroadcast(cfg.CHANNEL_ACCESS_TOKEN);
+  return LineBot.NoticeService.runNoticeBroadcast();
 }

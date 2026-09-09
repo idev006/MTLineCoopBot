@@ -81,6 +81,9 @@ jobs:
       - name: Scheduled runtime delegation tests
         run: node tests/application/scheduled-runtime-delegation.test.js
 
+      - name: Scheduled compatibility retirement test
+        run: node tests/application/scheduled-compatibility-retirement.test.js
+
       - name: Webhook privacy hardening test
         run: node tests/application/webhook-log-privacy.test.js
 

@@ -8,8 +8,6 @@
  *                        เตือน**รายบุคคล** (ชื่อสมาชิกจริง) → บันทึก t_reminder_log
  * - setupReminderTrigger() — สร้าง Time-driven Trigger รายวัน
  *
- * DI: opts.repo / opts.sender / opts.now / opts.reminderDays / opts.builder / opts.logger
- * ค่า default builder = FlexBuilder.loanReminderCard (Flex Card รายบุคคล — การ์ด MT-36)
  * ต่างจาก broadcast ประกาศ: ข้อความเป็นรายบุคคล (ไม่ใช่ข้อความเดียวถึงทุกคน) และ
  * audit trail ทุกสัญญาที่ถึงรอบเตือน (reminded / skipped — ไม่มี userId หรือไม่ active)
  */
@@ -21,62 +19,10 @@ LineBot.LoanReminderService = (() => {
 
   /**
    * รันรอบเตือนชำระ (entry point ของ scheduled trigger)
-   * @param {string} token - CHANNEL_ACCESS_TOKEN
-   * @param {Object} [opts] - { repo, sender, now, reminderDays, builder, logger }
    * @returns {{loans: number, due: number, reminded: number, skipped: number, pushed: number}}
    */
-  function runLoanReminders(token, opts) {
-    // Production/default path: delegate to the headless Application Layer.
-    // opts path remains temporarily for legacy characterization/DI tests.
-    if (!opts) {
-      return Composition.SystemFactory.createSystem().loanReminder.execute();
-    }
-
-    const o = opts || {};
-    const repo = o.repo || Data.MemberRepository.getRepository();
-    const now = o.now || new Date();
-    const reminderDays = o.reminderDays !== undefined ? o.reminderDays : Config.get().PAYMENT_REMINDER_DAYS;
-    const sender = o.sender || function (to, msg, tk) { return LineBot.MessageService.pushFlex(to, msg, tk); };
-    const builder = o.builder || LineBot.FlexBuilder.loanReminderCard;
-    const logger = o.logger || function (entry) { return repo.logReminder(entry); };
-
-    const loans = repo.listLoans();
-    const members = repo.listMembers();
-    const due = Core.LoanRules.getDueLoans(loans, now, reminderDays);
-
-    const summary = { loans: loans.length, due: due.length, reminded: 0, skipped: 0, pushed: 0 };
-
-    for (const { loan, daysLeft } of due) {
-      // หาสมาชิกของสัญญา เพื่อจัดข้อความรายบุคคล + ตรวจว่า push ได้หรือไม่
-      const member = (members || []).find(m => m && m.mem_code === loan.mem_code) || null;
-      if (!Core.LoanRules.isReminderTarget(member)) {
-        logger({
-          memCode: loan.mem_code,
-          loanNo: loan.loan_no,
-          dueDt: loan.due_dt,
-          daysLeft: daysLeft,
-          status: 'skipped',
-          remindedDt: now
-        });
-        summary.skipped++;
-        continue;
-      }
-      const text = builder(loan, member, daysLeft);
-      sender(member.line_user_id, text, token);
-      summary.pushed++;
-      logger({
-        memCode: loan.mem_code,
-        loanNo: loan.loan_no,
-        dueDt: loan.due_dt,
-        daysLeft: daysLeft,
-        status: 'reminded',
-        remindedDt: now
-      });
-      summary.reminded++;
-    }
-
-    Logger.log(`[LoanReminder] loans=${summary.loans} due=${summary.due} reminded=${summary.reminded} skipped=${summary.skipped} pushed=${summary.pushed}`);
-    return summary;
+  function runLoanReminders() {
+    return Composition.SystemFactory.createSystem().loanReminder.execute();
   }
 
   /**
@@ -106,5 +52,5 @@ LineBot.LoanReminderService = (() => {
  */
 function runLoanReminders() {
   const cfg = Config.validate();
-  return LineBot.LoanReminderService.runLoanReminders(cfg.CHANNEL_ACCESS_TOKEN);
+  return LineBot.LoanReminderService.runLoanReminders();
 }
