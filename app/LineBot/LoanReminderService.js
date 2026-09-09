@@ -52,5 +52,5 @@ LineBot.LoanReminderService = (() => {
  */
 function runLoanReminders() {
   const cfg = Config.validate();
-  return LineBot.LoanReminderService.runLoanReminders(cfg.CHANNEL_ACCESS_TOKEN);
+  return LineBot.LoanReminderService.runLoanReminders();
 }
