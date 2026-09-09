@@ -3,7 +3,7 @@
  * กฎการเตือนชำระหนี้ (payment reminders — การ์ด MT-13b, บทที่ 7 ระยะ 2)
  * Pure functions — เทสต์ใน node ได้โดยไม่ต้อง mock (ไม่มี SpreadsheetApp / LINE API)
  *
- * - getDueLoans(loans, now?, reminderDays?) — สัญญากู้ที่ถึงรอบเตือน
+ * - getDueLoans(loans, now, reminderDays?)  — สัญญากู้ที่ถึงรอบเตือน
  * - buildLoanReminderText(loan, member, daysLeft) — ข้อความเตือนรายบุคคล
  * - isReminderTarget(member) — สมาชิกที่ส่งเตือนได้ (active + มี line_user_id)
  *
@@ -41,12 +41,13 @@ Core.LoanRules = (() => {
   /**
    * กรองสัญญากู้ที่ถึงรอบเตือน (due_dt ∈ [now, now + reminderDays])
    * @param {Array<Object>} loans - รายการจาก t_loan_acct
-   * @param {Date|string} [now]
+   * @param {Date|string} now - เวลาอ้างอิงจาก caller/ClockPort
    * @param {number} [reminderDays]
    * @returns {Array<{loan: Object, daysLeft: number}>}
    */
   function getDueLoans(loans, now, reminderDays) {
-    const nowDate = now instanceof Date ? now : new Date(String(now || fmtDate(new Date())));
+    if (!now) throw new Error('LoanRules now is required');
+    const nowDate = now instanceof Date ? now : new Date(String(now));
     const days = typeof reminderDays === 'number' ? reminderDays : 14;
     const nowStr = fmtDate(nowDate);
     const limit = new Date(nowDate.getTime() + days * 86400000);
