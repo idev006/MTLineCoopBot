@@ -536,29 +536,6 @@ LineBot.SheetService = (() => {
   }
 
   /**
-   * ตรวจว่าสมาชิกมีสถานะ active และวันเวลาปัจจุบันอยู่ในช่วง [mem_eff_dt, mem_exp_dt]
-   * (ขอบเขตรวม: now >= mem_eff_dt และ now <= mem_exp_dt)
-   * @param {Object} member - ข้อมูลสมาชิกจาก DataDict.rowToObject
-   * @returns {boolean}
-   */
-  function isActiveMember(member) {
-    // delegate ไป Core.MemberRules (pure — บทที่ 3.1.1, การ์ด MT-15)
-    return Core.MemberRules.isActiveMember(member);
-  }
-
-  /**
-   * ตรวจว่าสมาชิก valid และมีบทบาทตรงตามที่กำหนด
-   * นิยาม "member valid": อยู่ในช่วง [mem_eff_dt, mem_exp_dt] + mem_status='active' + mem_role='member'
-   * @param {Object} member
-   * @param {string} role - 'member' | 'staff' | 'admin'
-   * @returns {boolean}
-   */
-  function hasRole(member, role) {
-    // delegate ไป Core.MemberRules (pure — บทที่ 3.1.1, การ์ด MT-15)
-    return Core.MemberRules.hasRole(member, role);
-  }
-
-  /**
    * ตรวจสอบว่าสมาชิกถูก activate แล้วหรือไม่
    * @param {Object} member
    * @returns {boolean}
@@ -589,8 +566,6 @@ LineBot.SheetService = (() => {
     saveActivation,
     saveRole,
     appendAdminAuditLog,
-    isActiveMember,
-    hasRole,
     isActivated,
     getSheet,
     getSpreadsheet,
