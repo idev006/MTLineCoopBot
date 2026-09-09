@@ -28,6 +28,10 @@ Composition.SystemFactory = (() => {
     return Ports.ConfigPort.assertImplemented(override || defaultConfig());
   }
 
+  function createValidatedConfig(override) {
+    return Ports.ConfigPort.assertValidatable(override || defaultConfig());
+  }
+
   function defaultMemberRepository(config) {
     const cfg = Ports.ConfigPort.assertImplemented(config).get();
     const type = String((cfg && cfg.DB_TYPE) || 'sheets').toLowerCase();
@@ -315,6 +319,7 @@ Composition.SystemFactory = (() => {
   return {
     createSystem,
     createClock,
-    createConfig
+    createConfig,
+    createValidatedConfig
   };
 })();

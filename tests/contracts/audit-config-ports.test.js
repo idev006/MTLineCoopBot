@@ -9,7 +9,7 @@ const root=path.join(__dirname,'..','..');
 const sandbox={
   Ports:{},
   Adapters:{},
-  Config:{ get:()=>({mode:'prod',EXPIRY_WARNING_DAYS:30}) },
+  Config:{ get:()=>({mode:'prod',EXPIRY_WARNING_DAYS:30}), validate:()=>({mode:'validated',CHANNEL_ACCESS_TOKEN:'TOKEN'}) },
   Object,Array,JSON,String
 };
 vm.createContext(sandbox);
@@ -35,6 +35,16 @@ if(ConfigPort.assertImplemented(sandbox.Adapters.Config.AppsScriptConfigAdapter)
 if(sandbox.Adapters.Config.AppsScriptConfigAdapter.get().mode!=='prod'){
   throw new Error('AppsScriptConfigAdapter must delegate to Config.get');
 }
+if(ConfigPort.assertValidatable(sandbox.Adapters.Config.AppsScriptConfigAdapter)
+  !== sandbox.Adapters.Config.AppsScriptConfigAdapter){
+  throw new Error('AppsScriptConfigAdapter must satisfy validatable ConfigPort capability');
+}
+if(sandbox.Adapters.Config.AppsScriptConfigAdapter.validate().mode!=='validated'){
+  throw new Error('AppsScriptConfigAdapter must delegate validate() to Config.validate');
+}
+let rejectedValidatable=false;
+try{ ConfigPort.assertValidatable({get:()=>({})}); }catch(e){ rejectedValidatable=/validate/.test(String(e.message)); }
+if(!rejectedValidatable) throw new Error('read-only ConfigPort must be rejected by validatable capability');
 
 let rejectedConfig=false;
 try{ ConfigPort.assertImplemented({}); }catch(e){ rejectedConfig=/get/.test(String(e.message)); }
@@ -91,7 +101,7 @@ if(memory.snapshot().length!==1 || memory.snapshot()[0].type!=='seed') {
   throw new Error('in-memory audit reset failed');
 }
 
-console.log('PASS  ConfigPort production adapter + invalid adapter rejection');
+console.log('PASS  ConfigPort production adapter + validatable capability + invalid adapter rejection');
 console.log('PASS  AuditPort durable activation/renewal mapping');
 console.log('PASS  InMemoryAuditAdapter deterministic snapshot/reset');
 console.log('=== AUDIT CONFIG PORT TESTS PASS (3/3) ===');

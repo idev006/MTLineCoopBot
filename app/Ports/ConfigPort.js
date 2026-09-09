@@ -14,5 +14,13 @@ Ports.ConfigPort = (() => {
     return config;
   }
 
-  return { assertImplemented };
+  function assertValidatable(config) {
+    const c = assertImplemented(config);
+    if (typeof c.validate !== 'function') {
+      throw new Error('ConfigPort validatable capability requires validate()');
+    }
+    return c;
+  }
+
+  return { assertImplemented, assertValidatable };
 })();
