@@ -23,7 +23,9 @@ Application.Member.GetCurrentMemberFinanceUseCase = (() => {
     if (!access || typeof access.hasKnownRole !== 'function') {
       throw new Error('memberAccess dependency is required');
     }
-    if (!authorization || typeof authorization.requireAuthenticated !== 'function') {
+    if (!authorization ||
+        typeof authorization.requireAuthenticated !== 'function' ||
+        typeof authorization.requireMemberBinding !== 'function') {
       throw new Error('authorization dependency is required');
     }
 
@@ -42,6 +44,11 @@ Application.Member.GetCurrentMemberFinanceUseCase = (() => {
       }
       if (!principal.memberCode) {
         return { ok:false, error:{ code:'MEMBER_NOT_LINKED' } };
+      }
+
+      const binding = authorization.requireMemberBinding(principal, principal.memberCode);
+      if (!binding.allowed) {
+        return { ok:false, error:{ code:'FORBIDDEN' } };
       }
 
       const member = repo.findByMemberCode(principal.memberCode);
