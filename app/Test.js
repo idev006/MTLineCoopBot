@@ -79,22 +79,26 @@ function testVerifyWebhookSecret() {
 }
 
 /**
- * ทดสอบ SheetService.isActiveMember / hasRole (กฎความ valid บทที่ 3.7.2)
+ * ทดสอบ canonical MemberAccessEngine (กฎความ valid/role บทที่ 3.7.2)
  * @returns {boolean}
  */
 function testMemberValidity() {
-  const S = LineBot.SheetService;
-  const DAY = 24 * 3600 * 1000;
-  const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} 00:00:00`;
-  const past = new Date(Date.now() - 3650 * DAY);   // 10 ปีก่อน
-  const future = new Date(Date.now() + 3650 * DAY); // 10 ปีหน้า
-  const valid = { mem_status: 'active', mem_role: 'member', mem_eff_dt: fmt(past), mem_exp_dt: fmt(future) };
+  const now = new Date(2026, 8, 9, 12, 0, 0);
+  const access = Engine.MemberAccessEngine.create({
+    clock: { now: () => new Date(now.getTime()) }
+  });
+  const valid = {
+    mem_status: 'active',
+    mem_role: 'member',
+    mem_eff_dt: '2026-01-01 00:00:00',
+    mem_exp_dt: '2026-12-31 23:59:59'
+  };
 
   const cases = [
     [valid, true, 'valid member'],
     [{ ...valid, mem_status: 'inactive' }, false, 'status ไม่ใช่ active'],
-    [{ ...valid, mem_eff_dt: fmt(future) }, false, 'ยังไม่ถึงวันเริ่ม'],
-    [{ ...valid, mem_exp_dt: fmt(past) }, false, 'หมดอายุแล้ว'],
+    [{ ...valid, mem_eff_dt: '2026-10-01 00:00:00' }, false, 'ยังไม่ถึงวันเริ่ม'],
+    [{ ...valid, mem_exp_dt: '2026-08-31 23:59:59' }, false, 'หมดอายุแล้ว'],
     [{ ...valid, mem_eff_dt: '' }, false, 'ไม่มีวันเริ่ม (fail-safe)'],
     [{ ...valid, mem_exp_dt: null }, false, 'ไม่มีวันหมดอายุ (fail-safe)'],
     [null, false, 'ไม่มี member'],
@@ -103,19 +107,18 @@ function testMemberValidity() {
     [{ ...valid, mem_role: 'admin' }, true, 'hasRole(member, admin) ผ่าน']
   ];
 
-  // ข้อ 1–7 ใช้ isActiveMember; ข้อ 8–10 ใช้ hasRole
   const failed = [];
   for (let i = 0; i < cases.length; i++) {
     const [member, expected, label] = cases[i];
-    let actual;
-    if (i < 7) actual = S.isActiveMember(member);
-    else actual = S.hasRole(member, i === 8 ? 'member' : (i === 9 ? 'admin' : 'member'));
+    const actual = i < 7
+      ? access.isActive(member)
+      : access.hasRole(member, i === 8 ? 'member' : (i === 9 ? 'admin' : 'member'));
     if (actual !== expected) failed.push(label + ' (expected ' + expected + ', got ' + actual + ')');
   }
   if (failed.length > 0) {
     throw new Error('testMemberValidity FAILED: ' + failed.join(' | '));
   }
-  Logger.log('testMemberValidity OK — ' + cases.length + ' กรณี');
+  Logger.log('testMemberValidity OK — canonical engine / deterministic clock / ' + cases.length + ' กรณี');
   return true;
 }
 
