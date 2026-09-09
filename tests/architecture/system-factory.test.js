@@ -22,6 +22,10 @@ const auditPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'AuditPort.js'),
   'utf8'
 );
+const memberAuditStorePortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'MemberAuditStorePort.js'),
+  'utf8'
+);
 const adminAuditStorePortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'AdminAuditStorePort.js'),
   'utf8'
@@ -114,8 +118,12 @@ const appsScriptConfigSrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Config', 'AppsScriptConfigAdapter.js'),
   'utf8'
 );
-const repositoryAuditSrc = fs.readFileSync(
-  path.join(root, 'app', 'Adapters', 'Audit', 'MemberRepositoryAuditAdapter.js'),
+const sheetsMemberAuditStoreSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Audit', 'SheetsMemberAuditStore.js'),
+  'utf8'
+);
+const durableAuditSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Audit', 'DurableAuditAdapter.js'),
   'utf8'
 );
 const sheetsAdminAuditStoreSrc = fs.readFileSync(
@@ -286,6 +294,11 @@ const fakeRepo = makeRepo('fake-repo');
 const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeAudit = { record: () => ({ ok: true }) };
+const fakeMemberAuditStore = {
+  logActivation: () => ({ ok:true }),
+  logExpiry: () => ({ ok:true }),
+  logReminder: () => ({ ok:true })
+};
 const fakeAdminAuditStore = { append: () => ({ ok:true }) };
 const fakeStaffAdminRepository = { saveRole: () => ({ memRole:'staff' }) };
 const fakeAuditQuery = { list: () => [] };
@@ -338,6 +351,7 @@ vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
 vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
 vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
+vm.runInContext(memberAuditStorePortSrc, sandbox, { filename: 'MemberAuditStorePort.js' });
 vm.runInContext(adminAuditStorePortSrc, sandbox, { filename: 'AdminAuditStorePort.js' });
 vm.runInContext(staffAdminRepositoryPortSrc, sandbox, { filename: 'StaffAdminRepositoryPort.js' });
 vm.runInContext(auditQueryPortSrc, sandbox, { filename: 'AuditQueryPort.js' });
@@ -360,8 +374,9 @@ vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' 
 vm.runInContext(webSessionEngineSrc, sandbox, { filename: 'WebSessionEngine.js' });
 vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
 vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
-vm.runInContext(repositoryAuditSrc, sandbox, { filename: 'MemberRepositoryAuditAdapter.js' });
+vm.runInContext(sheetsMemberAuditStoreSrc, sandbox, { filename: 'SheetsMemberAuditStore.js' });
 vm.runInContext(sheetsAdminAuditStoreSrc, sandbox, { filename: 'SheetsAdminAuditStore.js' });
+vm.runInContext(durableAuditSrc, sandbox, { filename: 'DurableAuditAdapter.js' });
 vm.runInContext(sheetsStaffAdminRepositorySrc, sandbox, { filename: 'SheetsStaffAdminRepository.js' });
 vm.runInContext(sheetsAuditQuerySrc, sandbox, { filename: 'SheetsAuditQueryAdapter.js' });
 vm.runInContext(sheetsReportQuerySrc, sandbox, { filename: 'SheetsReportQueryAdapter.js' });
@@ -405,6 +420,7 @@ const injected = createSystem({
   clock: fakeClock,
   config: fakeConfig,
   audit: fakeAudit,
+  memberAuditStore: fakeMemberAuditStore,
   adminAuditStore: fakeAdminAuditStore,
   staffAdminRepository: fakeStaffAdminRepository,
   auditQuery: fakeAuditQuery,
@@ -425,6 +441,7 @@ if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository in
 if (injected.clock !== fakeClock) throw new Error('clock injection failed');
 if (injected.config !== fakeConfig) throw new Error('config injection failed');
 if (injected.audit !== fakeAudit) throw new Error('audit injection failed');
+if (injected.memberAuditStore !== fakeMemberAuditStore) throw new Error('memberAuditStore injection failed');
 if (injected.adminAuditStore !== fakeAdminAuditStore) throw new Error('adminAuditStore injection failed');
 if (injected.staffAdminRepository !== fakeStaffAdminRepository) throw new Error('staffAdminRepository injection failed');
 if (injected.auditQuery !== fakeAuditQuery) throw new Error('auditQuery injection failed');
@@ -445,6 +462,7 @@ const defaults = createSystem();
 if (defaults.memberRepository.name !== 'prod-repo') throw new Error('default repository wiring failed');
 if (defaults.config.get().mode !== 'prod') throw new Error('default config wiring failed');
 if (!defaults.audit || typeof defaults.audit.record !== 'function') throw new Error('default audit wiring failed');
+if (!defaults.memberAuditStore || typeof defaults.memberAuditStore.logActivation !== 'function') throw new Error('default member audit store wiring failed');
 if (!defaults.adminAuditStore || typeof defaults.adminAuditStore.append !== 'function') throw new Error('default admin audit store wiring failed');
 if (!defaults.staffAdminRepository || typeof defaults.staffAdminRepository.saveRole !== 'function') throw new Error('default staff admin repository wiring failed');
 if (!defaults.auditQuery || typeof defaults.auditQuery.list !== 'function') throw new Error('default audit-query wiring failed');
