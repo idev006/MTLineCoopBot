@@ -19,11 +19,11 @@ Api.ApiHandlers = (() => {
 
   /** GET /api/health — ตรวจว่า API ทำงาน */
   function health() {
-    const system = getSystem();
+    const clock = Composition.SystemFactory.createClock();
     return {
       status: 'ok',
       service: 'MTLineCoopBot API',
-      time: DataDict.formatDateTime(system.clock.now()),
+      time: DataDict.formatDateTime(clock.now()),
       routes: Api.ApiRegistry.listRoutes().length
     };
   }
