@@ -63,25 +63,6 @@ Data.SheetsMemberRepository = (() => {
   }
 
   /**
-   * ตรวจว่าสมาชิก valid หรือไม่ (ช่วงวัน + สถานะ — บทที่ 3.7.2)
-   * @param {Object} member
-   * @returns {boolean}
-   */
-  function isActiveMember(member) {
-    return LineBot.SheetService.isActiveMember(member);
-  }
-
-  /**
-   * ตรวจบทบาทสมาชิก
-   * @param {Object} member
-   * @param {string} role - member / staff / admin
-   * @returns {boolean}
-   */
-  function hasRole(member, role) {
-    return LineBot.SheetService.hasRole(member, role);
-  }
-
-  /**
    * ดึงบัญชีเงินฝากของสมาชิก (MT-27)
    * @param {string} memCode
    * @returns {Array<Object>}
@@ -205,8 +186,6 @@ Data.SheetsMemberRepository = (() => {
     findByActivateCode,
     activateMember,
     saveActivation,
-    isActiveMember,
-    hasRole,
     findSavingsByMember,
     findLoansByMember,
     findDividendsByMember,
