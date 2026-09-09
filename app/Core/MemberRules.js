@@ -3,14 +3,19 @@
  * กฎความถูกต้องของสมาชิก (pure functions — ไม่แตะ SpreadsheetApp/UrlFetchApp)
  *
  * เป็น Core/Business Logic (บทที่ 3.1.1, 3.2.4): เทสต์ได้ใน node โดยไม่ต้อง
- * mock service ใดๆ · รับค่า `now` เป็น parameter (optional) เพื่อให้ test
- * deterministic — production ใช้ค่า default new Date()
+ * mock service ใดๆ · รับค่า `now` เป็น parameter จาก ClockPort/Application เพื่อให้
+ * deterministic และไม่อ่าน wall clock ภายใน Core
  */
 
 var Core = Core || {};
 
 Core.MemberRules = (() => {
   'use strict';
+
+  function requireNow(now) {
+    if (!now) throw new Error('MemberRules now is required');
+    return now;
+  }
 
   /**
    * แปลงวันที่รูปแบบ yyyy-mm-dd[ HH:mm:ss] เป็น Date
@@ -30,7 +35,7 @@ Core.MemberRules = (() => {
    * ตรวจว่าสมาชิก valid: สถานะ active + ช่วงเวลา [mem_eff_dt, mem_exp_dt] ครอบคลุม now
    * (ขอบเขตรวม: now >= mem_eff_dt และ now <= mem_exp_dt) — fail-safe เมื่อไม่มีวันครบ
    * @param {Object} member
-   * @param {Date} [now] - เวลาอ้างอิง (default: เวลาจริง)
+   * @param {Date} now - เวลาอ้างอิงจาก caller/ClockPort
    * @returns {boolean}
    */
   function isActiveMember(member, now) {
@@ -40,7 +45,7 @@ Core.MemberRules = (() => {
     const exp = parseDate(member.mem_exp_dt);
     // Fail-safe: ต้องมีวันเริ่มและวันหมดอายุครบทั้งคู่
     if (!eff || !exp) return false;
-    const n = now || new Date();
+    const n = requireNow(now);
     if (n < eff || n > exp) return false;
     return true;
   }
@@ -49,7 +54,7 @@ Core.MemberRules = (() => {
    * ตรวจว่าสมาชิก valid และมีบทบาทตรงตามที่กำหนด
    * @param {Object} member
    * @param {string} role - 'member' | 'staff' | 'admin'
-   * @param {Date} [now]
+   * @param {Date} now
    * @returns {boolean}
    */
   function hasRole(member, role, now) {
@@ -63,7 +68,7 @@ Core.MemberRules = (() => {
    * - 'valid'    → ยังห่างจากวันหมดอายุ
    * ถ้าไม่มี mem_exp_dt → 'valid' (หาครบกำหนดไม่ได้ — fail-safe ตาม isActiveMember)
    * @param {Object} member
-   * @param {Date} [now] - เวลาอ้างอิง (default: เวลาจริง) — ส่งเพื่อ deterministic ใน test
+   * @param {Date} now - เวลาอ้างอิงจาก caller/ClockPort
    * @param {number} [warningDays] - จำนวนวันก่อนหมดอายุที่ถือว่า "ใกล้หมด" (default 30)
    * @returns {{status: string, daysLeft: (number|null)}} daysLeft = จำนวนวันเต็มที่เหลือ (ปัดขึ้น)
    */
@@ -71,7 +76,7 @@ Core.MemberRules = (() => {
     if (!member) return { status: 'valid', daysLeft: null };
     const exp = parseDate(member.mem_exp_dt);
     if (!exp) return { status: 'valid', daysLeft: null };
-    const n = now || new Date();
+    const n = requireNow(now);
     const daysLeft = Math.ceil((exp.getTime() - n.getTime()) / 86400000);
     if (daysLeft < 0) return { status: 'expired', daysLeft };
     const warn = (typeof warningDays === 'number' ? warningDays : 30);
@@ -85,11 +90,11 @@ Core.MemberRules = (() => {
    *   - ยังไม่หมดอายุ → ต่อจากวันหมดอายุเดิม (ไม่เสียสิทธิ์ที่เหลืออยู่)
    *   - หมดอายุแล้ว → ต่อจากวันนี้ 1 ปี
    * @param {Object} member
-   * @param {Date} [now] - เวลาอ้างอิง (ส่งเพื่อ deterministic ใน test)
+   * @param {Date} now - เวลาอ้างอิงจาก caller/ClockPort
    * @returns {{newExpDt: string, fromDt: string, years: number}}
    */
   function computeRenewal(member, now) {
-    const n = now || new Date();
+    const n = requireNow(now);
     const current = parseDate(member && member.mem_exp_dt);
     const base = (current && current.getTime() > n.getTime()) ? current : n;
     const newDate = new Date(base);
