@@ -19,8 +19,11 @@ if(!/verifyWebhookSecret\s*\(e,\s*cfg\.WEBHOOK_SECRET\)/.test(src)){
   throw new Error('downstream webhook secret gate must remain until gateway cutover');
 }
 
-const secretCheck=src.indexOf('verifyWebhookSecret');
-const parse=src.indexOf('JSON.parse(e.postData.contents)');
+const doPostStart=src.indexOf('function doPost(e)');
+if(doPostStart<0) throw new Error('doPost webhook entrypoint missing');
+const doPostSrc=src.slice(doPostStart);
+const secretCheck=doPostSrc.indexOf('verifyWebhookSecret');
+const parse=doPostSrc.indexOf('JSON.parse(e.postData.contents)');
 if(secretCheck<0||parse<0||secretCheck>parse){
   throw new Error('downstream secret gate must execute before webhook JSON parse');
 }
