@@ -27,7 +27,8 @@ for(const [file,fn,useCase] of services){
     /RichMenu\.Gating\.unlinkMemberMenu/,
     /\.logExpiry\s*\(/,
     /\.logReminder\s*\(/,
-    /\.markNoticeSent\s*\(/
+    /\.markNoticeSent\s*\(/,
+    /\bConfig\.validate\s*\(/
   ];
   for(const pattern of forbidden){
     if(pattern.test(src)) throw new Error(file+' still contains retired scheduled compatibility orchestration: '+pattern);
@@ -35,6 +36,13 @@ for(const [file,fn,useCase] of services){
 
   const delegation=new RegExp('SystemFactory\\.createSystem\\(\\)\\.'+useCase+'\\.execute\\(\\)');
   if(!delegation.test(src)) throw new Error(file+' must delegate directly to '+useCase+'.execute()');
+
+  const triggerWiring=new RegExp(
+    'function\\s+'+fn+'\\s*\\(\\s*\\)\\s*\\{[\\s\\S]*?'
+    +'SystemFactory\\.createValidatedConfig\\(\\)\\.validate\\(\\);[\\s\\S]*?'
+    +'return\\s+LineBot\\.[A-Za-z]+Service\\.'+fn+'\\(\\);'
+  );
+  if(!triggerWiring.test(src)) throw new Error(file+' top-level trigger must validate through composition before delegation');
 }
 
 const legacyTests=fs.readFileSync(path.join(root,'app','Test.js'),'utf8');
