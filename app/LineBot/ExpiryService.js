@@ -50,5 +50,5 @@ LineBot.ExpiryService = (() => {
  */
 function runExpiryCheck() {
   const cfg = Config.validate();
-  return LineBot.ExpiryService.runExpiryCheck(cfg.CHANNEL_ACCESS_TOKEN);
+  return LineBot.ExpiryService.runExpiryCheck();
 }
