@@ -36,6 +36,9 @@ if(repo.findByMemberCode('M001').line_user_id!=='U123') throw new Error('activat
 if(audit.snapshot().length!==1 || audit.snapshot()[0].type!=='member.activation') {
   throw new Error('activation AuditPort event missing');
 }
+if(audit.snapshot()[0].occurredAt!=='2026-09-08 09:00:00') {
+  throw new Error('activation audit timestamp must come from canonical activation plan');
+}
 
 const dup=uc.execute({activateCode:'ABC123',lineUserId:'U123'});
 if(dup.ok || dup.error.code!=='ALREADY_ACTIVATED') throw new Error('duplicate activation must fail');
