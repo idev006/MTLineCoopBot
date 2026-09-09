@@ -15,11 +15,12 @@ const sandbox={
 vm.createContext(sandbox);
 
 for(const rel of [
-  'app/Ports/MemberRepositoryPort.js',
+  'app/Ports/MemberAuditStorePort.js',
+  'app/Ports/AdminAuditStorePort.js',
   'app/Ports/ConfigPort.js',
   'app/Ports/AuditPort.js',
   'app/Adapters/Config/AppsScriptConfigAdapter.js',
-  'app/Adapters/Audit/MemberRepositoryAuditAdapter.js',
+  'app/Adapters/Audit/DurableAuditAdapter.js',
   'app/Adapters/Test/InMemoryAuditAdapter.js'
 ]){
   vm.runInContext(fs.readFileSync(path.join(root,rel),'utf8'),sandbox,{filename:rel});
@@ -54,13 +55,18 @@ let rejectedAudit=false;
 try{ AuditPort.assertImplemented({}); }catch(e){ rejectedAudit=/record/.test(String(e.message)); }
 if(!rejectedAudit) throw new Error('invalid AuditPort adapter must be rejected');
 
-const methods=sandbox.Ports.MemberRepositoryPort.listMethods();
 const calls=[];
-const repo={};
-for(const m of methods) repo[m]=()=>null;
-repo.logActivation=(entry)=>{ calls.push(entry); return {log_id:'L1',status:entry.status}; };
+const memberAuditStore={
+  logActivation:(entry)=>{ calls.push({kind:'activation',entry}); return {log_id:'L1',status:entry.status}; },
+  logExpiry:(entry)=>{ calls.push({kind:'expiry',entry}); return {log_id:'E1',status:entry.status}; },
+  logReminder:(entry)=>{ calls.push({kind:'reminder',entry}); return {log_id:'R1',status:entry.status}; }
+};
+const adminCalls=[];
+const adminAuditStore={append:(entry)=>{adminCalls.push(entry);return {log_id:'A1',status:entry.status};}};
+sandbox.Ports.MemberAuditStorePort.assertImplemented(memberAuditStore);
+sandbox.Ports.AdminAuditStorePort.assertImplemented(adminAuditStore);
 
-const durable=sandbox.Adapters.Audit.MemberRepositoryAuditAdapter.create({memberRepository:repo});
+const durable=sandbox.Adapters.Audit.DurableAuditAdapter.create({memberAuditStore,adminAuditStore});
 AuditPort.assertImplemented(durable);
 
 durable.record({
@@ -80,10 +86,10 @@ durable.record({
 });
 
 if(calls.length!==2) throw new Error('durable audit adapter did not persist both events');
-if(calls[0].activateCode!=='A1' || calls[0].status!=='success' || calls[0].activatedDt!=='2026-09-09 10:00:00') {
+if(calls[0].kind!=='activation' || calls[0].entry.activateCode!=='A1' || calls[0].entry.status!=='success' || calls[0].entry.activatedDt!=='2026-09-09 10:00:00') {
   throw new Error('activation audit mapping incorrect');
 }
-if(calls[1].activateCode!=='' || calls[1].status!=='renewed' || calls[1].activatedDt!=='2026-09-09 11:00:00') {
+if(calls[1].kind!=='activation' || calls[1].entry.activateCode!=='' || calls[1].entry.status!=='renewed' || calls[1].entry.activatedDt!=='2026-09-09 11:00:00') {
   throw new Error('renewal audit mapping incorrect');
 }
 
@@ -104,6 +110,6 @@ if(memory.snapshot().length!==1 || memory.snapshot()[0].type!=='seed') {
 }
 
 console.log('PASS  ConfigPort production adapter + validatable capability + invalid adapter rejection');
-console.log('PASS  AuditPort durable activation/renewal mapping');
+console.log('PASS  AuditPort durable activation/renewal mapping through dedicated audit stores');
 console.log('PASS  InMemoryAuditAdapter deterministic snapshot/reset');
 console.log('=== AUDIT CONFIG PORT TESTS PASS (3/3) ===');
