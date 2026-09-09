@@ -246,18 +246,23 @@ LineBot.EventHandler = (() => {
       return;
     }
 
-    // การ์ด MT-35: ยืนยัน/ยกเลิกการต่ออายุ (ขั้น 2 ของ flow renew — หลังกดปุ่มใน confirmCard)
+    // Legacy renewal confirmation cards are no longer allowed to mutate membership.
+    // Hand off to LIFF where the raw LINE ID token is verified server-side.
     if (params.action === 'cancel_renew') {
       deps.MessageService.reply(replyToken, 'ยกเลิกการต่ออายุสมาชิกแล้ว', token);
       return;
     }
     if (params.action === 'confirm_renew') {
-      try {
-        LineBot.RenewalService.handleConfirmRenew(params.code || '', event.source.userId, replyToken, token);
-      } catch (e) {
-        Logger.log('[EventHandler] Error calling RenewalService.handleConfirmRenew: ' + e);
-        deps.MessageService.reply(replyToken, 'เกิดข้อผิดพลาดในการต่ออายุสมาชิก', token);
-      }
+      const memberUrl = getSystem().config.get().LIFF_ACTIVATION_URL;
+      const message = [
+        'เพื่อความปลอดภัย การต่ออายุสมาชิกต้องยืนยันตัวตนผ่าน LINE Login',
+        memberUrl
+          ? 'กรุณาเปิดหน้าสมาชิกนี้ แล้วกด “ต่ออายุสมาชิก”:\n' + memberUrl
+          : 'กรุณาเปิด LIFF สมาชิก แล้วกด “ต่ออายุสมาชิก”',
+        'ระบบจะไม่ต่ออายุหรือเปลี่ยนการผูกบัญชีจาก LINE User ID ใน postback'
+      ].join('\n\n');
+      deps.MessageService.reply(replyToken, message, token);
+      Logger.log('[Renewal] Legacy confirm postback handed off to secure LIFF');
       return;
     }
 
@@ -393,20 +398,20 @@ LineBot.EventHandler = (() => {
     }
 
     if (text.startsWith('renew') || text.startsWith('ต่ออายุ')) {
-      // การ์ด MT-12: ต่ออายุสมาชิก — renew:CODE (ตามรหัส) หรือ renew (ตัวเอง)
-      const activateCode = (text.startsWith('renew:') || text.startsWith('ต่ออายุ:'))
-        ? text.split(':')[1].trim()
-        : '';
-      if (text.indexOf(':') !== -1 && !activateCode) {
-        replyAlert(event.replyToken, token, 'warning', 'กรุณาระบุรหัสต่ออายุ', 'กรุณาระบุรหัสต่ออายุ เช่น renew:ABC123');
-        return;
-      }
-      try {
-        LineBot.RenewalService.handleRenew(activateCode, event.source.userId, event.replyToken, token);
-      } catch (e) {
-        Logger.log('[EventHandler] Error calling RenewalService: ' + e);
-        deps.MessageService.reply(event.replyToken, 'เกิดข้อผิดพลาดในการต่ออายุสมาชิก', token);
-      }
+      // Secure renewal handoff: chat/webhook context is not identity proof for renewal.
+      // Any legacy renew:CODE value is deliberately ignored as authority.
+      const memberUrl = getSystem().config.get().LIFF_ACTIVATION_URL;
+      const message = [
+        'เพื่อความปลอดภัย การต่ออายุสมาชิกต้องยืนยันตัวตนผ่าน LINE Login',
+        memberUrl
+          ? 'กรุณาเปิดหน้าสมาชิกนี้ แล้วกด “ต่ออายุสมาชิก”:\n' + memberUrl
+          : 'กรุณาเปิด LIFF สมาชิก แล้วกด “ต่ออายุสมาชิก”',
+        text.indexOf(':') !== -1
+          ? 'ไม่จำเป็นต้องส่งรหัสต่ออายุในแชท ระบบจะต่ออายุเฉพาะบัญชีสมาชิกที่ผูกกับ LINE ที่ยืนยันแล้ว'
+          : 'ระบบจะต่ออายุเฉพาะบัญชีสมาชิกที่ผูกกับ LINE ที่ยืนยันแล้ว'
+      ].join('\n\n');
+      deps.MessageService.reply(event.replyToken, message, token);
+      Logger.log('[Renewal] Secure LIFF handoff sent');
       return;
     }
 
