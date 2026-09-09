@@ -42,7 +42,7 @@ MTLineCoopBot/
 │   ├── Dashboard.js            ← สร้างชีท KPI ของทีมอัตโนมัติ
 │   ├── LineBot/                ← EventHandler · SheetService · ReplyStore · FlexBuilder ...
 │   ├── RichMenu/               ← MenuData · Deployer · ApiService
-│   ├── docs/                   ← เอกสารโครงการ (เล่มหลัก)
+│   ├── docs/                   ← legacy pointer only; canonical docs อยู่ MTP6LineCoopBot/docs/ssot
 │   └── assets/                 ← รูป Rich Menu (เฉพาะในเครื่อง — ไม่ push ขึ้น Apps Script)
 ├── loan_calculator.html        ← เครื่องคำนวณสินเชื่อ
 ├── .clasp.json                 ← scriptId + rootDir ของ clasp
@@ -96,4 +96,4 @@ clasp push
 
 ## 📌 สถานะโครงการ
 
-ดูตารางสถานะล่าสุด (✅ ทำแล้ว / 📌 ออกแบบไว้ — เฟส 2/3) ได้ที่ [app/docs/README.md](./app/docs/README.md) และบอร์ดงานที่ [KANBAN.md](./app/docs/KANBAN.md)
+ดูสถานะล่าสุด, Kanban, traceability และ release gates ที่ canonical SSOT: `idev006/MTP6LineCoopBot/docs/ssot/`
