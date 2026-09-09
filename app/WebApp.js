@@ -191,8 +191,7 @@ function doPost(e) {
       throw new Error('ไม่พบข้อมูล POST body');
     }
 
-    Logger.log(`raw body: ${e.postData.contents.substring(0, 500)}`);
-
+    // Privacy rule: never log raw webhook body or message payloads.
     let body;
     try {
       body = JSON.parse(e.postData.contents);
