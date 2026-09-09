@@ -226,38 +226,27 @@ function testWelcomeMenu() {
  * @returns {boolean}
  */
 function testMemberRepository() {
-  const propsService = PropertiesService.getScriptProperties();
-
-  // 1) default (DB_TYPE='sheets') → ได้ SheetsMemberRepository ครบตามสัญญา
-  const repo = Data.MemberRepository.getRepository();
-  const names = ['findByLineUserId', 'findByActivateCode', 'activateMember', 'isActiveMember', 'hasRole'];
-  const missing = names.filter(n => typeof repo[n] !== 'function');
-  if (missing.length > 0) {
-    throw new Error('testMemberRepository: SheetsMemberRepository ขาดฟังก์ชัน: ' + missing.join(', '));
+  // Canonical repository contract + production Sheets adapter.
+  const repo = Ports.MemberRepositoryPort.assertImplemented(Data.SheetsMemberRepository);
+  if (typeof repo.findByLineUserId !== 'function') {
+    throw new Error('testMemberRepository: SheetsMemberRepository ไม่ผ่าน canonical port');
   }
 
-  // 2) assertImplemented ผ่านกับ repo ที่ครบ
-  Data.MemberRepository.assertImplemented(repo);
-
-  // 3) assertImplemented throw กับ object ที่ไม่ครบสัญญา
   let threw = false;
-  try { Data.MemberRepository.assertImplemented({ findByLineUserId: function () {} }); } catch (e) { threw = true; }
-  if (!threw) throw new Error('testMemberRepository: assertImplemented ควร throw เมื่อ object ไม่ครบสัญญา');
+  try { Ports.MemberRepositoryPort.assertImplemented({ findByLineUserId: function () {} }); } catch (e) { threw = true; }
+  if (!threw) throw new Error('testMemberRepository: port assertion ควร throw เมื่อ adapter ไม่ครบสัญญา');
 
-  // 4) DB_TYPE=firestore → ยังไม่ implement ต้อง throw (แทนที่จะเงียบๆ ใช้ตัวผิด)
-  propsService.setProperty('DB_TYPE', 'firestore');
+  // Adapter selection belongs to Composition.SystemFactory; unsupported DB types fail closed.
+  const original = PropertiesService.getScriptProperties().getProperty('DB_TYPE');
+  PropertiesService.getScriptProperties().setProperty('DB_TYPE', 'firestore');
   threw = false;
-  try { Data.MemberRepository.getRepository(); } catch (e) { threw = true; }
-  if (!threw) throw new Error('testMemberRepository: DB_TYPE=firestore ควร throw (ยังไม่ implement)');
+  try { Composition.SystemFactory.createSystem(); } catch (e) { threw = String(e && e.message || e).includes('firestore'); }
+  if (!threw) throw new Error('testMemberRepository: firestore ต้อง fail closed ที่ composition root');
 
-  // 5) คืนค่า DB_TYPE=sheets → ทำงานได้ตามเดิม
-  propsService.deleteProperty('DB_TYPE');
-  const repo2 = Data.MemberRepository.getRepository();
-  if (typeof repo2.findByLineUserId !== 'function') {
-    throw new Error('testMemberRepository: กลับมาใช้ sheets repository ไม่ได้หลัง reset');
-  }
+  if (original === null || original === undefined) PropertiesService.getScriptProperties().deleteProperty('DB_TYPE');
+  else PropertiesService.getScriptProperties().setProperty('DB_TYPE', original);
 
-  Logger.log('testMemberRepository OK — interface + factory (DB_TYPE switch)');
+  Logger.log('testMemberRepository OK — canonical port + composition-owned adapter selection');
   return true;
 }
 
@@ -798,7 +787,7 @@ function testFinanceData() {
   }
 
   // 2) repository อ่านข้อมูลจริง (Data Layer เต็ม path)
-  const repo = Data.MemberRepository.getRepository();
+  const repo = Ports.MemberRepositoryPort.assertImplemented(Data.SheetsMemberRepository);
   const savings = repo.findSavingsByMember('MEM001');
   if (savings.length !== 2) throw new Error('testFinanceData: MEM001 ควรมี 2 บัญชี (ได้ ' + savings.length + ')');
   const loans = repo.findLoansByMember('MEM001');
@@ -853,7 +842,7 @@ function testColumnReordering() {
      'นาย', 25, 'กรรมการ', 10, '2026-08-06', '2027-08-06', 'member', 85, 50000, 10000]
   ];
 
-  const repo = Data.MemberRepository.getRepository();
+  const repo = Ports.MemberRepositoryPort.assertImplemented(Data.SheetsMemberRepository);
 
   // 2) findByLineUserId ยังคืนข้อมูลถูกต้องแม้สลับตำแหน่ง
   const m = repo.findByLineUserId('U11111111111111111111111111111111');
