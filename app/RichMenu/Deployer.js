@@ -15,7 +15,7 @@ RichMenu.Deployer = (() => {
    * Deploy Rich Menu ทั้ง 5 แท็บ
    */
   function deploy() {
-    const cfg = Config.validate();
+    const cfg = Composition.SystemFactory.createValidatedConfig().validate();
     const token = cfg.CHANNEL_ACCESS_TOKEN;
 
     const MenuData = RichMenu.MenuData;
@@ -87,7 +87,7 @@ function main() {
  * รันฟังก์ชันนี้เพื่อตรวจสอบสถานะ Rich Menu ปัจจุบัน
  */
 function checkRichMenuStatus() {
-  const cfg = Config.validate();
+  const cfg = Composition.SystemFactory.createValidatedConfig().validate();
   const status = RichMenu.ApiService.checkStatus(cfg.CHANNEL_ACCESS_TOKEN);
   Logger.log('=== Rich Menu Status ===');
   Logger.log(`Rich Menus: ${status.richmenus.length}`);
