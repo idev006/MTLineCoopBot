@@ -1247,8 +1247,10 @@ function testApiLayer() {
     DataDict.getHeaders('MEMBER_MASTER'),
     ['M003', 'นาย', 'ใหม่', 'สมาชิก', 10, '', 2, '', '', 'inactive', 'ACT003', '', 'member', 60, 0, 1000]
   ];
+  const beforeActivation = JSON.stringify(__fakeSheets['t_member_mast'][1]);
   const a1 = api.handleRequest('POST', '/api/member/activate', { body: { activateCode:'ACT003', lineUserId:'U33333333333333333333333333333333' } });
-  if (!a1.ok) throw new Error('testApiLayer: activation compatibility ต้องยังทำงาน');
+  if (a1.ok || a1.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: retired activation route ต้อง NOT_FOUND');
+  if (JSON.stringify(__fakeSheets['t_member_mast'][1]) !== beforeActivation) throw new Error('testApiLayer: retired activation route ต้องไม่ mutate member');
 
   const unknown = api.handleRequest('GET','/api/nope',{});
   if (unknown.ok || unknown.error.code !== 'NOT_FOUND') throw new Error('testApiLayer: unknown route ควร NOT_FOUND');
@@ -1335,87 +1337,42 @@ function testBotUsesApi() {
  * @returns {boolean}
  */
 function testActivateViaApi() {
-  // 1) seed fake sheets: M001/M002 ยังไม่ activate (มี activate code)
   delete __fakeSheets['t_member_mast'];
   __fakeSheets['t_member_mast'] = [
     DataDict.getHeaders('MEMBER_MASTER'),
-    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '', '', 'inactive', 'ACT001', '', 'member', 85, 50000, 10000],
-    ['M002', 'นาง', 'สมหญิง', 'รักดี', 20, '', 5, '', '', 'inactive', 'ACT002', '', 'member', 80, 8000, 5000]
+    ['M001', 'นาย', 'สมชาย', 'ใจดี', 25, 'กรรมการ', 10, '', '', 'inactive', 'ACT001', '', 'member', 85, 50000, 10000]
   ];
 
-  const S = LineBot.ActivationService;
+  const before = JSON.stringify(__fakeSheets['t_member_mast'][1]);
 
-  // 2) spy Api.ApiService.handleRequest (ตรวจว่า Bot เรียกผ่าน API)
-  const origHandle = Api.ApiService.handleRequest;
-  const apiCalls = [];
-  Api.ApiService.handleRequest = function (m, p, o) {
-    apiCalls.push({ m, p });
-    return origHandle(m, p, o);
-  };
-  // fake MessageService/FlexBuilder/Gating
-  const replies = [];
-  const origReply = LineBot.MessageService.reply;
-  LineBot.MessageService.reply = function (rt, text) { replies.push({ type: 'text', text }); return { ok: true }; };
-  const flexSent = [];
-  const origReplyFlex = LineBot.MessageService.replyFlex;
-  LineBot.MessageService.replyFlex = function (rt, flex) { flexSent.push(flex); return { ok: true }; };
-  const gated = [];
-  const origLink = RichMenu.Gating.linkMemberMenu;
-  RichMenu.Gating.linkMemberMenu = function (uid) { gated.push(uid); return { ok: true }; };
-
-  try {
-    // 3) performActivate (pure) → ผ่าน POST /api/member/activate + เขียนชีท
-    const res = S.performActivate('ACT001', 'U11111111111111111111111111111111', {});
-    if (!res.success) throw new Error('testActivateViaApi: performActivate ควรสำเร็จ — ' + JSON.stringify(res));
-    if (res.memberCode !== 'M001') throw new Error('testActivateViaApi: memberCode ผิด');
-    if (apiCalls.length !== 1 || apiCalls[0].m !== 'POST' || apiCalls[0].p !== '/api/member/activate') {
-      throw new Error('testActivateViaApi: ควรเรียก POST /api/member/activate ผ่าน Api.ApiService');
+  const env = Api.ApiService.handleRequest('POST', '/api/member/activate', {
+    body: {
+      activateCode:'ACT001',
+      lineUserId:'U11111111111111111111111111111111'
     }
-    const mRow = __fakeSheets['t_member_mast'][1];
-    if (mRow[11] !== 'U11111111111111111111111111111111') throw new Error('testActivateViaApi: line_user_id ต้องถูกเขียนผ่าน API');
-    if (mRow[9] !== 'active') throw new Error('testActivateViaApi: mem_status ควรเป็น active');
-
-    // 4) handleActivate → welcome flex + ผูกเมนู (UI work อยู่ที่ Bot layer) — ใช้ ACT002 (ยังไม่ activate)
-    const h = S.handleActivate('ACT002', 'U22222222222222222222222222222222', 'RT1', 'TOKEN');
-    if (!h.success) throw new Error('testActivateViaApi: handleActivate ควรสำเร็จ');
-    if (apiCalls.length !== 2) throw new Error('testActivateViaApi: handleActivate ควรเรียก API (POST activate)');
-    if (flexSent.length !== 1) throw new Error('testActivateViaApi: ควรส่ง welcome flex');
-    if (!JSON.stringify(flexSent[0]).includes('สมหญิง')) throw new Error('testActivateViaApi: welcome flex ต้องมีชื่อสมาชิก');
-    if (!gated.includes('U22222222222222222222222222222222')) throw new Error('testActivateViaApi: ควรผูกเมนูสมาชิก (gating)');
-
-    // 5) error paths ผ่าน API: รหัสผิด → code_not_found · activate ซ้ำ → already_activated
-    const bad = S.handleActivate('WRONG', 'U11111111111111111111111111111111', 'RT2', 'TOKEN');
-    if (bad.success || bad.reason !== 'code_not_found') throw new Error('testActivateViaApi: รหัสผิดควร code_not_found');
-    const dup = S.handleActivate('ACT001', 'U11111111111111111111111111111111', 'RT3', 'TOKEN');
-    if (dup.success || dup.reason !== 'already_activated') throw new Error('testActivateViaApi: activate ซ้ำควร already_activated');
-  } finally {
-    Api.ApiService.handleRequest = origHandle;
-    LineBot.MessageService.reply = origReply;
-    LineBot.MessageService.replyFlex = origReplyFlex;
-    RichMenu.Gating.linkMemberMenu = origLink;
+  });
+  if (env.ok || env.error.code !== 'NOT_FOUND') {
+    throw new Error('testActivateViaApi: retired /api/member/activate ต้อง NOT_FOUND');
   }
 
-  // 6) ข้อความตอบผู้ใช้เหมือนเดิม (แต่เป็น alertCard — การ์ด MT-35):
-  //    welcome (flexSent[0]) + error alert (รหัสผิด — ❌) + warning alert (ซ้ำ — ⚠️)
-  if (flexSent.length !== 3) throw new Error('testActivateViaApi: ควรส่ง 3 การ์ด (welcome + 2 alert) — ได้ ' + flexSent.length);
-  const flexJson = flexSent.map(f => JSON.stringify(f)).join('\n');
-  if (!flexJson.includes('ไม่พบรหัส activate')) throw new Error('testActivateViaApi: ควรรายงาน "ไม่พบรหัส activate" เมื่อรหัสผิด');
-  if (!flexJson.includes('ถูกใช้ไปแล้ว')) throw new Error('testActivateViaApi: ควรรายงาน "รหัสนี้ถูกใช้ไปแล้ว" เมื่อ activate ซ้ำ');
-  const errCard = JSON.stringify(flexSent[1]);
-  const warnCard = JSON.stringify(flexSent[2]);
-  if (!errCard.includes('❌') || errCard.includes('⚠️')) throw new Error('testActivateViaApi: รหัสผิดควรเป็น alert ระดับ error (❌)');
-  if (!warnCard.includes('⚠️') || warnCard.includes('❌')) throw new Error('testActivateViaApi: activate ซ้ำควรเป็น alert ระดับ warning (⚠️)');
+  const legacy = LineBot.ActivationService.performActivate(
+    'ACT001',
+    'U11111111111111111111111111111111',
+    {}
+  );
+  if (legacy.success || legacy.reason !== 'retired' ||
+      !legacy.error || legacy.error.code !== 'LEGACY_ACTIVATION_RETIRED') {
+    throw new Error('testActivateViaApi: legacy ActivationService ต้อง fail closed');
+  }
 
-  Logger.log('testActivateViaApi OK — activate ผ่าน POST /api/member/activate (Bot = UI adapter, alertCard ข้อความเดิม)');
+  if (JSON.stringify(__fakeSheets['t_member_mast'][1]) !== before) {
+    throw new Error('testActivateViaApi: retired legacy path ต้องไม่ mutate member');
+  }
+
+  Logger.log('testActivateViaApi OK — legacy direct activation retired and non-mutating');
   return true;
 }
 
-/**
- * ทดสอบ API Mount ใน WebApp (doGet/doPost แยก /api/* → Api.ApiService + API key):
- * health เปิดสาธารณะ · path อื่นต้องมี api_key ถูกต้อง (401 ถ้าไม่) ·
- * profile/activate ผ่าน mount · LINE webhook (ไม่มี pathInfo) ยังทำงานเหมือนเดิม
- * @returns {boolean}
- */
 function testApiMount() {
   // 1) ตั้งค่า Script Properties (sandbox): API_KEY + WEBHOOK_SECRET
   const props = PropertiesService.getScriptProperties();
@@ -1444,21 +1401,18 @@ function testApiMount() {
     throw new Error('testApiMount: retired profile route ต้อง NOT_FOUND');
   }
 
-  // 4) POST /api/member/activate — api_key ใน body (ไม่ใช่ query) → ผูก line_user_id กับ M001
+  // 4) POST /api/member/activate — retired; client lineUserId must never bind identity
+  const beforeRetiredActivation = JSON.stringify(__fakeSheets['t_member_mast'][1]);
   env = resp(doPost({
     pathInfo: 'api/member/activate',
     parameter: {},
     postData: { contents: JSON.stringify({ api_key: 'test-api-key-123', activateCode: 'ACT001', lineUserId: 'U11111111111111111111111111111111' }) }
   }));
-  if (!env.ok || env.data.mem_status !== 'active') throw new Error('testApiMount: activate ผ่าน mount ต้องสำเร็จ');
-  // activate ซ้ำ → ALREADY_ACTIVATED (ผ่าน mount)
-  env = resp(doPost({
-    pathInfo: 'api/member/activate',
-    parameter: {},
-    postData: { contents: JSON.stringify({ api_key: 'test-api-key-123', activateCode: 'ACT001', lineUserId: 'U11111111111111111111111111111111' }) }
-  }));
-  if (env.ok || env.error.code !== 'ALREADY_ACTIVATED') {
-    throw new Error('testApiMount: activate ซ้ำผ่าน mount ต้องตอบ ALREADY_ACTIVATED');
+  if (env.ok || env.error.code !== 'NOT_FOUND') {
+    throw new Error('testApiMount: retired activate route ต้อง NOT_FOUND');
+  }
+  if (JSON.stringify(__fakeSheets['t_member_mast'][1]) !== beforeRetiredActivation) {
+    throw new Error('testApiMount: retired activate route ต้องไม่ mutate member');
   }
 
   // 6) LINE webhook (ไม่มี pathInfo) — ไม่แตะ API mount: ตรวจ webhook_secret เหมือนเดิม
@@ -1469,7 +1423,7 @@ function testApiMount() {
   env = resp(doPost({ parameter: { webhook_secret: 'wh-secret' }, postData: { contents: JSON.stringify({ events: [] }) } }));
   if (env.status !== 'ok') throw new Error('testApiMount: webhook ที่มี webhook_secret ต้องตอบ ok (เส้นทางเดิมไม่เปลี่ยน)');
 
-  Logger.log('testApiMount OK — retired reads stay unavailable; activation compatibility + webhook preserved');
+  Logger.log('testApiMount OK — retired reads/activation stay unavailable; webhook preserved');
   return true;
 }
 
@@ -1544,6 +1498,7 @@ function testRenewal() {
  * ตรวจกฎความ valid ด้วย now ที่กำหนดเอง (deterministic)
  * @returns {boolean}
  */
+
 function testCoreMemberRules() {
   const R = Core.MemberRules;
   const now = new Date('2026-08-06T12:00:00');

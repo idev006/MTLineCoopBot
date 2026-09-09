@@ -58,31 +58,6 @@ Api.ApiHandlers = (() => {
     };
   }
 
-  /** POST /api/member/activate { activateCode, lineUserId } — thin delivery adapter */
-  function activate(ctx) {
-    const activateCode = (ctx.body && ctx.body.activateCode) || (ctx.query && ctx.query.activateCode);
-    const lineUserId = (ctx.body && ctx.body.lineUserId) || (ctx.query && ctx.query.lineUserId);
-    const system = getSystem();
-    const result = system.activateMember.execute({ activateCode, lineUserId });
-
-    if (!result.ok) {
-      const code = result.error && result.error.code ? result.error.code : 'INTERNAL';
-      if (code === 'VALIDATION') {
-        throw Api.ApiError.create('VALIDATION', 'ต้องระบุ activateCode และ lineUserId');
-      }
-      if (code === 'MEMBER_NOT_FOUND') {
-        throw Api.ApiError.create('MEMBER_NOT_FOUND', 'ไม่พบรหัส activate นี้ในระบบ', 404);
-      }
-      if (code === 'ALREADY_ACTIVATED') {
-        throw Api.ApiError.create('ALREADY_ACTIVATED', 'รหัสนี้ถูกใช้ไปแล้ว ไม่สามารถ activate ซ้ำได้', 409);
-      }
-      throw Api.ApiError.create(code, 'ไม่สามารถ activate สมาชิกได้', 500);
-    }
-
-    return result.data;
-  }
-
-
   function requireLinePrincipal(ctx) {
     const idToken = ctx && ctx.body ? ctx.body.idToken : null;
     if (!idToken) {
@@ -362,7 +337,6 @@ Api.ApiHandlers = (() => {
     getCurrentDividends,
     activateCurrentMember,
     renewCurrentMember,
-    activate,
     renew
   };
 })();
