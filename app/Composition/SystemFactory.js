@@ -93,11 +93,14 @@ Composition.SystemFactory = (() => {
     const staffAdminRepository = Ports.StaffAdminRepositoryPort.assertImplemented(
       o.staffAdminRepository || Adapters.Admin.SheetsStaffAdminRepository
     );
+    const idGenerator = Ports.IdPort.assertImplemented(
+      o.idGenerator || Adapters.Id.AppsScriptIdAdapter
+    );
     const memberAuditStore = Ports.MemberAuditStorePort.assertImplemented(
-      o.memberAuditStore || Adapters.Audit.SheetsMemberAuditStore
+      o.memberAuditStore || Adapters.Audit.SheetsMemberAuditStore.create({ idGenerator })
     );
     const adminAuditStore = Ports.AdminAuditStorePort.assertImplemented(
-      o.adminAuditStore || Adapters.Audit.SheetsAdminAuditStore
+      o.adminAuditStore || Adapters.Audit.SheetsAdminAuditStore.create({ idGenerator })
     );
     const audit = Ports.AuditPort.assertImplemented(
       o.audit || Adapters.Audit.DurableAuditAdapter.create({
@@ -276,6 +279,7 @@ Composition.SystemFactory = (() => {
     return Object.freeze({
       clock,
       config,
+      idGenerator,
       audit,
       auditQuery,
       reportQuery,

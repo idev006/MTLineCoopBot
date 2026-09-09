@@ -14,6 +14,10 @@ const clockSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'ClockPort.js'),
   'utf8'
 );
+const idPortSrc = fs.readFileSync(
+  path.join(root, 'app', 'Ports', 'IdPort.js'),
+  'utf8'
+);
 const configPortSrc = fs.readFileSync(
   path.join(root, 'app', 'Ports', 'ConfigPort.js'),
   'utf8'
@@ -116,6 +120,10 @@ const appsScriptHttpSrc = fs.readFileSync(
 );
 const appsScriptConfigSrc = fs.readFileSync(
   path.join(root, 'app', 'Adapters', 'Config', 'AppsScriptConfigAdapter.js'),
+  'utf8'
+);
+const appsScriptIdSrc = fs.readFileSync(
+  path.join(root, 'app', 'Adapters', 'Id', 'AppsScriptIdAdapter.js'),
   'utf8'
 );
 const sheetsMemberAuditStoreSrc = fs.readFileSync(
@@ -292,6 +300,7 @@ function makeRepo(name) {
 }
 const fakeRepo = makeRepo('fake-repo');
 const fakeClock = { now: () => new Date('2026-09-08T00:00:00Z') };
+const fakeIdGenerator = { next: prefix => String(prefix) + '-TEST-ID' };
 const fakeConfig = { get: () => ({ mode: 'test' }) };
 const fakeAudit = { record: () => ({ ok: true }) };
 const fakeMemberAuditStore = {
@@ -349,6 +358,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(memberRulesSrc, sandbox, { filename: 'MemberRules.js' });
 vm.runInContext(clockSrc, sandbox, { filename: 'ClockPort.js' });
+vm.runInContext(idPortSrc, sandbox, { filename: 'IdPort.js' });
 vm.runInContext(configPortSrc, sandbox, { filename: 'ConfigPort.js' });
 vm.runInContext(auditPortSrc, sandbox, { filename: 'AuditPort.js' });
 vm.runInContext(memberAuditStorePortSrc, sandbox, { filename: 'MemberAuditStorePort.js' });
@@ -374,6 +384,7 @@ vm.runInContext(authorizationSrc, sandbox, { filename: 'AuthorizationEngine.js' 
 vm.runInContext(webSessionEngineSrc, sandbox, { filename: 'WebSessionEngine.js' });
 vm.runInContext(appsScriptHttpSrc, sandbox, { filename: 'AppsScriptHttpClientAdapter.js' });
 vm.runInContext(appsScriptConfigSrc, sandbox, { filename: 'AppsScriptConfigAdapter.js' });
+vm.runInContext(appsScriptIdSrc, sandbox, { filename: 'AppsScriptIdAdapter.js' });
 vm.runInContext(sheetsMemberAuditStoreSrc, sandbox, { filename: 'SheetsMemberAuditStore.js' });
 vm.runInContext(sheetsAdminAuditStoreSrc, sandbox, { filename: 'SheetsAdminAuditStore.js' });
 vm.runInContext(durableAuditSrc, sandbox, { filename: 'DurableAuditAdapter.js' });
@@ -418,6 +429,7 @@ const createSystem = sandbox.Composition.SystemFactory.createSystem;
 const injected = createSystem({
   memberRepository: fakeRepo,
   clock: fakeClock,
+  idGenerator: fakeIdGenerator,
   config: fakeConfig,
   audit: fakeAudit,
   memberAuditStore: fakeMemberAuditStore,
@@ -439,6 +451,7 @@ const injected = createSystem({
 
 if (injected.memberRepository !== fakeRepo) throw new Error('memberRepository injection failed');
 if (injected.clock !== fakeClock) throw new Error('clock injection failed');
+if (injected.idGenerator !== fakeIdGenerator) throw new Error('idGenerator injection failed');
 if (injected.config !== fakeConfig) throw new Error('config injection failed');
 if (injected.audit !== fakeAudit) throw new Error('audit injection failed');
 if (injected.memberAuditStore !== fakeMemberAuditStore) throw new Error('memberAuditStore injection failed');
@@ -470,6 +483,7 @@ if (!defaults.reportQuery || typeof defaults.reportQuery.snapshot !== 'function'
 if (!defaults.messaging || typeof defaults.messaging.send !== 'function') throw new Error('default messaging wiring failed');
 if (!defaults.memberMenu || typeof defaults.memberMenu.revokeMemberMenu !== 'function') throw new Error('default member-menu wiring failed');
 if (!defaults.clock.now()) throw new Error('default clock wiring failed');
+if (!defaults.idGenerator || typeof defaults.idGenerator.next !== 'function') throw new Error('default ID generator wiring failed');
 if (!defaults.api.handleRequest().ok) throw new Error('default api wiring failed');
 if (defaults.identity.authenticate({ channel: 'line' }).authenticated) throw new Error('default identity must fail closed');
 if (!defaults.authorization.requireAuthenticated) throw new Error('default authorization wiring failed');
