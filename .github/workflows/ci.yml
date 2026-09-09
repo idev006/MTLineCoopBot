@@ -81,6 +81,9 @@ jobs:
       - name: Scheduled runtime delegation tests
         run: node tests/application/scheduled-runtime-delegation.test.js
 
+      - name: Webhook privacy hardening test
+        run: node tests/application/webhook-log-privacy.test.js
+
       - name: Activation chat handoff security test
         run: node tests/application/chat-activation-handoff.test.js
 
