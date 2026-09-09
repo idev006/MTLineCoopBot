@@ -51,6 +51,6 @@ LineBot.NoticeService = (() => {
  * (Apps Script เรียก function ระดับบนสุดได้เท่านั้น — ตัวนี้เป็นตัวส่งต่อให้ NoticeService)
  */
 function runNoticeBroadcast() {
-  const cfg = Config.validate();
+  Composition.SystemFactory.createValidatedConfig().validate();
   return LineBot.NoticeService.runNoticeBroadcast();
 }

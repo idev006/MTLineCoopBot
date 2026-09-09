@@ -51,6 +51,6 @@ LineBot.LoanReminderService = (() => {
  * Entry point สำหรับ Time-driven Trigger — เลือกฟังก์ชันนี้ใน Apps Script Editor
  */
 function runLoanReminders() {
-  const cfg = Config.validate();
+  Composition.SystemFactory.createValidatedConfig().validate();
   return LineBot.LoanReminderService.runLoanReminders();
 }
