@@ -5,7 +5,7 @@ const vm = require('vm');
 const root = process.cwd();
 const sheetPath = path.join(root, 'app/LineBot/SheetService.js');
 const sheetSrc = fs.readFileSync(sheetPath, 'utf8');
-const adapterSrc = fs.readFileSync(path.join(root, 'app/Adapters/Audit/MemberRepositoryAuditAdapter.js'), 'utf8');
+const adapterSrc = fs.readFileSync(path.join(root, 'app/Adapters/Audit/DurableAuditAdapter.js'), 'utf8');
 const renewSrc = fs.readFileSync(path.join(root, 'app/Application/Member/RenewMemberUseCase.js'), 'utf8');
 const staffRenewSrc = fs.readFileSync(path.join(root, 'app/Application/Web/RenewMemberByStaffUseCase.js'), 'utf8');
 
