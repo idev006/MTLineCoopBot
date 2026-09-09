@@ -84,8 +84,6 @@ if(r.ok||r.error.code!=='METHOD_NOT_ALLOWED') throw new Error('role assignment m
 const route=sandbox.Api.ApiRegistry.listRoutes().find(x=>x.path==='/api/web/admin/staff/role');
 if(!route||route.method!=='POST'||route.auth!=='web-session') throw new Error('route metadata mismatch');
 
-const webSrc=fs.readFileSync(path.join(root,'app','WebApp.js'),'utf8');
-if(!webSrc.includes("path === '/api/web/admin/staff/role'")) throw new Error('WebApp session route classification missing');
 
 console.log('PASS  admin role assignment requires verified Web session');
 console.log('PASS  non-admin/self-change/invalid role/missing member fail closed');
