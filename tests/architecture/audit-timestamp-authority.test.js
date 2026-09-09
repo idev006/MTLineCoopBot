@@ -19,11 +19,10 @@ for (const forbidden of [
 }
 
 for (const required of [
-  'activatedDt: e.occurredAt',
-  'occurredAt: now',
-  'occurredAt:now'
+  /activatedDt\s*:\s*e\.occurredAt/,
+  /occurredAt\s*:\s*now/
 ]) {
-  if (!(adapterSrc + renewSrc + staffRenewSrc).includes(required)) {
+  if (!required.test(adapterSrc + renewSrc + staffRenewSrc)) {
     throw new Error('audit timestamp propagation missing: ' + required);
   }
 }
