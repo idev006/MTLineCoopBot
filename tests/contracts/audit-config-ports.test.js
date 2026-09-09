@@ -68,20 +68,22 @@ durable.record({
   memberCode:'M001',
   lineUserId:'U1',
   activateCode:'A1',
-  status:'success'
+  status:'success',
+  occurredAt:'2026-09-09 10:00:00'
 });
 durable.record({
   type:'member.renewal',
   memberCode:'M001',
   lineUserId:'U1',
-  status:'renewed'
+  status:'renewed',
+  occurredAt:'2026-09-09 11:00:00'
 });
 
 if(calls.length!==2) throw new Error('durable audit adapter did not persist both events');
-if(calls[0].activateCode!=='A1' || calls[0].status!=='success') {
+if(calls[0].activateCode!=='A1' || calls[0].status!=='success' || calls[0].activatedDt!=='2026-09-09 10:00:00') {
   throw new Error('activation audit mapping incorrect');
 }
-if(calls[1].activateCode!=='' || calls[1].status!=='renewed') {
+if(calls[1].activateCode!=='' || calls[1].status!=='renewed' || calls[1].activatedDt!=='2026-09-09 11:00:00') {
   throw new Error('renewal audit mapping incorrect');
 }
 
