@@ -42,6 +42,7 @@ jobs:
           node tests/architecture/repository-renewal-policy-retirement.test.js
           node tests/architecture/audit-timestamp-authority.test.js
           node tests/architecture/member-audit-store-extraction.test.js
+          node tests/architecture/audit-caller-authority.test.js
           node tests/architecture/core-time-determinism.test.js
           node tests/architecture/protected-identity-usecase-authority.test.js
           node tests/architecture/delivery-config-clock-wiring.test.js
