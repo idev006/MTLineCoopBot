@@ -269,11 +269,11 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function logActivation(entry) {
-    const tableKey = 'ACTIVATION_LOG';
-    const sheet = getSheet(tableKey);
     if (!entry || !entry.activatedDt) {
       throw new Error('Activation audit timestamp is required');
     }
+    const tableKey = 'ACTIVATION_LOG';
+    const sheet = getSheet(tableKey);
     const logId = 'LOG-' + String(Date.now());
     // เขียนตามลำดับ header จริงของชีท (รองรับการสลับตำแหน่งฟิลด์)
     const headers = getHeaderRow(sheet);
@@ -296,11 +296,11 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function appendExpiryLog(entry) {
-    const tableKey = 'EXPIRY_LOG';
-    const sheet = getSheet(tableKey);
     if (!entry || !entry.checkedDt) {
       throw new Error('Expiry audit timestamp is required');
     }
+    const tableKey = 'EXPIRY_LOG';
+    const sheet = getSheet(tableKey);
     const logId = 'ELOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
@@ -342,11 +342,11 @@ LineBot.SheetService = (() => {
    * @returns {Object} ข้อมูลที่บันทึก
    */
   function appendReminderLog(entry) {
-    const tableKey = 'REMINDER_LOG';
-    const sheet = getSheet(tableKey);
     if (!entry || !entry.remindedDt) {
       throw new Error('Reminder audit timestamp is required');
     }
+    const tableKey = 'REMINDER_LOG';
+    const sheet = getSheet(tableKey);
     const logId = 'RLOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
@@ -498,11 +498,11 @@ LineBot.SheetService = (() => {
   }
 
   function appendAdminAuditLog(entry) {
-    const tableKey = 'ADMIN_AUDIT_LOG';
-    const sheet = getSheet(tableKey);
     if (!entry || !entry.createdDt) {
       throw new Error('Admin audit timestamp is required');
     }
+    const tableKey = 'ADMIN_AUDIT_LOG';
+    const sheet = getSheet(tableKey);
     const logId = 'ALOG-' + String(Date.now());
     const headers = getHeaderRow(sheet);
     const row = DataDict.objectToRowByHeaders(tableKey, headers, {
