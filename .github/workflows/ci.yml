@@ -38,6 +38,7 @@ jobs:
           node tests/architecture/system-factory.test.js
           node tests/architecture/member-repository-factory-retirement.test.js
           node tests/architecture/repository-policy-helper-retirement.test.js
+          node tests/architecture/delivery-config-clock-wiring.test.js
           node tests/architecture/loan-calculator-authority.test.js
 
       - name: Port contract tests (plug-compatible adapters)
