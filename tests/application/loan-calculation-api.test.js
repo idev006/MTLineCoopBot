@@ -80,5 +80,5 @@ if(!/!isPublicApiPath\(path\) && !isIdentityAuthenticatedApiPath\(path\)/.test(w
 
 console.log('PASS  public POST loan calculation delivery contract');
 console.log('PASS  stable validation envelope and POST-only method');
-console.log('PASS  route is explicitly public and API-key exempt');
+console.log('PASS  route is explicitly public via canonical auth metadata');
 console.log('=== LOAN CALCULATION API TESTS PASS (3/3) ===');
