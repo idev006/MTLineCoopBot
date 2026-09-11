@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - 'tools/deployment_test.py'
+      - 'tools/deployment_probe.py'
       - 'tests/tools/test_deployment_test.py'
       - '.github/workflows/deployment-verifier-ci.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tools/deployment_test.py'
+      - 'tools/deployment_probe.py'
       - 'tests/tools/test_deployment_test.py'
       - '.github/workflows/deployment-verifier-ci.yml'
   workflow_dispatch:
@@ -25,8 +27,8 @@ jobs:
       - name: Python runtime evidence
         run: python3 --version
 
-      - name: Compile deployment verifier
-        run: python3 -m py_compile tools/deployment_test.py tests/tools/test_deployment_test.py
+      - name: Compile deployment verifier and transport probe
+        run: python3 -m py_compile tools/deployment_test.py tools/deployment_probe.py tests/tools/test_deployment_test.py
 
       - name: Deployment verifier unit tests
         run: python3 -m unittest -v tests/tools/test_deployment_test.py
