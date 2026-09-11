@@ -1,0 +1,32 @@
+name: Deployment Verifier CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/deployment_test.py'
+      - 'tests/tools/test_deployment_test.py'
+      - '.github/workflows/deployment-verifier-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/deployment_test.py'
+      - 'tests/tools/test_deployment_test.py'
+      - '.github/workflows/deployment-verifier-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  python-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Python runtime evidence
+        run: python3 --version
+
+      - name: Compile deployment verifier
+        run: python3 -m py_compile tools/deployment_test.py tests/tools/test_deployment_test.py
+
+      - name: Deployment verifier unit tests
+        run: python3 -m unittest -v tests/tools/test_deployment_test.py
