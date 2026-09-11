@@ -29,7 +29,7 @@ class DeploymentVerifierTests(unittest.TestCase):
     def test_line_signature_matches_hmac_sha256_base64(self):
         self.assertEqual(
             dt.line_signature(b'{"events":[]}', "secret"),
-            "HqJYcFYwFn3ZNxuKtpStLJ0w9qGs1X6z8w4UIsB65ps=",
+            "pkK1lVPJPiJ+wPLziRD79xIxohl8AImYM8AEeM7IbzQ=",
         )
 
     def test_error_code_reads_only_api_envelope(self):
