@@ -4,16 +4,24 @@ const fs=require('fs'),path=require('path'),vm=require('vm');
 const root=path.join(__dirname,'..','..');
 const sandbox={Ports:{},Security:{},Engine:{},Application:{},Adapters:{},Date,Object,Array,Set,JSON,String,Number};
 vm.createContext(sandbox);
+
+function load(rel){
+  vm.runInContext(fs.readFileSync(path.join(root,rel),'utf8'),sandbox,{filename:rel});
+}
+
+// Regression: Apps Script does not guarantee source-file evaluation order.
+// The use case must be safe to evaluate before Security.RoleCatalog exists.
+load('app/Application/Web/ListStaffAccountsUseCase.js');
+if(!sandbox.Application.Web.ListStaffAccountsUseCase) throw new Error('use case failed to initialize before RoleCatalog');
+
 for(const rel of [
   'app/Security/Principal.js',
   'app/Security/RoleCatalog.js',
   'app/Ports/MemberRepositoryPort.js',
   'app/Engine/AuthorizationEngine.js',
-  'app/Adapters/Test/InMemoryMemberRepository.js',
-  'app/Application/Web/ListStaffAccountsUseCase.js'
-]){
-  vm.runInContext(fs.readFileSync(path.join(root,rel),'utf8'),sandbox,{filename:rel});
-}
+  'app/Adapters/Test/InMemoryMemberRepository.js'
+]) load(rel);
+
 const repo=sandbox.Adapters.Test.InMemoryMemberRepository.create({members:[
   {mem_code:'M001',mem_title:'นาย',mem_fname:'A',mem_lname:'One',mem_role:'member',mem_status:'active',line_user_id:'U1'},
   {mem_code:'S001',mem_title:'นาง',mem_fname:'Staff',mem_lname:'One',mem_role:'staff',mem_status:'active',line_user_id:'US'},
@@ -33,7 +41,8 @@ if(JSON.stringify(r.data.roles)!==JSON.stringify(['staff','manager','admin'])) t
 const staff=P.create({subject:'web:staff',channel:'web',roles:['staff'],authenticated:true});
 const denied=uc.execute({principal:staff});
 if(denied.ok||denied.error.code!=='FORBIDDEN') throw new Error('non-admin must be denied');
+console.log('PASS  use case initializes before RoleCatalog (Apps Script load-order regression)');
 console.log('PASS  admin-only staff account list');
 console.log('PASS  ordinary members excluded and fields sanitized');
 console.log('PASS  staff role vocabulary is canonical');
-console.log('=== STAFF ACCOUNTS READ TESTS PASS (3/3) ===');
+console.log('=== STAFF ACCOUNTS READ TESTS PASS (4/4) ===');
