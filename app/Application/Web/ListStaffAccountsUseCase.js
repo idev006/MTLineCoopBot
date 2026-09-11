@@ -8,7 +8,19 @@ Application.Web = Application.Web || {};
 Application.Web.ListStaffAccountsUseCase = (() => {
   'use strict';
 
-  const STAFF_ROLES = Object.freeze(Security.RoleCatalog.staffRoleIds());
+  /**
+   * Resolve canonical staff roles lazily.
+   *
+   * Google Apps Script does not guarantee source-file evaluation order. Avoid
+   * dereferencing another namespace at module initialization time; RoleCatalog
+   * may be evaluated later in the same Apps Script project.
+   */
+  function getStaffRoles() {
+    if (!Security || !Security.RoleCatalog || typeof Security.RoleCatalog.staffRoleIds !== 'function') {
+      throw new Error('ListStaffAccountsUseCase requires Security.RoleCatalog.staffRoleIds');
+    }
+    return Object.freeze(Security.RoleCatalog.staffRoleIds());
+  }
 
   function create(deps) {
     const d = deps || {};
@@ -17,6 +29,7 @@ Application.Web.ListStaffAccountsUseCase = (() => {
     if (!authorization || typeof authorization.requireRole !== 'function') {
       throw new Error('ListStaffAccountsUseCase requires authorization.requireRole');
     }
+    const staffRoles = getStaffRoles();
 
     function execute(input) {
       const principal = input && input.principal;
@@ -26,7 +39,7 @@ Application.Web.ListStaffAccountsUseCase = (() => {
       }
 
       const accounts = (repo.listMembers() || [])
-        .filter(m => STAFF_ROLES.includes(String(m.mem_role || '')))
+        .filter(m => staffRoles.includes(String(m.mem_role || '')))
         .map(m => ({
           memberCode:String(m.mem_code || ''),
           displayName:[m.mem_title,m.mem_fname,m.mem_lname].filter(Boolean).join(' ').trim(),
@@ -36,11 +49,11 @@ Application.Web.ListStaffAccountsUseCase = (() => {
         }))
         .sort((a,b) => a.memberCode.localeCompare(b.memberCode));
 
-      return { ok:true, data:{ accounts, roles:STAFF_ROLES.slice() } };
+      return { ok:true, data:{ accounts, roles:staffRoles.slice() } };
     }
 
     return Object.freeze({ execute });
   }
 
-  return { create, STAFF_ROLES };
+  return { create };
 })();
